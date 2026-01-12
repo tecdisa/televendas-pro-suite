@@ -392,11 +392,11 @@ export const clientsService = {
       delete cleanData.codigoCliente;
       delete cleanData.codigo_cliente;
       
-      // Payload plano: empresaId no topo + campos diretamente
+      // Payload conforme doc: empresaId no topo + dados dentro de "data"
       const res = await apiClient.fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ empresaId: empresa.empresa_id, ...cleanData }),
+        body: JSON.stringify({ empresaId: empresa.empresa_id, data: cleanData }),
       });
       if (!res.ok) {
         let message = 'Falha ao criar cliente';
