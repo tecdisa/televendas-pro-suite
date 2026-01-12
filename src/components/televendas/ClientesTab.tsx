@@ -14,7 +14,6 @@ import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota } from '@/services/metadataService';
 import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from './ClientInfoModal';
-import { ClientFormModal } from './ClientFormModal';
 import { cn } from '@/lib/utils';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
@@ -621,27 +620,984 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
       </Dialog>
 
       {/* Create Client */}
-      <ClientFormModal
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        mode="create"
-        onSuccess={() => {
-          setSelectedClients([]);
-          loadClients();
-        }}
-      />
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Cadastrar novo cliente</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
+            <TabsList className="w-auto">
+              <TabsTrigger value="identificacao">Identificação</TabsTrigger>
+              <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
+              <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
+            </TabsList>
 
-      {/* Edit Client */}
-      <ClientFormModal
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        mode="edit"
-        clientId={editId}
-        onSuccess={() => {
-          setSelectedClients([]);
-          loadClients();
-        }}
-      />
+            <div className="flex-1 overflow-y-auto mt-4 pr-2">
+              {/* =================== Identificação =================== */}
+              <TabsContent value="identificacao" className="m-0 space-y-4">
+                {/* CNPJ/CPF + Tipo + Código */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
+                    <div className="flex gap-1">
+                      <Input
+                        className="h-8 text-sm flex-1"
+                        value={formData.cnpjCpf}
+                        onChange={(e) => {
+                          setFormData({ ...formData, cnpjCpf: e.target.value });
+                          cnpjLookupRef.current?.(e.target.value);
+                        }}
+                      />
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}>
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="col-span-3">
+                    <Select defaultValue="Cliente">
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="Cliente">Cliente</SelectItem>
+                        <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
+                    <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: e.target.value })} />
+                  </div>
+                  <div className="col-span-3 flex items-center gap-2">
+                    <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
+                    <label className="text-sm">Cliente Inativo</label>
+                  </div>
+                </div>
+
+                {/* Razão Social + Simples Nacional */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-9">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
+                    <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
+                  </div>
+                  <div className="col-span-3 flex items-center gap-2">
+                    <Checkbox />
+                    <label className="text-sm">Simples nacional</label>
+                  </div>
+                </div>
+
+                {/* Nome Fantasia + Consumidor final */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-9">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
+                    <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })} />
+                  </div>
+                  <div className="col-span-3 flex items-center gap-2">
+                    <Checkbox />
+                    <label className="text-sm">Consumidor final</label>
+                  </div>
+                </div>
+
+                {/* Inscr. estadual + Contribuinte + Suframa */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
+                    <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: e.target.value })} />
+                  </div>
+                  <div className="col-span-4">
+                    <Select defaultValue="contribuinte">
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="contribuinte">Contribuinte ICM</SelectItem>
+                        <SelectItem value="nao">Não contribuinte</SelectItem>
+                        <SelectItem value="isento">Isento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                {/* Seção Endereço */}
+                <div className="border-b border-primary/50 pb-1 mt-4">
+                  <span className="text-sm font-medium text-primary">Endereço</span>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep *</label>
+                    <div className="flex gap-1">
+                      <Input className="h-8 text-sm" placeholder="-" value={formData.cep} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} />
+                      <Button variant="outline" size="icon" className="h-8 w-8">
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-12">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
+                    <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-2">
+                    <Select value={formData.uf} onValueChange={(v) => setFormData({ ...formData, uf: v })}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-5">
+                    <Input className="h-8 text-sm" placeholder="Cidade" value={formData.cidade} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
+                  </div>
+                  <div className="col-span-3">
+                    <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Complem.</label>
+                    <Input className="h-8 text-sm" value={formData.complemento} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* Seção Telefones */}
+                <div className="border-b border-primary/50 pb-1 mt-4">
+                  <span className="text-sm font-medium text-primary">Telefones</span>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: e.target.value })} />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
+                    <Input className="h-8 text-sm" placeholder="( )" />
+                  </div>
+                </div>
+
+                <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" />
+                <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" />
+                <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" />
+
+                <div className="max-w-lg">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota entrega *</label>
+                  <Select
+                    value={formData.rotaId ? String(formData.rotaId) : ''}
+                    onValueChange={(v) => setFormData({ ...formData, rotaId: parseInt(v) || 0 })}
+                    disabled={rotasLoading}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder={rotasLoading ? 'Carregando...' : 'Selecione a rota'} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="0">Nenhuma</SelectItem>
+                      {rotas.map((rota) => (
+                        <SelectItem key={rota.id} value={String(rota.id)}>
+                          {rota.codigo_rota ? `${rota.codigo_rota} - ${rota.label}` : rota.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+
+              {/* =================== Dados Complementares =================== */}
+              <TabsContent value="complementares" className="m-0 space-y-4">
+                {/* Proprietário + Aniversário */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
+                    <Input type="date" className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                {/* CPF + RG + Início atividade */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
+                    <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: e.target.value })} />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
+                    <Input type="date" className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                {/* Endereço complementar */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-8">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4 flex items-center gap-2">
+                    <Checkbox />
+                    <label className="text-sm">Endereço para entrega</label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-2">
+                    <Select>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-4">
+                    <Input className="h-8 text-sm" placeholder="Cidade" />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+                    <Input className="h-8 text-sm" placeholder="-" />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                <FormField label="Email" value="" onChange={() => {}} className="max-w-md" />
+
+                {/* Seção Referências */}
+                <div className="border-b border-primary/50 pb-1 mt-4">
+                  <span className="text-sm font-medium text-primary">Referências</span>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <Input className="h-8 text-sm" placeholder="Agência" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <Input className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                {/* Referências Comerciais + Sócios */}
+                <div className="grid grid-cols-12 gap-3 items-start mt-4">
+                  <div className="col-span-6 space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
+                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-6 space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
+                    <div className="flex gap-2">
+                      <Input className="h-8 text-sm flex-1" />
+                      <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Input className="h-8 text-sm flex-1" />
+                      <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Input className="h-8 text-sm flex-1" />
+                      <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
+                    </div>
+                  </div>
+                </div>
+
+                <FormField label="Cap. social" value="" onChange={() => {}} />
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-8">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Contador</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
+                    <Input className="h-8 text-sm" placeholder="( )" />
+                  </div>
+                </div>
+
+                {/* Seção Cobrança */}
+                <div className="border-b border-primary/50 pb-1 mt-4">
+                  <span className="text-sm font-medium text-primary">Cobrança</span>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-8">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-2">
+                    <Select>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-5">
+                    <Input className="h-8 text-sm" placeholder="Cidade" />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+                    <Input className="h-8 text-sm" placeholder="-" />
+                  </div>
+                  <div className="col-span-2">
+                    <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* =================== Dados Comerciais =================== */}
+              <TabsContent value="comerciais" className="m-0 space-y-4">
+                {/* Contatos */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-5">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
+                    <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: e.target.value })} />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: e.target.value })} />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
+                    <Input type="date" className="h-8 text-sm" value={formData.contato1Aniversario} onChange={(e) => setFormData({ ...formData, contato1Aniversario: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-5">
+                    <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: e.target.value })} />
+                  </div>
+                  <div className="col-span-3">
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: e.target.value })} />
+                  </div>
+                  <div className="col-span-4">
+                    <Input type="date" className="h-8 text-sm" value={formData.contato2Aniversario} onChange={(e) => setFormData({ ...formData, contato2Aniversario: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* Classe / Checkouts / Nielsen / Dependência / Rede */}
+                <div className="grid grid-cols-12 gap-3 items-end mt-4">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Classe *</label>
+                    <Select value={formData.classe} onValueChange={(v) => setFormData({ ...formData, classe: v })}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="A">A</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                        <SelectItem value="D">D</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Checkouts</label>
+                    <Input type="number" className="h-8 text-sm text-right" value={formData.checkouts} onChange={(e) => setFormData({ ...formData, checkouts: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Dependência</label>
+                    <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Nielsen</label>
+                    <Select value={formData.nielsen} onValueChange={(v) => setFormData({ ...formData, nielsen: v })}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Rede</label>
+                    <Select value={formData.rede} onValueChange={(v) => setFormData({ ...formData, rede: v })}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="propria">Própria</SelectItem>
+                        <SelectItem value="associada">Associada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Tabelas de preços / Permite venda */}
+                <div className="grid grid-cols-12 gap-3 items-end mt-4">
+                  <div className="col-span-5">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabelas de preços *</label>
+                    <div className="flex gap-1">
+                      <Input className="h-8 text-sm" value={formData.tabelas} onChange={(e) => setFormData({ ...formData, tabelas: e.target.value })} />
+                      <Select>
+                        <SelectTrigger className="h-8 text-sm w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="2">2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="col-span-7">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Permite venda nas empresas (ex: 01,02..)</label>
+                    <Input className="h-8 text-sm" />
+                  </div>
+                </div>
+
+                {/* Representante */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
+                    <Select>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="rep1">Representante 1</SelectItem>
+                        <SelectItem value="rep2">Representante 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Prazo máximo + Descontos */}
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
+                    <Select value={formData.prazo} onValueChange={(v) => setFormData({ ...formData, prazo: v })}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="30/40/50 DD">30/40/50 DD</SelectItem>
+                        <SelectItem value="30/60/90 DD">30/60/90 DD</SelectItem>
+                        <SelectItem value="A VISTA">A VISTA</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">% Desconto máximo na nota fiscal</label>
+                    <div className="flex items-center gap-1">
+                      <Input type="number" className="h-8 text-sm text-right" value={formData.descontoFinanceiroBoleto} onChange={(e) => setFormData({ ...formData, descontoFinanceiroBoleto: parseFloat(e.target.value) || 0 })} />
+                      <span className="text-sm">(%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-center">
+                  <div className="col-span-6 flex items-center gap-2">
+                    <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
+                    <label className="text-sm">Boleto bancário</label>
+                  </div>
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">% Despesas nota fiscal</label>
+                    <div className="flex items-center gap-1">
+                      <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
+                      <span className="text-sm">(%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-6"></div>
+                  <div className="col-span-6">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">% Frete nota fiscal</label>
+                    <div className="flex items-center gap-1">
+                      <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
+                      <span className="text-sm">(%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* B2B */}
+                <div className="grid grid-cols-12 gap-3 items-center mt-4">
+                  <div className="col-span-12 flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Checkbox />
+                      <label className="text-sm">Liberado venda no B2B</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-muted-foreground">Senha B2B</label>
+                      <Input className="h-8 text-sm w-32" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
+                      <Select>
+                        <SelectTrigger className="h-8 text-sm w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="2">2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Observação */}
+                <div className="border-t pt-4 mt-4">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs.</label>
+                  <Textarea
+                    className="min-h-[80px] text-sm"
+                    value={formData.observacaoComercial}
+                    onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })}
+                  />
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+          {formError && <div className="text-sm text-destructive mt-2">{formError}</div>}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={formLoading}>Cancelar</Button>
+            <Button onClick={submitCreate} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client - mesmo layout */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          {detailLoading ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Carregando dados do cliente...</div>
+          ) : (
+            <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
+              <TabsList className="w-auto">
+                <TabsTrigger value="identificacao">Identificação</TabsTrigger>
+                <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
+                <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
+              </TabsList>
+
+              <div className="flex-1 overflow-y-auto mt-4 pr-2">
+                {/* Identificação */}
+                <TabsContent value="identificacao" className="m-0 space-y-4">
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
+                      <div className="flex gap-1">
+                        <Input className="h-8 text-sm flex-1" value={formData.cnpjCpf} onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })} />
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="col-span-3">
+                      <Select defaultValue="Cliente">
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="Cliente">Cliente</SelectItem>
+                          <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
+                      <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: e.target.value })} />
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
+                      <label className="text-sm">Cliente Inativo</label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-9">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
+                      <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Checkbox />
+                      <label className="text-sm">Simples nacional</label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-9">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
+                      <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })} />
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Checkbox />
+                      <label className="text-sm">Consumidor final</label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
+                      <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: e.target.value })} />
+                    </div>
+                    <div className="col-span-4">
+                      <Select defaultValue="contribuinte">
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="contribuinte">Contribuinte ICM</SelectItem>
+                          <SelectItem value="nao">Não contribuinte</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="border-b border-primary/50 pb-1 mt-4">
+                    <span className="text-sm font-medium text-primary">Endereço</span>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep *</label>
+                      <div className="flex gap-1">
+                        <Input className="h-8 text-sm" value={formData.cep} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} />
+                        <Button variant="outline" size="icon" className="h-8 w-8"><Search className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <FormField label="Endereço *" value={formData.endereco} onChange={(v) => setFormData({ ...formData, endereco: v })} />
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-2">
+                      <Select value={formData.uf} onValueChange={(v) => setFormData({ ...formData, uf: v })}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="UF" /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-5">
+                      <Input className="h-8 text-sm" placeholder="Cidade" value={formData.cidade} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
+                    </div>
+                    <div className="col-span-3">
+                      <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <FormField label="Complem." value={formData.complemento} onChange={(v) => setFormData({ ...formData, complemento: v })} className="max-w-md" />
+
+                  <div className="border-b border-primary/50 pb-1 mt-4">
+                    <span className="text-sm font-medium text-primary">Telefones</span>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
+                      <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
+                      <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: e.target.value })} />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
+                      <Input className="h-8 text-sm" placeholder="( )" />
+                    </div>
+                  </div>
+
+                  <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" />
+                  <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" />
+                  <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" />
+
+                  <div className="max-w-lg">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota entrega *</label>
+                    <Select value={formData.rotaId ? String(formData.rotaId) : ''} onValueChange={(v) => setFormData({ ...formData, rotaId: parseInt(v) || 0 })} disabled={rotasLoading}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={rotasLoading ? 'Carregando...' : 'Selecione'} /></SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="0">Nenhuma</SelectItem>
+                        {rotas.map((rota) => (
+                          <SelectItem key={rota.id} value={String(rota.id)}>{rota.codigo_rota ? `${rota.codigo_rota} - ${rota.label}` : rota.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
+
+                {/* Dados Complementares */}
+                <TabsContent value="complementares" className="m-0 space-y-4">
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
+                      <Input type="date" className="h-8 text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
+                      <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: e.target.value })} />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
+                      <Input type="date" className="h-8 text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="border-b border-primary/50 pb-1 mt-4">
+                    <span className="text-sm font-medium text-primary">Referências</span>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-4">
+                      <Input className="h-8 text-sm" placeholder="Agência" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-start mt-4">
+                    <div className="col-span-6 space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
+                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-6 space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
+                      <div className="flex gap-2">
+                        <Input className="h-8 text-sm flex-1" />
+                        <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Input className="h-8 text-sm flex-1" />
+                        <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-b border-primary/50 pb-1 mt-4">
+                    <span className="text-sm font-medium text-primary">Cobrança</span>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-8">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+                      <Input className="h-8 text-sm" />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Dados Comerciais */}
+                <TabsContent value="comerciais" className="m-0 space-y-4">
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-5">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
+                      <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: e.target.value })} />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
+                      <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: e.target.value })} />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
+                      <Input type="date" className="h-8 text-sm" value={formData.contato1Aniversario} onChange={(e) => setFormData({ ...formData, contato1Aniversario: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-5">
+                      <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: e.target.value })} />
+                    </div>
+                    <div className="col-span-3">
+                      <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: e.target.value })} />
+                    </div>
+                    <div className="col-span-4">
+                      <Input type="date" className="h-8 text-sm" value={formData.contato2Aniversario} onChange={(e) => setFormData({ ...formData, contato2Aniversario: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end mt-4">
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Classe *</label>
+                      <Select value={formData.classe} onValueChange={(v) => setFormData({ ...formData, classe: v })}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="B">B</SelectItem>
+                          <SelectItem value="C">C</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Checkouts</label>
+                      <Input type="number" className="h-8 text-sm text-right" value={formData.checkouts} onChange={(e) => setFormData({ ...formData, checkouts: parseInt(e.target.value) || 0 })} />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Dependência</label>
+                      <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabelas de preços *</label>
+                      <Input className="h-8 text-sm" value={formData.tabelas} onChange={(e) => setFormData({ ...formData, tabelas: e.target.value })} />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
+                      <Select>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="rep1">Representante 1</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
+                      <Select value={formData.prazo} onValueChange={(v) => setFormData({ ...formData, prazo: v })}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="30/40/50 DD">30/40/50 DD</SelectItem>
+                          <SelectItem value="30/60/90 DD">30/60/90 DD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-6 flex items-center gap-2 pt-5">
+                      <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
+                      <label className="text-sm">Boleto bancário</label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-center mt-4">
+                    <div className="col-span-12 flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Checkbox />
+                        <label className="text-sm">Liberado venda no B2B</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-muted-foreground">Senha B2B</label>
+                        <Input className="h-8 text-sm w-32" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
+                        <Select>
+                          <SelectTrigger className="h-8 text-sm w-16"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            <SelectItem value="1">1</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs.</label>
+                    <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })} />
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
+          )}
+          {formError && <div className="text-sm text-destructive mt-2">{formError}</div>}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={formLoading}>Cancelar</Button>
+            <Button onClick={submitEdit} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ClientInfoModal
         open={clientInfoOpen}
