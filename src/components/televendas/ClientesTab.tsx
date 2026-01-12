@@ -122,7 +122,7 @@ export const ClientesTab = () => {
     representanteNome: '',
     descontoFinanceiroBoleto: 0,
     observacaoComercial: '',
-    segmentoId: 0,
+    segmentoId: 1,
     // Financeiro
     credito: '',
     boleto: false,
@@ -131,8 +131,8 @@ export const ClientesTab = () => {
     aberto: 0,
     disponivel: 0,
     observacaoFinanceiro: '',
-    formaPagtoId: 0,
-    prazoPagtoId: 0,
+    formaPagtoId: 1,
+    prazoPagtoId: 1,
   });
 
   const cnpjLookupRef = useRef<(v: string) => void>();
@@ -343,7 +343,7 @@ const createEmptyFormData = () => ({
   representanteNome: '',
   descontoFinanceiroBoleto: 0,
   observacaoComercial: '',
-  segmentoId: 0,
+  segmentoId: 1,
   credito: '',
   boleto: false,
   prazo: '',
@@ -351,12 +351,16 @@ const createEmptyFormData = () => ({
   aberto: 0,
   disponivel: 0,
   observacaoFinanceiro: '',
-  formaPagtoId: 0,
-  prazoPagtoId: 0,
+  formaPagtoId: 1,
+  prazoPagtoId: 1,
 });
 
 const normalizeCep = (v: string) => v.replace(/\D+/g, '').slice(0, 8);
 const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
+const ensurePositiveId = (value: number | string | undefined | null, fallback = 1) => {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : fallback;
+};
 
   const openCreateDialog = () => {
     setFormError(null);
@@ -375,10 +379,10 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
       await clientsService.create({
         ...formData,
         cidadeId: Number(formData.cidadeId) || 0,
-        segmentoId: Number(formData.segmentoId) || 0,
+        segmentoId: ensurePositiveId(formData.segmentoId),
         rotaId: Number(formData.rotaId) || 0,
-        formaPagtoId: Number(formData.formaPagtoId) || 0,
-        prazoPagtoId: Number(formData.prazoPagtoId) || 0,
+        formaPagtoId: ensurePositiveId(formData.formaPagtoId),
+        prazoPagtoId: ensurePositiveId(formData.prazoPagtoId),
       });
       toast.success('Cliente criado com sucesso');
       setCreateOpen(false);
@@ -443,7 +447,7 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
         representanteNome: String(d.representante_nome ?? d.representanteNome ?? d.representante?.nome ?? ''),
         descontoFinanceiroBoleto: Number(d.desconto_financeiro_boleto ?? d.descontoFinanceiroBoleto ?? 0),
         observacaoComercial: String(d.observacao_comercial ?? d.observacaoComercial ?? ''),
-        segmentoId: Number(d.segmento_id ?? d.segmentoId ?? 0),
+        segmentoId: ensurePositiveId(d.segmento_id ?? d.segmentoId),
         credito: String(d.credito ?? ''),
         boleto: Boolean(d.boleto),
         prazo: String(d.prazo ?? ''),
@@ -451,8 +455,8 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
         aberto: Number(d.aberto ?? 0),
         disponivel: Number(d.disponivel ?? 0),
         observacaoFinanceiro: String(d.observacao_financeiro ?? d.observacaoFinanceiro ?? ''),
-        formaPagtoId: Number(d.forma_pagto_id ?? d.formaPagtoId ?? 0),
-        prazoPagtoId: Number(d.prazo_pagto_id ?? d.prazoPagtoId ?? 0),
+        formaPagtoId: ensurePositiveId(d.forma_pagto_id ?? d.formaPagtoId),
+        prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
       });
     } catch (e: any) {
       setFormError(String(e));
@@ -469,10 +473,10 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
       await clientsService.update(editId, {
         ...formData,
         cidadeId: Number(formData.cidadeId) || 0,
-        segmentoId: Number(formData.segmentoId) || 0,
+        segmentoId: ensurePositiveId(formData.segmentoId),
         rotaId: Number(formData.rotaId) || 0,
-        formaPagtoId: Number(formData.formaPagtoId) || 0,
-        prazoPagtoId: Number(formData.prazoPagtoId) || 0,
+        formaPagtoId: ensurePositiveId(formData.formaPagtoId),
+        prazoPagtoId: ensurePositiveId(formData.prazoPagtoId),
       });
       toast.success('Cliente atualizado com sucesso');
       setEditOpen(false);
