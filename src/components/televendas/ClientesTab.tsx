@@ -5,16 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Plus, Pencil, Trash2, Info, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
-import { metadataService, Rota } from '@/services/metadataService';
+import { metadataService, Rota, Tabela } from '@/services/metadataService';
+import { representativesService, Representative } from '@/services/representativesService';
 import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from './ClientInfoModal';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -66,6 +68,20 @@ export const ClientesTab = () => {
   const [clientInfoId, setClientInfoId] = useState<number | null>(null);
   const [rotas, setRotas] = useState<Rota[]>([]);
   const [rotasLoading, setRotasLoading] = useState(false);
+
+  // Representantes
+  const [representatives, setRepresentatives] = useState<Representative[]>([]);
+  const [repSearchOpen, setRepSearchOpen] = useState(false);
+  const [repSearch, setRepSearch] = useState('');
+  const [loadingReps, setLoadingReps] = useState(false);
+  const [repsError, setRepsError] = useState<string | null>(null);
+  const [repPage, setRepPage] = useState(1);
+  const [repHasMore, setRepHasMore] = useState(true);
+
+  // Tabelas de preço
+  const [tabelas, setTabelas] = useState<Tabela[]>([]);
+  const [tabelasLoading, setTabelasLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     // Identificação
     codigoCliente: '',
@@ -101,7 +117,9 @@ export const ClientesTab = () => {
     checkouts: 0,
     nielsen: '',
     rede: '',
-    tabelas: '',
+    tabelaId: 0,
+    representanteId: '',
+    representanteNome: '',
     descontoFinanceiroBoleto: 0,
     observacaoComercial: '',
     segmentoId: 0,
@@ -171,12 +189,51 @@ export const ClientesTab = () => {
     loadClients();
   }, []);
 
-  // Carregar rotas quando abrir os dialogs de criação/edição
+  // Carregar rotas e tabelas quando abrir os dialogs de criação/edição
   useEffect(() => {
     if (createOpen || editOpen) {
       loadRotas();
+      loadTabelas();
     }
   }, [createOpen, editOpen]);
+
+  // Carregar representantes quando abrir dialog de busca
+  const REP_LIMIT = 100;
+  const loadReps = async (reset = false) => {
+    if (loadingReps) return;
+    setLoadingReps(true);
+    setRepsError(null);
+    try {
+      const nextPage = reset ? 1 : repPage + 1;
+      const data = await representativesService.find(repSearch || undefined, nextPage, REP_LIMIT);
+      setRepresentatives((prev) => {
+        const combined = reset ? data : [...prev, ...data];
+        const unique = combined.filter((r, i, arr) => arr.findIndex((x) => x.id === r.id) === i);
+        return unique;
+      });
+      setRepPage(nextPage);
+      setRepHasMore(Array.isArray(data) && data.length === REP_LIMIT);
+    } catch (e: any) {
+      setRepsError(String(e));
+    } finally {
+      setLoadingReps(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!repSearchOpen) return;
+    loadReps(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repSearchOpen]);
+
+  useEffect(() => {
+    if (!repSearchOpen) return;
+    const t = setTimeout(() => {
+      loadReps(true);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repSearch]);
 
   const loadRotas = async () => {
     setRotasLoading(true);
@@ -187,6 +244,18 @@ export const ClientesTab = () => {
       console.error('Erro ao carregar rotas:', e);
     } finally {
       setRotasLoading(false);
+    }
+  };
+
+  const loadTabelas = async () => {
+    setTabelasLoading(true);
+    try {
+      const data = await metadataService.getTabelas();
+      setTabelas(data);
+    } catch (e) {
+      console.error('Erro ao carregar tabelas:', e);
+    } finally {
+      setTabelasLoading(false);
     }
   };
 
@@ -269,7 +338,9 @@ const createEmptyFormData = () => ({
   checkouts: 0,
   nielsen: '',
   rede: '',
-  tabelas: '',
+  tabelaId: 0,
+  representanteId: '',
+  representanteNome: '',
   descontoFinanceiroBoleto: 0,
   observacaoComercial: '',
   segmentoId: 0,
@@ -367,7 +438,9 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
         checkouts: Number(d.checkouts ?? 0),
         nielsen: String(d.nielsen ?? ''),
         rede: String(d.rede_id ?? d.rede ?? ''),
-        tabelas: String(d.tabelas ?? ''),
+        tabelaId: Number(d.tabela_id ?? d.tabelaId ?? 0),
+        representanteId: String(d.representante_id ?? d.representanteId ?? d.representante?.id ?? ''),
+        representanteNome: String(d.representante_nome ?? d.representanteNome ?? d.representante?.nome ?? ''),
         descontoFinanceiroBoleto: Number(d.desconto_financeiro_boleto ?? d.descontoFinanceiroBoleto ?? 0),
         observacaoComercial: String(d.observacao_comercial ?? d.observacaoComercial ?? ''),
         segmentoId: Number(d.segmento_id ?? d.segmentoId ?? 0),
@@ -1097,19 +1170,24 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
                 {/* Tabelas de preços / Permite venda */}
                 <div className="grid grid-cols-12 gap-3 items-end mt-4">
                   <div className="col-span-5">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabelas de preços *</label>
-                    <div className="flex gap-1">
-                      <Input className="h-8 text-sm" value={formData.tabelas} onChange={(e) => setFormData({ ...formData, tabelas: e.target.value })} />
-                      <Select>
-                        <SelectTrigger className="h-8 text-sm w-16">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          <SelectItem value="1">1</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
+                    <Select
+                      value={formData.tabelaId ? String(formData.tabelaId) : ''}
+                      onValueChange={(v) => setFormData({ ...formData, tabelaId: parseInt(v) || 0 })}
+                      disabled={tabelasLoading}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder={tabelasLoading ? 'Carregando...' : 'Selecione a tabela'} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="0">Nenhuma</SelectItem>
+                        {tabelas.map((t) => (
+                          <SelectItem key={t.id} value={String(t.id)}>
+                            {t.codigo ? `${t.codigo} - ${t.descricao}` : t.descricao}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-7">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Permite venda nas empresas (ex: 01,02..)</label>
@@ -1121,15 +1199,59 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
-                    <Select>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        <SelectItem value="rep1">Representante 1</SelectItem>
-                        <SelectItem value="rep2">Representante 2</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start h-8 text-sm">
+                          {formData.representanteId ? `${formData.representanteId} - ${formData.representanteNome}` : 'Selecione...'}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Buscar Representante</DialogTitle>
+                        </DialogHeader>
+                        <Input
+                          placeholder="Digite nome ou código..."
+                          value={repSearch}
+                          onChange={(e) => setRepSearch(e.target.value)}
+                          autoFocus
+                        />
+                        <ScrollArea className="h-64 mt-2" onScrollCapture={(e) => {
+                          const el = e.currentTarget;
+                          if (repHasMore && !loadingReps && el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+                            loadReps(false);
+                          }
+                        }}>
+                          {loadingReps ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
+                          ) : repsError ? (
+                            <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
+                          ) : representatives.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {representatives.map((r) => (
+                                <Button
+                                  key={r.id}
+                                  variant="ghost"
+                                  className="w-full justify-start text-sm h-9"
+                                  onClick={() => {
+                                    setFormData({
+                                      ...formData,
+                                      representanteId: r.codigoRepresentante || r.id,
+                                      representanteNome: r.nome,
+                                    });
+                                    setRepSearchOpen(false);
+                                    setRepSearch('');
+                                  }}
+                                >
+                                  {r.codigoRepresentante || r.id} - {r.nome}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
 
@@ -1530,17 +1652,80 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabelas de preços *</label>
-                      <Input className="h-8 text-sm" value={formData.tabelas} onChange={(e) => setFormData({ ...formData, tabelas: e.target.value })} />
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
+                      <Select
+                        value={formData.tabelaId ? String(formData.tabelaId) : ''}
+                        onValueChange={(v) => setFormData({ ...formData, tabelaId: parseInt(v) || 0 })}
+                        disabled={tabelasLoading}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={tabelasLoading ? 'Carregando...' : 'Selecione a tabela'} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="0">Nenhuma</SelectItem>
+                          {tabelas.map((t) => (
+                            <SelectItem key={t.id} value={String(t.id)}>
+                              {t.codigo ? `${t.codigo} - ${t.descricao}` : t.descricao}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
-                      <Select>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          <SelectItem value="rep1">Representante 1</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start h-8 text-sm">
+                            {formData.representanteId ? `${formData.representanteId} - ${formData.representanteNome}` : 'Selecione...'}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Buscar Representante</DialogTitle>
+                          </DialogHeader>
+                          <Input
+                            placeholder="Digite nome ou código..."
+                            value={repSearch}
+                            onChange={(e) => setRepSearch(e.target.value)}
+                            autoFocus
+                          />
+                          <ScrollArea className="h-64 mt-2" onScrollCapture={(e) => {
+                            const el = e.currentTarget;
+                            if (repHasMore && !loadingReps && el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+                              loadReps(false);
+                            }
+                          }}>
+                            {loadingReps ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
+                            ) : repsError ? (
+                              <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
+                            ) : representatives.length === 0 ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
+                            ) : (
+                              <div className="space-y-1">
+                                {representatives.map((r) => (
+                                  <Button
+                                    key={r.id}
+                                    variant="ghost"
+                                    className="w-full justify-start text-sm h-9"
+                                    onClick={() => {
+                                      setFormData({
+                                        ...formData,
+                                        representanteId: r.codigoRepresentante || r.id,
+                                        representanteNome: r.nome,
+                                      });
+                                      setRepSearchOpen(false);
+                                      setRepSearch('');
+                                    }}
+                                  >
+                                    {r.codigoRepresentante || r.id} - {r.nome}
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
 
