@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Plus, Pencil, Trash2, Info, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
-import { metadataService, Rota, Tabela } from '@/services/metadataService';
+import { metadataService, Rota, Tabela, Uf, Cidade } from '@/services/metadataService';
 import { representativesService, Representative } from '@/services/representativesService';
 import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from './ClientInfoModal';
@@ -81,6 +81,12 @@ export const ClientesTab = () => {
   // Tabelas de preço
   const [tabelas, setTabelas] = useState<Tabela[]>([]);
   const [tabelasLoading, setTabelasLoading] = useState(false);
+
+  // UFs e Cidades
+  const [ufsApi, setUfsApi] = useState<Uf[]>([]);
+  const [ufsLoading, setUfsLoading] = useState(false);
+  const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
+  const [cidadesLoading, setCidadesLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     // Identificação
@@ -189,13 +195,23 @@ export const ClientesTab = () => {
     loadClients();
   }, []);
 
-  // Carregar rotas e tabelas quando abrir os dialogs de criação/edição
+  // Carregar rotas, tabelas e UFs quando abrir os dialogs de criação/edição
   useEffect(() => {
     if (createOpen || editOpen) {
       loadRotas();
       loadTabelas();
+      loadUfs();
     }
   }, [createOpen, editOpen]);
+
+  // Carregar cidades quando UF mudar
+  useEffect(() => {
+    if (formData.uf && (createOpen || editOpen)) {
+      loadCidades(formData.uf);
+    } else {
+      setCidadesApi([]);
+    }
+  }, [formData.uf, createOpen, editOpen]);
 
   // Carregar representantes quando abrir dialog de busca
   const REP_LIMIT = 100;
@@ -256,6 +272,30 @@ export const ClientesTab = () => {
       console.error('Erro ao carregar tabelas:', e);
     } finally {
       setTabelasLoading(false);
+    }
+  };
+
+  const loadUfs = async () => {
+    setUfsLoading(true);
+    try {
+      const data = await metadataService.getUfs();
+      setUfsApi(data);
+    } catch (e) {
+      console.error('Erro ao carregar UFs:', e);
+    } finally {
+      setUfsLoading(false);
+    }
+  };
+
+  const loadCidades = async (uf: string) => {
+    setCidadesLoading(true);
+    try {
+      const data = await metadataService.getCidadesPorUf(uf);
+      setCidadesApi(data);
+    } catch (e) {
+      console.error('Erro ao carregar cidades:', e);
+    } finally {
+      setCidadesLoading(false);
     }
   };
 
@@ -825,19 +865,41 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-2">
-                    <Select value={formData.uf} onValueChange={(v) => setFormData({ ...formData, uf: v })}>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">UF *</label>
+                    <Select
+                      value={formData.uf}
+                      onValueChange={(v) => setFormData({ ...formData, uf: v, cidade: '', cidadeId: 0 })}
+                      disabled={ufsLoading}
+                    >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="UF" />
+                        <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
-                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                        {ufsApi.map(u => (
+                          <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="col-span-5">
-                    <Input className="h-8 text-sm" placeholder="Cidade" value={formData.cidade} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} />
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade *</label>
+                    <Select
+                      value={formData.cidadeId ? String(formData.cidadeId) : ''}
+                      onValueChange={(v) => {
+                        const cid = cidadesApi.find(c => String(c.cidade_id) === v);
+                        setFormData({ ...formData, cidadeId: parseInt(v) || 0, cidade: cid?.nome_cidade || '' });
+                      }}
+                      disabled={cidadesLoading || !formData.uf}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder={cidadesLoading ? 'Carregando...' : (formData.uf ? 'Selecione' : 'Selecione UF')} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50 max-h-60">
+                        {cidadesApi.map(c => (
+                          <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
@@ -1462,17 +1524,41 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-2">
-                      <Select value={formData.uf} onValueChange={(v) => setFormData({ ...formData, uf: v })}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="UF" /></SelectTrigger>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">UF *</label>
+                      <Select
+                        value={formData.uf}
+                        onValueChange={(v) => setFormData({ ...formData, uf: v, cidade: '', cidadeId: 0 })}
+                        disabled={ufsLoading}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
+                        </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
-                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                          {ufsApi.map(u => (
+                            <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="col-span-5">
-                      <Input className="h-8 text-sm" placeholder="Cidade" value={formData.cidade} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} />
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade *</label>
+                      <Select
+                        value={formData.cidadeId ? String(formData.cidadeId) : ''}
+                        onValueChange={(v) => {
+                          const cid = cidadesApi.find(c => String(c.cidade_id) === v);
+                          setFormData({ ...formData, cidadeId: parseInt(v) || 0, cidade: cid?.nome_cidade || '' });
+                        }}
+                        disabled={cidadesLoading || !formData.uf}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={cidadesLoading ? 'Carregando...' : (formData.uf ? 'Selecione' : 'Selecione UF')} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50 max-h-60">
+                          {cidadesApi.map(c => (
+                            <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
