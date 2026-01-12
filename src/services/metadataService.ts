@@ -57,6 +57,21 @@ export interface Rota {
   inativo?: boolean;
 }
 
+export interface Uf {
+  uf: string;
+  nome_uf: string;
+  codigo_ibge: string | null;
+  fuso: number;
+}
+
+export interface Cidade {
+  cidade_id: number;
+  codigo_cidade: string;
+  nome_cidade: string;
+  codigo_ibge: string | null;
+  uf: string;
+}
+
 function normalizeOperacao(raw: any): Operacao {
   const id = raw?.operacao_id ?? raw?.id ?? raw?.codigo ?? raw?.codigo_operacao ?? '';
   const codigo = raw?.codigo_operacao ?? raw?.codigo ?? String(id ?? '');
@@ -425,6 +440,82 @@ export const metadataService = {
         const bc = String(b.codigo || b.id || '');
         return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
       });
+      return mapped;
+    } catch (e) {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
+
+  // UFs disponíveis - GET /api/ufs
+  getUfs: async (): Promise<Uf[]> => {
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    try {
+      const url = `${API_BASE}/api/ufs`;
+      const headers: Record<string, string> = { accept: 'application/json' };
+      const res = await apiClient.fetch(url, { method: 'GET', headers });
+
+      if (!res.ok) {
+        let message = 'Falha ao buscar UFs';
+        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        return Promise.reject(message);
+      }
+
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+
+      const normalize = (raw: any): Uf => ({
+        uf: String(raw?.uf ?? '').trim(),
+        nome_uf: String(raw?.nome_uf ?? '').trim(),
+        codigo_ibge: raw?.codigo_ibge ?? null,
+        fuso: Number(raw?.fuso ?? -3),
+      });
+
+      const mapped = arr.map(normalize).filter((u) => u.uf.length === 2);
+      mapped.sort((a, b) => a.uf.localeCompare(b.uf, 'pt-BR'));
+      return mapped;
+    } catch (e) {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
+
+  // Cidades por UF - GET /api/cidades-por-uf?empresaId=...&uf=...&q=...
+  getCidadesPorUf: async (uf: string, query?: string): Promise<Cidade[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    try {
+      const params = new URLSearchParams();
+      params.set('empresaId', String(empresa.empresa_id));
+      params.set('uf', uf);
+      if (query) params.set('q', query);
+
+      const url = `${API_BASE}/api/cidades-por-uf?${params.toString()}`;
+      const headers: Record<string, string> = { accept: 'application/json' };
+      const res = await apiClient.fetch(url, { method: 'GET', headers });
+
+      if (!res.ok) {
+        let message = 'Falha ao buscar cidades';
+        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        return Promise.reject(message);
+      }
+
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+
+      const normalize = (raw: any): Cidade => ({
+        cidade_id: Number(raw?.cidade_id ?? 0),
+        codigo_cidade: String(raw?.codigo_cidade ?? '').trim(),
+        nome_cidade: String(raw?.nome_cidade ?? '').trim(),
+        codigo_ibge: raw?.codigo_ibge ?? null,
+        uf: String(raw?.uf ?? '').trim(),
+      });
+
+      const mapped = arr.map(normalize).filter((c) => c.nome_cidade.length > 0);
+      mapped.sort((a, b) => a.nome_cidade.localeCompare(b.nome_cidade, 'pt-BR', { numeric: true, sensitivity: 'base' }));
       return mapped;
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
