@@ -14,6 +14,7 @@ import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota } from '@/services/metadataService';
 import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from './ClientInfoModal';
+import { ClientFormModal } from './ClientFormModal';
 import { cn } from '@/lib/utils';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
@@ -620,296 +621,33 @@ const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
       </Dialog>
 
       {/* Create Client */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Novo Cliente</DialogTitle>
-          </DialogHeader>
-          <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-              <TabsTrigger value="comercial">Comercial</TabsTrigger>
-              <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-              <TabsTrigger value="itinerario">Representantes</TabsTrigger>
-            </TabsList>
-
-            <div className="flex-1 overflow-y-auto mt-4 pr-2">
-              {/* Identificação */}
-              <TabsContent value="identificacao" className="m-0 space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-                  <div className="flex items-center gap-2 h-8">
-                    <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
-                    <label className="text-sm">Inativo</label>
-                  </div>
-                  <FormField label="CNPJ/CPF" value={formData.cnpjCpf} onChange={(v) => {
-                    setFormData({ ...formData, cnpjCpf: v });
-                    cnpjLookupRef.current?.(v);
-                  }} />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}
-                  >
-                    Consultar CNPJ
-                  </Button>
-                  <FormField label="Insc. Est." value={formData.inscEstadual} onChange={(v) => setFormData({ ...formData, inscEstadual: v })} />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <FormField label="Nome" value={formData.nome} onChange={(v) => setFormData({ ...formData, nome: v })} className="col-span-2 md:col-span-3" />
-                  <FormField label="Insc. Mun." value={formData.inscMunicipal} onChange={(v) => setFormData({ ...formData, inscMunicipal: v })} />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <FormField label="Fantasia" value={formData.fantasia} onChange={(v) => setFormData({ ...formData, fantasia: v })} className="col-span-2 md:col-span-3" />
-                  <FormField label="RG" value={formData.rg} onChange={(v) => setFormData({ ...formData, rg: v })} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <FormField label="Endereço" value={formData.endereco} onChange={(v) => setFormData({ ...formData, endereco: v })} className="md:col-span-3" />
-                  <FormField label="Número" value={formData.numero} onChange={(v) => setFormData({ ...formData, numero: v })} />
-                </div>
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                  <FormField label="Bairro" value={formData.bairro} onChange={(v) => setFormData({ ...formData, bairro: v })} />
-                  <FormField label="UF" value={formData.uf} onChange={(v) => setFormData({ ...formData, uf: v })} className="col-span-1" />
-                  <FormField label="Cidade" value={formData.cidade} onChange={(v) => setFormData({ ...formData, cidade: v })} className="col-span-2" />
-                  <FormField label="CEP" value={formData.cep} onChange={(v) => setFormData({ ...formData, cep: v })} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField label="Complemento" value={formData.complemento} onChange={(v) => setFormData({ ...formData, complemento: v })} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Telefone" value={formData.telefone} onChange={(v) => setFormData({ ...formData, telefone: v })} />
-                  <FormField label="Fax" value={formData.fax} onChange={(v) => setFormData({ ...formData, fax: v })} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} />
-                  <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota</label>
-                  <Select 
-                    value={formData.rotaId ? String(formData.rotaId) : ''} 
-                    onValueChange={(v) => setFormData({ ...formData, rotaId: parseInt(v) || 0 })}
-                    disabled={rotasLoading}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder={rotasLoading ? 'Carregando...' : 'Selecione a rota'} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="0">Nenhuma</SelectItem>
-                      {rotas.map((rota) => (
-                        <SelectItem key={rota.id} value={String(rota.id)}>
-                          {rota.codigo_rota ? `${rota.codigo_rota} - ${rota.label}` : rota.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TabsContent>
-
-              {/* Comercial */}
-              <TabsContent value="comercial" className="m-0 space-y-4">
-                <div className="grid grid-cols-3 gap-3">
-                  <FormField label="Contato 1" value={formData.contato1Nome} onChange={(v) => setFormData({ ...formData, contato1Nome: v })} />
-                  <FormField label="Celular" value={formData.contato1Celular} onChange={(v) => setFormData({ ...formData, contato1Celular: v })} />
-                  <FormField label="Aniversário" value={formData.contato1Aniversario} onChange={(v) => setFormData({ ...formData, contato1Aniversario: v })} />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <FormField label="Contato 2" value={formData.contato2Nome} onChange={(v) => setFormData({ ...formData, contato2Nome: v })} />
-                  <FormField label="Celular" value={formData.contato2Celular} onChange={(v) => setFormData({ ...formData, contato2Celular: v })} />
-                  <FormField label="Aniversário" value={formData.contato2Aniversario} onChange={(v) => setFormData({ ...formData, contato2Aniversario: v })} />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <FormField label="Classe" value={formData.classe} onChange={(v) => setFormData({ ...formData, classe: v })} />
-                  <FormField label="Checkouts" value={formData.checkouts} onChange={(v) => setFormData({ ...formData, checkouts: parseInt(v) || 0 })} type="number" />
-                  <FormField label="Nielsen" value={formData.nielsen} onChange={(v) => setFormData({ ...formData, nielsen: v })} />
-                  <FormField label="Rede" value={formData.rede} onChange={(v) => setFormData({ ...formData, rede: v })} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Tabelas" value={formData.tabelas} onChange={(v) => setFormData({ ...formData, tabelas: v })} />
-                  <FormField label="Desc. Fin. Boleto %" value={formData.descontoFinanceiroBoleto} onChange={(v) => setFormData({ ...formData, descontoFinanceiroBoleto: parseFloat(v) || 0 })} type="number" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação Comercial</label>
-                  <Textarea value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })} rows={3} />
-                </div>
-              </TabsContent>
-
-              {/* Financeiro */}
-              <TabsContent value="financeiro" className="m-0 space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <FormField label="Crédito" value={formData.credito} onChange={(v) => setFormData({ ...formData, credito: v })} />
-                  <div className="flex items-center gap-2 pt-6">
-                    <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
-                    <label className="text-sm">Boleto</label>
-                  </div>
-                  <FormField label="Prazo" value={formData.prazo} onChange={(v) => setFormData({ ...formData, prazo: v })} />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <FormField label="Limite" value={formData.limite} onChange={(v) => setFormData({ ...formData, limite: parseFloat(v) || 0 })} type="number" />
-                  <FormField label="Aberto" value={formData.aberto} onChange={(v) => setFormData({ ...formData, aberto: parseFloat(v) || 0 })} type="number" />
-                  <FormField label="Disponível" value={formData.disponivel} onChange={(v) => setFormData({ ...formData, disponivel: parseFloat(v) || 0 })} type="number" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação Financeiro</label>
-                  <Textarea value={formData.observacaoFinanceiro} onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: e.target.value })} rows={3} />
-                </div>
-              </TabsContent>
-
-              {/* Itinerário */}
-              <TabsContent value="itinerario" className="m-0 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Rota ID" value={formData.rotaId} onChange={(v) => setFormData({ ...formData, rotaId: parseInt(v) || 0 })} type="number" />
-                  <FormField label="Segmento ID" value={formData.segmentoId} onChange={(v) => setFormData({ ...formData, segmentoId: parseInt(v) || 0 })} type="number" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Forma Pagto ID" value={formData.formaPagtoId} onChange={(v) => setFormData({ ...formData, formaPagtoId: parseInt(v) || 0 })} type="number" />
-                  <FormField label="Prazo Pagto ID" value={formData.prazoPagtoId} onChange={(v) => setFormData({ ...formData, prazoPagtoId: parseInt(v) || 0 })} type="number" />
-                </div>
-              </TabsContent>
-            </div>
-          </Tabs>
-          {formError && <div className="text-sm text-destructive mt-2">{formError}</div>}
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={formLoading}>Cancelar</Button>
-            <Button onClick={submitCreate} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClientFormModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        onSuccess={() => {
+          setSelectedClients([]);
+          loadClients();
+        }}
+      />
 
       {/* Edit Client */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Editar Cliente</DialogTitle>
-          </DialogHeader>
-          {detailLoading ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">Carregando dados do cliente...</div>
-          ) : (
-            <>
-              <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-                  <TabsTrigger value="comercial">Comercial</TabsTrigger>
-                  <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-                  <TabsTrigger value="itinerario">Representantes</TabsTrigger>
-                </TabsList>
+      <ClientFormModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        mode="edit"
+        clientId={editId}
+        onSuccess={() => {
+          setSelectedClients([]);
+          loadClients();
+        }}
+      />
 
-                <div className="flex-1 overflow-y-auto mt-4 pr-2">
-                  <TabsContent value="identificacao" className="m-0 space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="flex items-center gap-2 pt-6">
-                        <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
-                        <label className="text-sm">Inativo</label>
-                      </div>
-                      <FormField label="CNPJ/CPF" value={formData.cnpjCpf} onChange={(v) => {
-                        setFormData({ ...formData, cnpjCpf: v });
-                        cnpjLookupRef.current?.(v);
-                      }} />
-                      <FormField label="Insc. Est." value={formData.inscEstadual} onChange={(v) => setFormData({ ...formData, inscEstadual: v })} />
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <FormField label="Nome" value={formData.nome} onChange={(v) => setFormData({ ...formData, nome: v })} className="col-span-2 md:col-span-3" />
-                      <FormField label="Insc. Mun." value={formData.inscMunicipal} onChange={(v) => setFormData({ ...formData, inscMunicipal: v })} />
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <FormField label="Fantasia" value={formData.fantasia} onChange={(v) => setFormData({ ...formData, fantasia: v })} className="col-span-2 md:col-span-3" />
-                      <FormField label="RG" value={formData.rg} onChange={(v) => setFormData({ ...formData, rg: v })} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <FormField label="Endereço" value={formData.endereco} onChange={(v) => setFormData({ ...formData, endereco: v })} className="md:col-span-3" />
-                      <FormField label="Número" value={formData.numero} onChange={(v) => setFormData({ ...formData, numero: v })} />
-                    </div>
-                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                      <FormField label="Bairro" value={formData.bairro} onChange={(v) => setFormData({ ...formData, bairro: v })} />
-                      <FormField label="UF" value={formData.uf} onChange={(v) => setFormData({ ...formData, uf: v })} className="col-span-1" />
-                      <FormField label="Cidade" value={formData.cidade} onChange={(v) => setFormData({ ...formData, cidade: v })} className="col-span-2" />
-                      <FormField label="CEP" value={formData.cep} onChange={(v) => setFormData({ ...formData, cep: v })} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormField label="Telefone" value={formData.telefone} onChange={(v) => setFormData({ ...formData, telefone: v })} />
-                      <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota</label>
-                      <Select 
-                        value={formData.rotaId ? String(formData.rotaId) : ''} 
-                        onValueChange={(v) => setFormData({ ...formData, rotaId: parseInt(v) || 0 })}
-                        disabled={rotasLoading}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder={rotasLoading ? 'Carregando...' : 'Selecione a rota'} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          <SelectItem value="0">Nenhuma</SelectItem>
-                          {rotas.map((rota) => (
-                            <SelectItem key={rota.id} value={String(rota.id)}>
-                              {rota.codigo_rota ? `${rota.codigo_rota} - ${rota.label}` : rota.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="comercial" className="m-0 space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
-                      <FormField label="Contato 1" value={formData.contato1Nome} onChange={(v) => setFormData({ ...formData, contato1Nome: v })} />
-                      <FormField label="Celular" value={formData.contato1Celular} onChange={(v) => setFormData({ ...formData, contato1Celular: v })} />
-                      <FormField label="Aniversário" value={formData.contato1Aniversario} onChange={(v) => setFormData({ ...formData, contato1Aniversario: v })} />
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <FormField label="Classe" value={formData.classe} onChange={(v) => setFormData({ ...formData, classe: v })} />
-                      <FormField label="Rede" value={formData.rede} onChange={(v) => setFormData({ ...formData, rede: v })} />
-                      <FormField label="Tabelas" value={formData.tabelas} onChange={(v) => setFormData({ ...formData, tabelas: v })} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação Comercial</label>
-                      <Textarea value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })} rows={2} />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="financeiro" className="m-0 space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <FormField label="Crédito" value={formData.credito} onChange={(v) => setFormData({ ...formData, credito: v })} />
-                      <div className="flex items-center gap-2 pt-6">
-                        <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
-                        <label className="text-sm">Boleto</label>
-                      </div>
-                      <FormField label="Prazo" value={formData.prazo} onChange={(v) => setFormData({ ...formData, prazo: v })} />
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <FormField label="Limite" value={formData.limite} onChange={(v) => setFormData({ ...formData, limite: parseFloat(v) || 0 })} type="number" />
-                      <FormField label="Aberto" value={formData.aberto} onChange={(v) => setFormData({ ...formData, aberto: parseFloat(v) || 0 })} type="number" />
-                      <FormField label="Disponível" value={formData.disponivel} onChange={(v) => setFormData({ ...formData, disponivel: parseFloat(v) || 0 })} type="number" />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="itinerario" className="m-0 space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormField label="Rota ID" value={formData.rotaId} onChange={(v) => setFormData({ ...formData, rotaId: parseInt(v) || 0 })} type="number" />
-                      <FormField label="Segmento ID" value={formData.segmentoId} onChange={(v) => setFormData({ ...formData, segmentoId: parseInt(v) || 0 })} type="number" />
-                    </div>
-                  </TabsContent>
-                </div>
-              </Tabs>
-              {formError && <div className="text-sm text-destructive mt-2">{formError}</div>}
-              <DialogFooter className="mt-4">
-                <Button variant="outline" onClick={() => setEditOpen(false)} disabled={formLoading}>Cancelar</Button>
-                <Button onClick={submitEdit} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Client Info Modal */}
-      {clientInfoId && (
-        <ClientInfoModal 
-          open={clientInfoOpen} 
-          onOpenChange={setClientInfoOpen} 
-          clienteId={clientInfoId} 
-        />
-      )}
+      <ClientInfoModal
+        open={clientInfoOpen}
+        onOpenChange={setClientInfoOpen}
+        clienteId={clientInfoId}
+      />
     </div>
   );
 };
