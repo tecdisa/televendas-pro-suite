@@ -367,6 +367,10 @@ export const clientsService = {
     rota?: string | number;
     redeId?: number;
     rede?: string | number;
+    tabelaId?: number;
+    tabelaIds?: number[];
+    representanteId?: string;
+    representanteIds?: string[];
     limite?: number;
     limiteCredito?: number;
     formaPagtoId?: number;
@@ -446,6 +450,10 @@ export const clientsService = {
       rota: string | number;
       redeId: number;
       rede: string | number;
+      tabelaId: number;
+      tabelaIds: number[];
+      representanteId: string;
+      representanteIds: string[];
       limite: number;
       limiteCredito: number;
       formaPagtoId: number;

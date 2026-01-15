@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Plus, Pencil, Trash2, Info, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
-import { metadataService, Rota, Tabela, Uf, Cidade } from '@/services/metadataService';
+import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto } from '@/services/metadataService';
 import { representativesService, Representative } from '@/services/representativesService';
 import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from './ClientInfoModal';
@@ -26,19 +26,142 @@ const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   };
 };
 
-const FormField = ({ label, value, onChange, type = 'text', className = '' }: { 
+const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
+const toUpperTrimValue = (value: string | number | null | undefined) => String(value ?? '').trim().toUpperCase();
+const formatPhone = (value: string | number | null | undefined) => {
+  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 11);
+  if (!digits) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  const ddd = digits.slice(0, 2);
+  const rest = digits.slice(2);
+  if (rest.length <= 4) return `(${ddd}) ${rest}`;
+  if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+};
+const formatCpf = (value: string | number | null | undefined) => {
+  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 11);
+  if (!digits) return '';
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+};
+const formatRg = (value: string | number | null | undefined) => {
+  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 9);
+  if (!digits) return '';
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}-${digits.slice(8)}`;
+};
+const formatCep = (value: string | number | null | undefined) => {
+  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 8);
+  if (!digits) return '';
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+};
+const handleUpperChange = (e: ChangeEvent<HTMLInputElement>) => {
+  e.currentTarget.value = toUpperValue(e.currentTarget.value);
+};
+const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>) => {
+  e.currentTarget.value = formatPhone(e.currentTarget.value);
+};
+const handleCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
+  e.currentTarget.value = formatCpf(e.currentTarget.value);
+};
+const handleCepChange = (e: ChangeEvent<HTMLInputElement>) => {
+  e.currentTarget.value = formatCep(e.currentTarget.value);
+};
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (value: string) => emailRegex.test(value.trim());
+const getTabelaLabel = (tabela: Tabela) => (tabela.codigo ? `${tabela.codigo} - ${tabela.descricao}` : tabela.descricao);
+const summarizeSelection = (items: string[], emptyLabel = 'Selecione...') => {
+  const filtered = Array.from(new Set(items.filter(Boolean)));
+  if (filtered.length === 0) return emptyLabel;
+  if (filtered.length <= 2) return filtered.join(', ');
+  return `${filtered.slice(0, 2).join(', ')} +${filtered.length - 2}`;
+};
+const normalizeTabelaIds = (value: any, fallback?: any) => {
+  const ids: number[] = [];
+  const pushId = (id: any) => {
+    const num = Number(id);
+    if (Number.isFinite(num) && num > 0) ids.push(num);
+  };
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      if (!item) return;
+      if (typeof item === 'object') {
+        pushId(item.id ?? item.tabela_id ?? item.tabelaId ?? item.codigo ?? item.cod);
+        return;
+      }
+      pushId(item);
+    });
+  } else if (value && typeof value === 'object') {
+    pushId(value.id ?? value.tabela_id ?? value.tabelaId ?? value.codigo ?? value.cod);
+  } else if (value != null) {
+    pushId(value);
+  }
+  if (!ids.length && fallback != null) pushId(fallback);
+  return Array.from(new Set(ids));
+};
+const normalizeRepresentantes = (value: any, fallbackId?: any, fallbackNome?: any) => {
+  const reps: Array<{ id: string; nome: string }> = [];
+  const pushRep = (id: any, nome?: any) => {
+    const idStr = String(id ?? '').trim();
+    if (!idStr) return;
+    if (reps.some((rep) => rep.id === idStr)) return;
+    reps.push({ id: idStr, nome: toUpperValue(nome ?? '') });
+  };
+  if (Array.isArray(value)) {
+    value.forEach((rep) => {
+      if (!rep) return;
+      if (typeof rep === 'object') {
+        pushRep(
+          rep.codigoRepresentante ??
+            rep.codigo_representante ??
+            rep.codigo ??
+            rep.cod ??
+            rep.matricula ??
+            rep.id,
+          rep.nome ?? rep.representante_nome ?? rep.representanteNome
+        );
+        return;
+      }
+      pushRep(rep);
+    });
+  } else if (value && typeof value === 'object') {
+    pushRep(
+      value.codigoRepresentante ??
+        value.codigo_representante ??
+        value.codigo ??
+        value.cod ??
+        value.matricula ??
+        value.id ??
+        value.representante_id ??
+        value.representanteId,
+      value.nome ?? value.representante_nome ?? value.representanteNome
+    );
+  }
+  if (!reps.length && fallbackId != null) {
+    pushRep(fallbackId, fallbackNome);
+  }
+  return reps;
+};
+
+const FormField = ({ label, value, onChange, type = 'text', className = '', upperCase = true }: { 
   label: string; 
   value?: string | number; 
   onChange: (value: string) => void;
   type?: string;
   className?: string;
+  upperCase?: boolean;
 }) => (
   <div className={className}>
     <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
     <Input 
       type={type}
       value={value ?? ''} 
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => onChange(upperCase ? toUpperValue(e.target.value) : e.target.value)}
       className="h-8 text-sm" 
     />
   </div>
@@ -68,6 +191,13 @@ export const ClientesTab = () => {
   const [clientInfoId, setClientInfoId] = useState<number | null>(null);
   const [rotas, setRotas] = useState<Rota[]>([]);
   const [rotasLoading, setRotasLoading] = useState(false);
+  const [segmentos, setSegmentos] = useState<SegmentoVenda[]>([]);
+  const [segmentosLoading, setSegmentosLoading] = useState(false);
+  const [redes, setRedes] = useState<Rede[]>([]);
+  const [redesLoading, setRedesLoading] = useState(false);
+  const [prazos, setPrazos] = useState<PrazoPagto[]>([]);
+  const [prazosLoading, setPrazosLoading] = useState(false);
+  const [prazosError, setPrazosError] = useState<string | null>(null);
 
   // Representantes
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
@@ -81,12 +211,29 @@ export const ClientesTab = () => {
   // Tabelas de preço
   const [tabelas, setTabelas] = useState<Tabela[]>([]);
   const [tabelasLoading, setTabelasLoading] = useState(false);
+  const [tabelaSearchOpen, setTabelaSearchOpen] = useState(false);
+  const [tabelaSearch, setTabelaSearch] = useState('');
 
   // UFs e Cidades
   const [ufsApi, setUfsApi] = useState<Uf[]>([]);
   const [ufsLoading, setUfsLoading] = useState(false);
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
+  const [complementarUf, setComplementarUf] = useState('');
+  const [complementarCidadeId, setComplementarCidadeId] = useState(0);
+  const [, setComplementarCidade] = useState('');
+  const [cidadesComplementares, setCidadesComplementares] = useState<Cidade[]>([]);
+  const [cidadesComplementaresLoading, setCidadesComplementaresLoading] = useState(false);
+  const [cobrancaUf, setCobrancaUf] = useState('');
+  const [cobrancaCidadeId, setCobrancaCidadeId] = useState(0);
+  const [, setCobrancaCidade] = useState('');
+  const [cidadesCobranca, setCidadesCobranca] = useState<Cidade[]>([]);
+  const [cidadesCobrancaLoading, setCidadesCobrancaLoading] = useState(false);
+
+  const onTabelaDialogChange = (open: boolean) => {
+    setTabelaSearchOpen(open);
+    if (!open) setTabelaSearch('');
+  };
 
   const [formData, setFormData] = useState({
     // Identificação
@@ -108,6 +255,7 @@ export const ClientesTab = () => {
     complemento: '',
     telefone: '',
     fax: '',
+    whatsapp: '',
     email: '',
     site: '',
     rota: '',
@@ -119,16 +267,13 @@ export const ClientesTab = () => {
     contato2Nome: '',
     contato2Celular: '',
     contato2Aniversario: '',
-    classe: '',
+    segmentoId: 1,
     checkouts: 0,
-    nielsen: '',
-    rede: '',
-    tabelaId: 0,
-    representanteId: '',
-    representanteNome: '',
+    redeId: 0,
+    tabelaIds: [] as number[],
+    representantes: [] as Array<{ id: string; nome: string }>,
     descontoFinanceiroBoleto: 0,
     observacaoComercial: '',
-    segmentoId: 1,
     // Financeiro
     credito: '',
     boleto: false,
@@ -164,20 +309,21 @@ export const ClientesTab = () => {
           const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
           const faxFmt = estab.fax ? String(estab.fax).trim() : prev.fax;
 
+          const cepValue = estab.cep ? normalizeCep(String(estab.cep)) : (d.cep ? normalizeCep(String(d.cep)) : prev.cep);
           return {
             ...prev,
             cnpjCpf: cleaned,
-            nome: d.razao_social || prev.nome,
-            fantasia: d.nome_fantasia || estab.nome_fantasia || prev.fantasia,
-            endereco: enderecoFmt,
-            numero: estab.numero || d.numero || prev.numero || '',
-            bairro: estab.bairro || d.bairro || prev.bairro,
-            cidade: cidadeObj.nome || estab.municipio || d.municipio || prev.cidade,
-            uf: estadoObj.sigla || estab.uf || d.uf || prev.uf,
-            cep: estab.cep ? normalizeCep(String(estab.cep)) : (d.cep ? normalizeCep(String(d.cep)) : prev.cep),
-            complemento,
-            telefone: telefoneFmt || prev.telefone,
-            fax: faxFmt,
+            nome: toUpperValue(d.razao_social || prev.nome),
+            fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
+            endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
+            numero: toUpperValue(estab.numero || d.numero || prev.numero || ''),
+            bairro: toUpperValue(estab.bairro || d.bairro || prev.bairro),
+            cidade: toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || prev.cidade),
+            uf: toUpperValue(estadoObj.sigla || estab.uf || d.uf || prev.uf),
+            cep: formatCep(cepValue),
+            complemento: toUpperValue(complemento),
+            telefone: formatPhone(telefoneFmt || prev.telefone),
+            fax: formatPhone(faxFmt),
             email: estab.email || prev.email,
             cidadeId: cidadeObj.id ?? prev.cidadeId,
           };
@@ -185,6 +331,38 @@ export const ClientesTab = () => {
         toast.success('Dados preenchidos pela consulta de CNPJ');
       } catch (e: any) {
         toast.error(String(e));
+      }
+    }, 600);
+  }
+
+  const cepLookupRef = useRef<(v: string) => void>();
+  if (!cepLookupRef.current) {
+    cepLookupRef.current = debounce(async (value: string) => {
+      const cleaned = normalizeCep(value);
+      if (cleaned.length !== 8) return;
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+        if (!res.ok) {
+          toast.error('Falha ao consultar CEP');
+          return;
+        }
+        const data = await res.json();
+        if (!data || data.erro) {
+          toast.error('CEP nao encontrado');
+          return;
+        }
+        setFormData((prev) => ({
+          ...prev,
+          cep: formatCep(cleaned),
+          endereco: toUpperValue(data.logradouro || prev.endereco),
+          complemento: toUpperValue(data.complemento || prev.complemento),
+          bairro: toUpperValue(data.bairro || prev.bairro),
+          cidade: toUpperValue(data.localidade || prev.cidade),
+          uf: toUpperValue(data.uf || prev.uf),
+        }));
+        toast.success('Endereco preenchido pelo CEP');
+      } catch (e: any) {
+        toast.error('Erro na consulta de CEP');
       }
     }, 600);
   }
@@ -201,6 +379,9 @@ export const ClientesTab = () => {
       loadRotas();
       loadTabelas();
       loadUfs();
+      loadSegmentos();
+      loadRedes();
+      loadPrazos();
     }
   }, [createOpen, editOpen]);
 
@@ -212,6 +393,31 @@ export const ClientesTab = () => {
       setCidadesApi([]);
     }
   }, [formData.uf, createOpen, editOpen]);
+
+  useEffect(() => {
+    if (complementarUf && (createOpen || editOpen)) {
+      loadCidadesComplementares(complementarUf);
+    } else {
+      setCidadesComplementares([]);
+    }
+  }, [complementarUf, createOpen, editOpen]);
+
+  useEffect(() => {
+    if (cobrancaUf && (createOpen || editOpen)) {
+      loadCidadesCobranca(cobrancaUf);
+    } else {
+      setCidadesCobranca([]);
+    }
+  }, [cobrancaUf, createOpen, editOpen]);
+
+  useEffect(() => {
+    if (!createOpen && !editOpen) {
+      setTabelaSearchOpen(false);
+      setTabelaSearch('');
+      setRepSearchOpen(false);
+      setRepSearch('');
+    }
+  }, [createOpen, editOpen]);
 
   // Carregar representantes quando abrir dialog de busca
   const REP_LIMIT = 100;
@@ -263,6 +469,44 @@ export const ClientesTab = () => {
     }
   };
 
+  const loadSegmentos = async () => {
+    setSegmentosLoading(true);
+    try {
+      const data = await metadataService.getSegmentosVendas();
+      setSegmentos(data);
+    } catch (e) {
+      console.error('Erro ao carregar segmentos de vendas:', e);
+    } finally {
+      setSegmentosLoading(false);
+    }
+  };
+
+  const loadRedes = async () => {
+    setRedesLoading(true);
+    try {
+      const data = await metadataService.getRedes();
+      setRedes(data);
+    } catch (e) {
+      console.error('Erro ao carregar redes:', e);
+    } finally {
+      setRedesLoading(false);
+    }
+  };
+
+  const loadPrazos = async () => {
+    setPrazosLoading(true);
+    setPrazosError(null);
+    try {
+      const data = await metadataService.getPrazos();
+      setPrazos(data);
+    } catch (e) {
+      console.error('Erro ao carregar prazos:', e);
+      setPrazosError(String(e));
+    } finally {
+      setPrazosLoading(false);
+    }
+  };
+
   const loadTabelas = async () => {
     setTabelasLoading(true);
     try {
@@ -296,6 +540,30 @@ export const ClientesTab = () => {
       console.error('Erro ao carregar cidades:', e);
     } finally {
       setCidadesLoading(false);
+    }
+  };
+
+  const loadCidadesComplementares = async (uf: string) => {
+    setCidadesComplementaresLoading(true);
+    try {
+      const data = await metadataService.getCidadesPorUf(uf);
+      setCidadesComplementares(data);
+    } catch (e) {
+      console.error('Erro ao carregar cidades:', e);
+    } finally {
+      setCidadesComplementaresLoading(false);
+    }
+  };
+
+  const loadCidadesCobranca = async (uf: string) => {
+    setCidadesCobrancaLoading(true);
+    try {
+      const data = await metadataService.getCidadesPorUf(uf);
+      setCidadesCobranca(data);
+    } catch (e) {
+      console.error('Erro ao carregar cidades:', e);
+    } finally {
+      setCidadesCobrancaLoading(false);
     }
   };
 
@@ -344,6 +612,31 @@ export const ClientesTab = () => {
 
   const ufs = [...new Set(clients.map(c => c.uf))];
   const cidades = [...new Set(clients.map(c => c.cidade))];
+  const tabelaSearchValue = tabelaSearch.trim().toUpperCase();
+  const filteredTabelas = tabelas.filter((t) => {
+    if (!tabelaSearchValue) return true;
+    return getTabelaLabel(t).toUpperCase().includes(tabelaSearchValue);
+  });
+  const selectedTabelaLabels = tabelas
+    .filter((t) => formData.tabelaIds.includes(t.id))
+    .map((t) => getTabelaLabel(t));
+  const tabelaSummary = summarizeSelection(
+    selectedTabelaLabels.length ? selectedTabelaLabels : formData.tabelaIds.map(String),
+    'Selecione uma ou mais tabelas'
+  );
+  const representanteSummary = summarizeSelection(
+    formData.representantes.map((rep) => rep.nome || rep.id),
+    'Selecione...'
+  );
+  const toggleTabelaId = (id: number, checked: boolean) => {
+    setFormData((prev) => {
+      const exists = prev.tabelaIds.includes(id);
+      const nextIds = checked && !exists
+        ? [...prev.tabelaIds, id]
+        : (!checked && exists ? prev.tabelaIds.filter((item) => item !== id) : prev.tabelaIds);
+      return { ...prev, tabelaIds: nextIds };
+    });
+  };
 
 const createEmptyFormData = () => ({
   codigoCliente: '',
@@ -364,6 +657,7 @@ const createEmptyFormData = () => ({
   complemento: '',
   telefone: '',
   fax: '',
+  whatsapp: '',
   email: '',
   site: '',
   rota: '',
@@ -374,16 +668,13 @@ const createEmptyFormData = () => ({
   contato2Nome: '',
   contato2Celular: '',
   contato2Aniversario: '',
-  classe: '',
+  segmentoId: 1,
   checkouts: 0,
-  nielsen: '',
-  rede: '',
-  tabelaId: 0,
-  representanteId: '',
-  representanteNome: '',
+  redeId: 0,
+  tabelaIds: [] as number[],
+  representantes: [] as Array<{ id: string; nome: string }>,
   descontoFinanceiroBoleto: 0,
   observacaoComercial: '',
-  segmentoId: 1,
   credito: '',
   boleto: false,
   prazo: '',
@@ -401,10 +692,19 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
   const num = Number(value);
   return Number.isFinite(num) && num > 0 ? num : fallback;
 };
-
   const openCreateDialog = () => {
     setFormError(null);
     setFormData(createEmptyFormData());
+    setComplementarUf('');
+    setComplementarCidadeId(0);
+    setComplementarCidade('');
+    setCidadesComplementares([]);
+    setCobrancaUf('');
+    setCobrancaCidadeId(0);
+    setCobrancaCidade('');
+    setCidadesCobranca([]);
+    setTabelaSearchOpen(false);
+    setTabelaSearch('');
     setCreateOpen(true);
   };
 
@@ -414,10 +714,26 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
       setFormError('Preencha Nome e CNPJ/CPF');
       return;
     }
+    const emailValue = formData.email.trim();
+    if (emailValue && !isValidEmail(emailValue)) {
+      setFormError('Email inválido');
+      return;
+    }
+    const tabelaId = formData.tabelaIds[0];
+    const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
+    const representanteId = representanteIds[0];
+    const redeId = ensurePositiveId(formData.redeId, 0);
     try {
       setFormLoading(true);
+      const { representantes, tabelaIds, ...payloadBase } = formData;
       await clientsService.create({
-        ...formData,
+        ...payloadBase,
+        tabelaIds,
+        tabelaId: tabelaId || undefined,
+        representanteIds,
+        representanteId: representanteId || undefined,
+        redeId: redeId || undefined,
+        email: emailValue,
         cidadeId: Number(formData.cidadeId) || 0,
         segmentoId: ensurePositiveId(formData.segmentoId),
         rotaId: Number(formData.rotaId) || 0,
@@ -444,60 +760,77 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
     setEditId(id);
     setFormError(null);
     setDetailLoading(true);
+    setComplementarUf('');
+    setComplementarCidadeId(0);
+    setComplementarCidade('');
+    setCidadesComplementares([]);
+    setCobrancaUf('');
+    setCobrancaCidadeId(0);
+    setCobrancaCidade('');
+    setCidadesCobranca([]);
+    setTabelaSearchOpen(false);
+    setTabelaSearch('');
     setEditOpen(true);
     try {
       const detail = await clientsService.getDetail(id);
       // Try to map common fields; fallback to empty strings
-        const d = detail || {};
-        setFormData({
-          codigoCliente: String(d.codigo_cliente ?? d.codigoCliente ?? d.codigo ?? ''),
-          inativo: Boolean(d.inativo),
-          cnpjCpf: String(d.cnpj_cpf ?? d.cnpjCpf ?? d.cnpj ?? d.cpf ?? ''),
-        inscEstadual: String(d.inscricao_estadual ?? d.inscEstadual ?? d.insc_estadual ?? ''),
-        inscMunicipal: String(d.inscricao_municipal ?? d.inscMunicipal ?? d.insc_municipal ?? ''),
-        rg: String(d.rg ?? ''),
-          nome: String(d.nome ?? d.razao_social ?? ''),
-          fantasia: String(d.fantasia ?? ''),
-          endereco: String(d.endereco ?? d.logradouro ?? ''),
-          numero: String((d as any)?.numero ?? (d as any)?.num ?? ''),
-          bairro: String(d.bairro ?? '').trim(),
-          uf: String(d.uf ?? d.estado ?? ''),
-          cidade: String(d.cidade ?? '').trim(),
-        cidadeId: Number(d.cidade_id ?? d.cidadeId ?? 0),
-        cep: String(d.cep ?? ''),
-        complemento: String(d.complemento ?? '').trim(),
-        telefone: String(d.fone ?? d.telefone ?? '').trim(),
-        fax: String(d.fax ?? ''),
-        email: String(d.email ?? '').trim(),
-        site: String(d.site ?? ''),
-        rota: String(d.rota ?? ''),
-        rotaId: Number(d.rota_id ?? d.rotaId ?? 0),
-        contato1Nome: String(d.contato ?? d.contatos?.[0]?.nome ?? '').trim(),
-        contato1Celular: String(d.celular ?? d.contatos?.[0]?.celular ?? '').trim(),
-        contato1Aniversario: String(d.contatos?.[0]?.aniversario ?? ''),
-        contato2Nome: String(d.contatos?.[1]?.nome ?? ''),
-        contato2Celular: String(d.contatos?.[1]?.celular ?? ''),
-        contato2Aniversario: String(d.contatos?.[1]?.aniversario ?? ''),
-        classe: String(d.classe ?? ''),
-        checkouts: Number(d.checkouts ?? 0),
-        nielsen: String(d.nielsen ?? ''),
-        rede: String(d.rede_id ?? d.rede ?? ''),
-        tabelaId: Number(d.tabela_id ?? d.tabelaId ?? 0),
-        representanteId: String(d.representante_id ?? d.representanteId ?? d.representante?.id ?? ''),
-        representanteNome: String(d.representante_nome ?? d.representanteNome ?? d.representante?.nome ?? ''),
+      const d = detail || {};
+      const tabelaIds = normalizeTabelaIds(
+        d.tabelas ?? d.tabelas_preco ?? d.tabelasPreco ?? d.tabelas_precos ?? d.tabelasPrecos,
+        d.tabela_id ?? d.tabelaId
+      );
+      const representantes = normalizeRepresentantes(
+        d.representantes ?? d.representante,
+        d.representante_codigo ?? d.representanteCod ?? d.representante_cod ?? d.representante_id ?? d.representanteId ?? d.representante?.id,
+        d.representante_nome ?? d.representanteNome ?? d.representante?.nome
+      );
+      setFormData({
+        codigoCliente: toUpperValue(d.codigo_cliente ?? d.codigoCliente ?? d.codigo ?? ''),
+        inativo: Boolean(d.inativo),
+        cnpjCpf: toUpperValue(d.cnpj_cpf ?? d.cnpjCpf ?? d.cnpj ?? d.cpf ?? ''),
+        inscEstadual: toUpperValue(d.inscricao_estadual ?? d.inscEstadual ?? d.insc_estadual ?? ''),
+          inscMunicipal: toUpperValue(d.inscricao_municipal ?? d.inscMunicipal ?? d.insc_municipal ?? ''),
+          rg: formatRg(d.rg ?? ''),
+          nome: toUpperValue(d.nome ?? d.razao_social ?? ''),
+          fantasia: toUpperValue(d.fantasia ?? ''),
+          endereco: toUpperValue(d.endereco ?? d.logradouro ?? ''),
+          numero: toUpperValue((d as any)?.numero ?? (d as any)?.num ?? ''),
+          bairro: toUpperTrimValue(d.bairro ?? ''),
+          uf: toUpperValue(d.uf ?? d.estado ?? ''),
+          cidade: toUpperTrimValue(d.cidade ?? ''),
+          cidadeId: Number(d.cidade_id ?? d.cidadeId ?? 0),
+          cep: formatCep(d.cep ?? ''),
+          complemento: toUpperTrimValue(d.complemento ?? ''),
+          telefone: formatPhone(d.fone ?? d.telefone ?? ''),
+          fax: formatPhone(d.fax ?? ''),
+          whatsapp: formatPhone(d.whatsapp ?? ''),
+          email: String(d.email ?? '').trim(),
+          site: String(d.site ?? ''),
+          rota: toUpperValue(d.rota ?? ''),
+          rotaId: Number(d.rota_id ?? d.rotaId ?? 0),
+          contato1Nome: toUpperTrimValue(d.contato ?? d.contatos?.[0]?.nome ?? ''),
+          contato1Celular: formatPhone(d.celular ?? d.contatos?.[0]?.celular ?? ''),
+          contato1Aniversario: String(d.contatos?.[0]?.aniversario ?? ''),
+          contato2Nome: toUpperValue(d.contatos?.[1]?.nome ?? ''),
+          contato2Celular: formatPhone(d.contatos?.[1]?.celular ?? ''),
+          contato2Aniversario: String(d.contatos?.[1]?.aniversario ?? ''),
+          segmentoId: ensurePositiveId(d.segmento_id ?? d.segmentoId),
+          checkouts: Number(d.checkouts ?? 0),
+        redeId: ensurePositiveId(d.rede_id ?? d.redeId ?? d.rede, 0),
+        tabelaIds,
+        representantes,
         descontoFinanceiroBoleto: Number(d.desconto_financeiro_boleto ?? d.descontoFinanceiroBoleto ?? 0),
-        observacaoComercial: String(d.observacao_comercial ?? d.observacaoComercial ?? ''),
-        segmentoId: ensurePositiveId(d.segmento_id ?? d.segmentoId),
-        credito: String(d.credito ?? ''),
-        boleto: Boolean(d.boleto),
-        prazo: String(d.prazo ?? ''),
-        limite: Number(d.limite_credito ?? d.limite ?? 0),
-        aberto: Number(d.aberto ?? 0),
-        disponivel: Number(d.disponivel ?? 0),
-        observacaoFinanceiro: String(d.observacao_financeiro ?? d.observacaoFinanceiro ?? ''),
-        formaPagtoId: ensurePositiveId(d.forma_pagto_id ?? d.formaPagtoId),
-        prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
-      });
+        observacaoComercial: toUpperValue(d.observacao_comercial ?? d.observacaoComercial ?? ''),
+          credito: toUpperValue(d.credito ?? ''),
+          boleto: Boolean(d.boleto),
+          prazo: String(d.prazo ?? '').trim(),
+          limite: Number(d.limite_credito ?? d.limite ?? 0),
+          aberto: Number(d.aberto ?? 0),
+          disponivel: Number(d.disponivel ?? 0),
+          observacaoFinanceiro: toUpperValue(d.observacao_financeiro ?? d.observacaoFinanceiro ?? ''),
+          formaPagtoId: ensurePositiveId(d.forma_pagto_id ?? d.formaPagtoId),
+          prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
+        });
     } catch (e: any) {
       setFormError(String(e));
     } finally {
@@ -508,10 +841,26 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
   const submitEdit = async () => {
     if (!editId) return;
     setFormError(null);
+    const emailValue = formData.email.trim();
+    if (emailValue && !isValidEmail(emailValue)) {
+      setFormError('Email inválido');
+      return;
+    }
+    const tabelaId = formData.tabelaIds[0];
+    const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
+    const representanteId = representanteIds[0];
+    const redeId = ensurePositiveId(formData.redeId, 0);
     try {
       setFormLoading(true);
+      const { representantes, tabelaIds, ...payloadBase } = formData;
       await clientsService.update(editId, {
-        ...formData,
+        ...payloadBase,
+        tabelaIds,
+        tabelaId: tabelaId || undefined,
+        representanteIds,
+        representanteId: representanteId || undefined,
+        redeId: redeId || undefined,
+        email: emailValue,
         cidadeId: Number(formData.cidadeId) || 0,
         segmentoId: ensurePositiveId(formData.segmentoId),
         rotaId: Number(formData.rotaId) || 0,
@@ -742,14 +1091,14 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
           <DialogHeader>
             <DialogTitle>Cadastrar novo cliente</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
+          <Tabs defaultValue="identificacao" className="flex-1 min-h-0 flex flex-col">
             <TabsList className="w-auto">
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
               <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
               <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto mt-4 pr-2">
+            <div className="flex-1 overflow-y-auto mt-4 px-2 pb-2">
               {/* =================== Identificação =================== */}
               <TabsContent value="identificacao" className="m-0 space-y-4">
                 {/* CNPJ/CPF + Tipo + Código */}
@@ -761,7 +1110,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                         className="h-8 text-sm flex-1"
                         value={formData.cnpjCpf}
                         onChange={(e) => {
-                          setFormData({ ...formData, cnpjCpf: e.target.value });
+                          setFormData({ ...formData, cnpjCpf: toUpperValue(e.target.value) });
                           cnpjLookupRef.current?.(e.target.value);
                         }}
                       />
@@ -783,7 +1132,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-                    <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3 flex items-center gap-2">
                     <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
@@ -795,7 +1144,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
-                    <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3 flex items-center gap-2">
                     <Checkbox />
@@ -807,7 +1156,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
-                    <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3 flex items-center gap-2">
                     <Checkbox />
@@ -819,7 +1168,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
-                    <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-4">
                     <Select defaultValue="contribuinte">
@@ -835,7 +1184,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
@@ -848,8 +1197,22 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep *</label>
                     <div className="flex gap-1">
-                      <Input className="h-8 text-sm" placeholder="-" value={formData.cep} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} />
-                      <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Input
+                        className="h-8 text-sm"
+                        placeholder="-"
+                        value={formData.cep}
+                        onChange={(e) => {
+                          const next = formatCep(e.target.value);
+                          setFormData({ ...formData, cep: next });
+                          cepLookupRef.current?.(next);
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => cepLookupRef.current?.(formData.cep)}
+                      >
                         <Search className="h-4 w-4" />
                       </Button>
                     </div>
@@ -859,7 +1222,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-12">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
-                    <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
                   </div>
                 </div>
 
@@ -868,7 +1231,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">UF *</label>
                     <Select
                       value={formData.uf}
-                      onValueChange={(v) => setFormData({ ...formData, uf: v, cidade: '', cidadeId: 0 })}
+                      onValueChange={(v) => setFormData({ ...formData, uf: toUpperValue(v), cidade: '', cidadeId: 0 })}
                       disabled={ufsLoading}
                     >
                       <SelectTrigger className="h-8 text-sm">
@@ -887,7 +1250,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                       value={formData.cidadeId ? String(formData.cidadeId) : ''}
                       onValueChange={(v) => {
                         const cid = cidadesApi.find(c => String(c.cidade_id) === v);
-                        setFormData({ ...formData, cidadeId: parseInt(v) || 0, cidade: cid?.nome_cidade || '' });
+                        setFormData({ ...formData, cidadeId: parseInt(v) || 0, cidade: toUpperValue(cid?.nome_cidade || '') });
                       }}
                       disabled={cidadesLoading || !formData.uf}
                     >
@@ -905,14 +1268,14 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
                   </div>
                   <div className="col-span-3">
-                    <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Complem.</label>
-                    <Input className="h-8 text-sm" value={formData.complemento} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.complemento} onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })} />
                   </div>
                 </div>
 
@@ -924,21 +1287,21 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
-                    <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} />
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
-                    <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: e.target.value })} />
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: formatPhone(e.target.value) })} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
-                    <Input className="h-8 text-sm" placeholder="( )" />
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.whatsapp} onChange={(e) => setFormData({ ...formData, whatsapp: formatPhone(e.target.value) })} />
                   </div>
                 </div>
 
-                <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" />
-                <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" />
-                <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" />
+                <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" upperCase={false} />
+                <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" upperCase={false} />
+                <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" upperCase={false} />
 
                 <div className="max-w-lg">
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota entrega *</label>
@@ -968,7 +1331,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
@@ -980,11 +1343,11 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleCpfChange} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
-                    <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: formatRg(e.target.value) })} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
@@ -996,7 +1359,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-8">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4 flex items-center gap-2">
                     <Checkbox />
@@ -1006,31 +1369,63 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-2">
-                    <Select>
+                    <Select
+                      value={complementarUf}
+                      onValueChange={(v) => {
+                        const nextUf = toUpperValue(v);
+                        setComplementarUf(nextUf);
+                        setComplementarCidadeId(0);
+                        setComplementarCidade('');
+                      }}
+                      disabled={ufsLoading}
+                    >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="UF" />
+                        <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
-                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                        {ufsApi.map(u => (
+                          <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="col-span-4">
-                    <Input className="h-8 text-sm" placeholder="Cidade" />
+                    <Select
+                      value={complementarCidadeId ? String(complementarCidadeId) : ''}
+                      onValueChange={(v) => {
+                        const cid = cidadesComplementares.find(c => String(c.cidade_id) === v);
+                        setComplementarCidadeId(parseInt(v) || 0);
+                        setComplementarCidade(toUpperValue(cid?.nome_cidade || ''));
+                      }}
+                      disabled={cidadesComplementaresLoading || !complementarUf}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue
+                          placeholder={
+                            cidadesComplementaresLoading
+                              ? 'Carregando...'
+                              : (complementarUf ? 'Selecione' : 'Selecione UF')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50 max-h-60">
+                        {cidadesComplementares.map(c => (
+                          <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-                    <Input className="h-8 text-sm" placeholder="-" />
+                    <Input className="h-8 text-sm" placeholder="-" onChange={handleCepChange} />
                   </div>
                   <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
-                <FormField label="Email" value="" onChange={() => {}} className="max-w-md" />
+                <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-md" upperCase={false} />
 
                 {/* Seção Referências */}
                 <div className="border-b border-primary/50 pb-1 mt-4">
@@ -1040,26 +1435,26 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4">
-                    <Input className="h-8 text-sm" placeholder="Agência" />
+                    <Input className="h-8 text-sm" placeholder="Agência" onChange={handleUpperChange} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-4">
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4">
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4">
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
@@ -1067,23 +1462,23 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-start mt-4">
                   <div className="col-span-6 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
-                    <Input className="h-8 text-sm" />
-                    <Input className="h-8 text-sm" />
-                    <Input className="h-8 text-sm" />
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-6 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
                     <div className="flex gap-2">
-                      <Input className="h-8 text-sm flex-1" />
+                      <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
                       <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
                     </div>
                     <div className="flex gap-2">
-                      <Input className="h-8 text-sm flex-1" />
+                      <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
                       <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
                     </div>
                     <div className="flex gap-2">
-                      <Input className="h-8 text-sm flex-1" />
+                      <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
                       <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
                     </div>
                   </div>
@@ -1094,11 +1489,11 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-8">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contador</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
-                    <Input className="h-8 text-sm" placeholder="( )" />
+                    <Input className="h-8 text-sm" placeholder="( )" onChange={handlePhoneChange} />
                   </div>
                 </div>
 
@@ -1110,33 +1505,65 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-8">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-2">
-                    <Select>
+                    <Select
+                      value={cobrancaUf}
+                      onValueChange={(v) => {
+                        const nextUf = toUpperValue(v);
+                        setCobrancaUf(nextUf);
+                        setCobrancaCidadeId(0);
+                        setCobrancaCidade('');
+                      }}
+                      disabled={ufsLoading}
+                    >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="UF" />
+                        <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
-                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                        {ufsApi.map(u => (
+                          <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="col-span-5">
-                    <Input className="h-8 text-sm" placeholder="Cidade" />
+                    <Select
+                      value={cobrancaCidadeId ? String(cobrancaCidadeId) : ''}
+                      onValueChange={(v) => {
+                        const cid = cidadesCobranca.find(c => String(c.cidade_id) === v);
+                        setCobrancaCidadeId(parseInt(v) || 0);
+                        setCobrancaCidade(toUpperValue(cid?.nome_cidade || ''));
+                      }}
+                      disabled={cidadesCobrancaLoading || !cobrancaUf}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue
+                          placeholder={
+                            cidadesCobrancaLoading
+                              ? 'Carregando...'
+                              : (cobrancaUf ? 'Selecione' : 'Selecione UF')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50 max-h-60">
+                        {cidadesCobranca.map(c => (
+                          <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-                    <Input className="h-8 text-sm" placeholder="-" />
+                    <Input className="h-8 text-sm" placeholder="-" onChange={handleUpperChange} />
                   </div>
                   <div className="col-span-2">
                     <Button variant="outline" size="icon" className="h-8 w-8">
@@ -1152,11 +1579,11 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
-                    <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
-                    <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: e.target.value })} />
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: formatPhone(e.target.value) })} />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
@@ -1166,29 +1593,34 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-5">
-                    <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: e.target.value })} />
+                    <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3">
-                    <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: e.target.value })} />
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: formatPhone(e.target.value) })} />
                   </div>
                   <div className="col-span-4">
                     <Input type="date" className="h-8 text-sm" value={formData.contato2Aniversario} onChange={(e) => setFormData({ ...formData, contato2Aniversario: e.target.value })} />
                   </div>
                 </div>
 
-                {/* Classe / Checkouts / Nielsen / Dependência / Rede */}
+                {/* Segmentos / Checkouts / Dependência / Rede */}
                 <div className="grid grid-cols-12 gap-3 items-end mt-4">
                   <div className="col-span-6">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Classe *</label>
-                    <Select value={formData.classe} onValueChange={(v) => setFormData({ ...formData, classe: v })}>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Segmentos *</label>
+                    <Select
+                      value={formData.segmentoId ? String(formData.segmentoId) : ''}
+                      onValueChange={(v) => setFormData({ ...formData, segmentoId: parseInt(v) || 0 })}
+                      disabled={segmentosLoading}
+                    >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder={segmentosLoading ? 'Carregando...' : 'Selecione'} />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="A">A</SelectItem>
-                        <SelectItem value="B">B</SelectItem>
-                        <SelectItem value="C">C</SelectItem>
-                        <SelectItem value="D">D</SelectItem>
+                        {segmentos.map((segmento) => (
+                          <SelectItem key={segmento.id} value={String(segmento.id)}>
+                            {segmento.codigo ? `${segmento.codigo} - ${segmento.descricao}` : segmento.descricao}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1204,30 +1636,22 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Nielsen</label>
-                    <Select value={formData.nielsen} onValueChange={(v) => setFormData({ ...formData, nielsen: v })}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Rede</label>
-                    <Select value={formData.rede} onValueChange={(v) => setFormData({ ...formData, rede: v })}>
+                    <Select
+                      value={formData.redeId !== undefined && formData.redeId !== null ? String(formData.redeId) : ''}
+                      onValueChange={(v) => setFormData({ ...formData, redeId: parseInt(v) || 0 })}
+                      disabled={redesLoading}
+                    >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder={redesLoading ? 'Carregando...' : 'Selecione'} />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="propria">Própria</SelectItem>
-                        <SelectItem value="associada">Associada</SelectItem>
+                        <SelectItem value="0">Nenhuma</SelectItem>
+                        {redes.map((rede) => (
+                          <SelectItem key={rede.id} value={String(rede.id)}>
+                            {rede.codigo ? `${rede.codigo} - ${rede.descricao}` : rede.descricao}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1237,27 +1661,56 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end mt-4">
                   <div className="col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
-                    <Select
-                      value={formData.tabelaId ? String(formData.tabelaId) : ''}
-                      onValueChange={(v) => setFormData({ ...formData, tabelaId: parseInt(v) || 0 })}
-                      disabled={tabelasLoading}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder={tabelasLoading ? 'Carregando...' : 'Selecione a tabela'} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        <SelectItem value="0">Nenhuma</SelectItem>
-                        {tabelas.map((t) => (
-                          <SelectItem key={t.id} value={String(t.id)}>
-                            {t.codigo ? `${t.codigo} - ${t.descricao}` : t.descricao}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Dialog open={tabelaSearchOpen && createOpen} onOpenChange={onTabelaDialogChange}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start h-8 text-sm">
+                          {tabelaSummary}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Selecionar tabelas de preço</DialogTitle>
+                        </DialogHeader>
+                        <Input
+                          placeholder="Buscar tabela..."
+                          value={tabelaSearch}
+                          onChange={(e) => setTabelaSearch(e.target.value)}
+                          autoFocus
+                        />
+                        <ScrollArea className="h-64 mt-2">
+                          {tabelasLoading ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Carregando tabelas...</div>
+                          ) : tabelas.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma tabela disponível</div>
+                          ) : filteredTabelas.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma tabela encontrada</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {filteredTabelas.map((t) => {
+                                const checked = formData.tabelaIds.includes(t.id);
+                                const label = getTabelaLabel(t);
+                                return (
+                                  <label
+                                    key={t.id}
+                                    className={cn('flex items-center gap-2 rounded px-2 py-1 text-sm cursor-pointer', checked && 'bg-muted')}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(value) => toggleTabelaId(t.id, value === true)}
+                                    />
+                                    <span>{label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   <div className="col-span-7">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Permite venda nas empresas (ex: 01,02..)</label>
-                    <Input className="h-8 text-sm" />
+                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
@@ -1265,10 +1718,10 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
-                    <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
+                    <Dialog open={repSearchOpen && createOpen} onOpenChange={setRepSearchOpen}>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="w-full justify-start h-8 text-sm">
-                          {formData.representanteId ? `${formData.representanteId} - ${formData.representanteNome}` : 'Selecione...'}
+                          {representanteSummary}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
@@ -1295,24 +1748,34 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                             <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
                           ) : (
                             <div className="space-y-1">
-                              {representatives.map((r) => (
-                                <Button
-                                  key={r.id}
-                                  variant="ghost"
-                                  className="w-full justify-start text-sm h-9"
-                                  onClick={() => {
-                                    setFormData({
-                                      ...formData,
-                                      representanteId: r.codigoRepresentante || r.id,
-                                      representanteNome: r.nome,
-                                    });
-                                    setRepSearchOpen(false);
-                                    setRepSearch('');
-                                  }}
-                                >
-                                  {r.codigoRepresentante || r.id} - {r.nome}
-                                </Button>
-                              ))}
+                              {representatives.map((r) => {
+                                const repId = String(r.codigoRepresentante || r.id);
+                                const repNome = toUpperValue(r.nome);
+                                const checked = formData.representantes.some((rep) => rep.id === repId);
+                                return (
+                                  <label
+                                    key={r.id}
+                                    className={cn('flex items-center gap-2 rounded px-2 py-1 text-sm cursor-pointer', checked && 'bg-muted')}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(value) => {
+                                        const isChecked = value === true;
+                                        setFormData((prev) => {
+                                          const exists = prev.representantes.some((rep) => rep.id === repId);
+                                          const nextRepresentantes = isChecked && !exists
+                                            ? [...prev.representantes, { id: repId, nome: repNome }]
+                                            : (!isChecked && exists
+                                              ? prev.representantes.filter((rep) => rep.id !== repId)
+                                              : prev.representantes);
+                                          return { ...prev, representantes: nextRepresentantes };
+                                        });
+                                      }}
+                                    />
+                                    <span>{`${r.codigoRepresentante || r.id} - ${repNome}`}</span>
+                                  </label>
+                                );
+                              })}
                             </div>
                           )}
                         </ScrollArea>
@@ -1325,14 +1788,25 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
-                    <Select value={formData.prazo} onValueChange={(v) => setFormData({ ...formData, prazo: v })}>
+                    <Select
+                      value={formData.prazo}
+                      onValueChange={(v) => {
+                        const match =
+                          prazos.find((p) => p.descricao === v) ||
+                          prazos.find((p) => String(p.codigo || '').trim() === String(v).trim());
+                        setFormData({ ...formData, prazo: v, prazoPagtoId: match ? ensurePositiveId(match.id, 0) : 0 });
+                      }}
+                      disabled={prazosLoading || !!prazosError}
+                    >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder={prazosLoading ? 'Carregando...' : prazosError ? 'Erro ao carregar' : 'Selecione'} />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        <SelectItem value="30/40/50 DD">30/40/50 DD</SelectItem>
-                        <SelectItem value="30/60/90 DD">30/60/90 DD</SelectItem>
-                        <SelectItem value="A VISTA">A VISTA</SelectItem>
+                        {prazos.map((p) => (
+                          <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.descricao)}>
+                            {p.descricao}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1379,7 +1853,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-muted-foreground">Senha B2B</label>
-                      <Input className="h-8 text-sm w-32" />
+                      <Input className="h-8 text-sm w-32" onChange={handleUpperChange} />
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
@@ -1402,7 +1876,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <Textarea
                     className="min-h-[80px] text-sm"
                     value={formData.observacaoComercial}
-                    onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })}
                   />
                 </div>
               </TabsContent>
@@ -1425,21 +1899,21 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
           {detailLoading ? (
             <div className="py-6 text-center text-sm text-muted-foreground">Carregando dados do cliente...</div>
           ) : (
-            <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
+            <Tabs defaultValue="identificacao" className="flex-1 min-h-0 flex flex-col">
               <TabsList className="w-auto">
                 <TabsTrigger value="identificacao">Identificação</TabsTrigger>
                 <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
                 <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
               </TabsList>
 
-              <div className="flex-1 overflow-y-auto mt-4 pr-2">
+              <div className="flex-1 overflow-y-auto mt-4 px-2 pb-2">
                 {/* Identificação */}
                 <TabsContent value="identificacao" className="m-0 space-y-4">
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
-                      <div className="flex gap-1">
-                        <Input className="h-8 text-sm flex-1" value={formData.cnpjCpf} onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })} />
+                    <div className="flex gap-1">
+                        <Input className="h-8 text-sm flex-1" value={formData.cnpjCpf} onChange={(e) => setFormData({ ...formData, cnpjCpf: toUpperValue(e.target.value) })} />
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}>
                           <Search className="h-4 w-4" />
                         </Button>
@@ -1456,7 +1930,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-                      <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: e.target.value })} />
+                      <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: toUpperValue(e.target.value) })} />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
                       <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
@@ -1467,7 +1941,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
-                      <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
+                      <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
                       <Checkbox />
@@ -1478,7 +1952,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
-                      <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })} />
+                      <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
                       <Checkbox />
@@ -1489,7 +1963,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
-                      <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: e.target.value })} />
+                      <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
                     </div>
                     <div className="col-span-4">
                       <Select defaultValue="contribuinte">
@@ -1502,7 +1976,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                   </div>
 
@@ -1514,20 +1988,35 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     <div className="col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep *</label>
                       <div className="flex gap-1">
-                        <Input className="h-8 text-sm" value={formData.cep} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} />
-                        <Button variant="outline" size="icon" className="h-8 w-8"><Search className="h-4 w-4" /></Button>
+                        <Input
+                          className="h-8 text-sm"
+                          value={formData.cep}
+                          onChange={(e) => {
+                            const next = formatCep(e.target.value);
+                            setFormData({ ...formData, cep: next });
+                            cepLookupRef.current?.(next);
+                          }}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => cepLookupRef.current?.(formData.cep)}
+                        >
+                          <Search className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
 
-                  <FormField label="Endereço *" value={formData.endereco} onChange={(v) => setFormData({ ...formData, endereco: v })} />
+                  <FormField label="Endereço *" value={formData.endereco} onChange={(v) => setFormData({ ...formData, endereco: toUpperValue(v) })} />
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">UF *</label>
                       <Select
                         value={formData.uf}
-                        onValueChange={(v) => setFormData({ ...formData, uf: v, cidade: '', cidadeId: 0 })}
+                        onValueChange={(v) => setFormData({ ...formData, uf: toUpperValue(v), cidade: '', cidadeId: 0 })}
                         disabled={ufsLoading}
                       >
                         <SelectTrigger className="h-8 text-sm">
@@ -1546,7 +2035,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                         value={formData.cidadeId ? String(formData.cidadeId) : ''}
                         onValueChange={(v) => {
                           const cid = cidadesApi.find(c => String(c.cidade_id) === v);
-                          setFormData({ ...formData, cidadeId: parseInt(v) || 0, cidade: cid?.nome_cidade || '' });
+                          setFormData({ ...formData, cidadeId: parseInt(v) || 0, cidade: toUpperValue(cid?.nome_cidade || '') });
                         }}
                         disabled={cidadesLoading || !formData.uf}
                       >
@@ -1564,11 +2053,11 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
                     </div>
                     <div className="col-span-3">
-                      <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
+                      <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })} />
                     </div>
                   </div>
 
-                  <FormField label="Complem." value={formData.complemento} onChange={(v) => setFormData({ ...formData, complemento: v })} className="max-w-md" />
+                  <FormField label="Complem." value={formData.complemento} onChange={(v) => setFormData({ ...formData, complemento: toUpperValue(v) })} className="max-w-md" />
 
                   <div className="border-b border-primary/50 pb-1 mt-4">
                     <span className="text-sm font-medium text-primary">Telefones</span>
@@ -1576,22 +2065,22 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
-                      <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} />
-                    </div>
-                    <div className="col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
-                      <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: e.target.value })} />
-                    </div>
-                    <div className="col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
-                      <Input className="h-8 text-sm" placeholder="( )" />
-                    </div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })} />
                   </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: formatPhone(e.target.value) })} />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
+                    <Input className="h-8 text-sm" placeholder="( )" value={formData.whatsapp} onChange={(e) => setFormData({ ...formData, whatsapp: formatPhone(e.target.value) })} />
+                  </div>
+                </div>
 
-                  <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" />
-                  <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" />
-                  <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" />
+                  <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" upperCase={false} />
+                  <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" upperCase={false} />
+                  <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" upperCase={false} />
 
                   <div className="max-w-lg">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota entrega *</label>
@@ -1612,7 +2101,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                     <div className="col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
@@ -1622,12 +2111,12 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
-                      <Input className="h-8 text-sm" />
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
+                      <Input className="h-8 text-sm" onChange={handleCpfChange} />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
-                      <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: e.target.value })} />
+                      <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: formatRg(e.target.value) })} />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
@@ -1642,32 +2131,32 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                     <div className="col-span-4">
-                      <Input className="h-8 text-sm" placeholder="Agência" />
+                      <Input className="h-8 text-sm" placeholder="Agência" onChange={handleUpperChange} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-12 gap-3 items-start mt-4">
                     <div className="col-span-6 space-y-2">
                       <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
-                      <Input className="h-8 text-sm" />
-                      <Input className="h-8 text-sm" />
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                     <div className="col-span-6 space-y-2">
                       <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
                       <div className="flex gap-2">
-                        <Input className="h-8 text-sm flex-1" />
+                        <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
                         <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
                       </div>
                       <div className="flex gap-2">
-                        <Input className="h-8 text-sm flex-1" />
+                        <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
                         <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
                       </div>
                     </div>
@@ -1680,11 +2169,11 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-8">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-                      <Input className="h-8 text-sm" />
+                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
                   </div>
                 </TabsContent>
@@ -1692,13 +2181,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 {/* Dados Comerciais */}
                 <TabsContent value="comerciais" className="m-0 space-y-4">
                   <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-5">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
-                      <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: e.target.value })} />
-                    </div>
+                  <div className="col-span-5">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
+                      <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: toUpperValue(e.target.value) })} />
+                  </div>
                     <div className="col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
-                      <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: e.target.value })} />
+                      <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: formatPhone(e.target.value) })} />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
@@ -1707,11 +2196,11 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   </div>
 
                   <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-5">
-                      <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: e.target.value })} />
-                    </div>
+                  <div className="col-span-5">
+                      <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: toUpperValue(e.target.value) })} />
+                  </div>
                     <div className="col-span-3">
-                      <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: e.target.value })} />
+                      <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: formatPhone(e.target.value) })} />
                     </div>
                     <div className="col-span-4">
                       <Input type="date" className="h-8 text-sm" value={formData.contato2Aniversario} onChange={(e) => setFormData({ ...formData, contato2Aniversario: e.target.value })} />
@@ -1720,13 +2209,21 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                   <div className="grid grid-cols-12 gap-3 items-end mt-4">
                     <div className="col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Classe *</label>
-                      <Select value={formData.classe} onValueChange={(v) => setFormData({ ...formData, classe: v })}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Segmentos *</label>
+                      <Select
+                        value={formData.segmentoId ? String(formData.segmentoId) : ''}
+                        onValueChange={(v) => setFormData({ ...formData, segmentoId: parseInt(v) || 0 })}
+                        disabled={segmentosLoading}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={segmentosLoading ? 'Carregando...' : 'Selecione'} />
+                        </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          <SelectItem value="A">A</SelectItem>
-                          <SelectItem value="B">B</SelectItem>
-                          <SelectItem value="C">C</SelectItem>
+                          {segmentos.map((segmento) => (
+                            <SelectItem key={segmento.id} value={String(segmento.id)}>
+                              {segmento.codigo ? `${segmento.codigo} - ${segmento.descricao}` : segmento.descricao}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1742,31 +2239,83 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Rede</label>
                       <Select
-                        value={formData.tabelaId ? String(formData.tabelaId) : ''}
-                        onValueChange={(v) => setFormData({ ...formData, tabelaId: parseInt(v) || 0 })}
-                        disabled={tabelasLoading}
+                        value={formData.redeId !== undefined && formData.redeId !== null ? String(formData.redeId) : ''}
+                        onValueChange={(v) => setFormData({ ...formData, redeId: parseInt(v) || 0 })}
+                        disabled={redesLoading}
                       >
                         <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder={tabelasLoading ? 'Carregando...' : 'Selecione a tabela'} />
+                          <SelectValue placeholder={redesLoading ? 'Carregando...' : 'Selecione'} />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
                           <SelectItem value="0">Nenhuma</SelectItem>
-                          {tabelas.map((t) => (
-                            <SelectItem key={t.id} value={String(t.id)}>
-                              {t.codigo ? `${t.codigo} - ${t.descricao}` : t.descricao}
+                          {redes.map((rede) => (
+                            <SelectItem key={rede.id} value={String(rede.id)}>
+                              {rede.codigo ? `${rede.codigo} - ${rede.descricao}` : rede.descricao}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
-                      <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
+                      <Dialog open={tabelaSearchOpen && editOpen} onOpenChange={onTabelaDialogChange}>
                         <DialogTrigger asChild>
                           <Button variant="outline" className="w-full justify-start h-8 text-sm">
-                            {formData.representanteId ? `${formData.representanteId} - ${formData.representanteNome}` : 'Selecione...'}
+                            {tabelaSummary}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Selecionar tabelas de preço</DialogTitle>
+                          </DialogHeader>
+                          <Input
+                            placeholder="Buscar tabela..."
+                            value={tabelaSearch}
+                            onChange={(e) => setTabelaSearch(e.target.value)}
+                            autoFocus
+                          />
+                          <ScrollArea className="h-64 mt-2">
+                            {tabelasLoading ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">Carregando tabelas...</div>
+                            ) : tabelas.length === 0 ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma tabela disponível</div>
+                            ) : filteredTabelas.length === 0 ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma tabela encontrada</div>
+                            ) : (
+                              <div className="space-y-1">
+                                {filteredTabelas.map((t) => {
+                                  const checked = formData.tabelaIds.includes(t.id);
+                                  const label = getTabelaLabel(t);
+                                  return (
+                                    <label
+                                      key={t.id}
+                                      className={cn('flex items-center gap-2 rounded px-2 py-1 text-sm cursor-pointer', checked && 'bg-muted')}
+                                    >
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(value) => toggleTabelaId(t.id, value === true)}
+                                      />
+                                      <span>{label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
+                      <Dialog open={repSearchOpen && editOpen} onOpenChange={setRepSearchOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start h-8 text-sm">
+                            {representanteSummary}
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
@@ -1789,30 +2338,40 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                               <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
                             ) : repsError ? (
                               <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
-                            ) : representatives.length === 0 ? (
-                              <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
-                            ) : (
-                              <div className="space-y-1">
-                                {representatives.map((r) => (
-                                  <Button
+                          ) : representatives.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {representatives.map((r) => {
+                                const repId = String(r.codigoRepresentante || r.id);
+                                const repNome = toUpperValue(r.nome);
+                                const checked = formData.representantes.some((rep) => rep.id === repId);
+                                return (
+                                  <label
                                     key={r.id}
-                                    variant="ghost"
-                                    className="w-full justify-start text-sm h-9"
-                                    onClick={() => {
-                                      setFormData({
-                                        ...formData,
-                                        representanteId: r.codigoRepresentante || r.id,
-                                        representanteNome: r.nome,
-                                      });
-                                      setRepSearchOpen(false);
-                                      setRepSearch('');
-                                    }}
+                                    className={cn('flex items-center gap-2 rounded px-2 py-1 text-sm cursor-pointer', checked && 'bg-muted')}
                                   >
-                                    {r.codigoRepresentante || r.id} - {r.nome}
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(value) => {
+                                        const isChecked = value === true;
+                                        setFormData((prev) => {
+                                          const exists = prev.representantes.some((rep) => rep.id === repId);
+                                          const nextRepresentantes = isChecked && !exists
+                                            ? [...prev.representantes, { id: repId, nome: repNome }]
+                                            : (!isChecked && exists
+                                              ? prev.representantes.filter((rep) => rep.id !== repId)
+                                              : prev.representantes);
+                                          return { ...prev, representantes: nextRepresentantes };
+                                        });
+                                      }}
+                                    />
+                                    <span>{`${r.codigoRepresentante || r.id} - ${repNome}`}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
                           </ScrollArea>
                         </DialogContent>
                       </Dialog>
@@ -1822,11 +2381,25 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
-                      <Select value={formData.prazo} onValueChange={(v) => setFormData({ ...formData, prazo: v })}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <Select
+                        value={formData.prazo}
+                        onValueChange={(v) => {
+                          const match =
+                            prazos.find((p) => p.descricao === v) ||
+                            prazos.find((p) => String(p.codigo || '').trim() === String(v).trim());
+                          setFormData({ ...formData, prazo: v, prazoPagtoId: match ? ensurePositiveId(match.id, 0) : 0 });
+                        }}
+                        disabled={prazosLoading || !!prazosError}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={prazosLoading ? 'Carregando...' : prazosError ? 'Erro ao carregar' : 'Selecione'} />
+                        </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          <SelectItem value="30/40/50 DD">30/40/50 DD</SelectItem>
-                          <SelectItem value="30/60/90 DD">30/60/90 DD</SelectItem>
+                          {prazos.map((p) => (
+                            <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.descricao)}>
+                              {p.descricao}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1844,7 +2417,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Senha B2B</label>
-                        <Input className="h-8 text-sm w-32" />
+                        <Input className="h-8 text-sm w-32" onChange={handleUpperChange} />
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
@@ -1860,7 +2433,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
                   <div className="border-t pt-4 mt-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs.</label>
-                    <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })} />
+                    <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })} />
                   </div>
                 </TabsContent>
               </div>

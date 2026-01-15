@@ -72,6 +72,23 @@ export interface Cidade {
   uf: string;
 }
 
+export interface SegmentoVenda {
+  id: number | string;
+  codigo?: string;
+  descricao: string;
+  inativo?: boolean;
+}
+
+export interface Rede {
+  id: number | string;
+  codigo?: string;
+  descricao: string;
+  cidade?: string;
+  uf?: string;
+  email?: string;
+  inativo?: boolean;
+}
+
 function normalizeOperacao(raw: any): Operacao {
   const id = raw?.operacao_id ?? raw?.id ?? raw?.codigo ?? raw?.codigo_operacao ?? '';
   const codigo = raw?.codigo_operacao ?? raw?.codigo ?? String(id ?? '');
@@ -255,6 +272,107 @@ export const metadataService = {
         const ap = a.principal ? 1 : 0;
         const bp = b.principal ? 1 : 0;
         if (bp !== ap) return bp - ap; // principal primeiro
+        const ad = String(a.descricao || '');
+        const bd = String(b.descricao || '');
+        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
+        if (byDesc !== 0) return byDesc;
+        const ac = String(a.codigo || a.id || '');
+        const bc = String(b.codigo || b.id || '');
+        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
+      });
+      return mapped;
+    } catch (e) {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
+
+  // Segmentos de vendas
+  getSegmentosVendas: async (): Promise<SegmentoVenda[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    const normalize = (raw: any): SegmentoVenda => {
+      if (!raw) return { id: '', descricao: '' };
+      const id = raw?.segmento_id ?? raw?.id ?? raw?.codigo ?? '';
+      const codigo = raw?.codigo_segmento ?? raw?.codigo ?? undefined;
+      const descricao = raw?.descricao_segmento ?? raw?.descricao ?? raw?.nome ?? '';
+      return {
+        id: typeof id === 'number' ? id : String(id || '').trim(),
+        codigo: codigo ? String(codigo).trim() : undefined,
+        descricao: String(descricao || '').trim(),
+        inativo: Boolean(raw?.inativo ?? false),
+      };
+    };
+
+    try {
+      const params = new URLSearchParams();
+      params.set('empresaId', String(empresa.empresa_id));
+      const url = `${API_BASE}/api/metadata/segmentos-vendas?${params.toString()}`;
+      const headers: Record<string, string> = { accept: 'application/json' };
+      const res = await apiClient.fetch(url, { method: 'GET', headers });
+      if (!res.ok) {
+        let message = 'Falha ao buscar segmentos de vendas';
+        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        return Promise.reject(message);
+      }
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      const mapped = arr.map(normalize).filter((s) => String(s.descricao || '').trim().length > 0 && !s.inativo);
+      mapped.sort((a, b) => {
+        const ad = String(a.descricao || '');
+        const bd = String(b.descricao || '');
+        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
+        if (byDesc !== 0) return byDesc;
+        const ac = String(a.codigo || a.id || '');
+        const bc = String(b.codigo || b.id || '');
+        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
+      });
+      return mapped;
+    } catch (e) {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
+
+  // Redes
+  getRedes: async (): Promise<Rede[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    const normalize = (raw: any): Rede => {
+      if (!raw) return { id: '', descricao: '' };
+      const id = raw?.rede_id ?? raw?.id ?? raw?.codigo ?? '';
+      const codigo = raw?.codigo_rede ?? raw?.codigo ?? undefined;
+      const descricao = raw?.descricao_rede ?? raw?.descricao ?? raw?.nome ?? '';
+      return {
+        id: typeof id === 'number' ? id : String(id || '').trim(),
+        codigo: codigo ? String(codigo).trim() : undefined,
+        descricao: String(descricao || '').trim(),
+        cidade: raw?.cidade ? String(raw.cidade).trim() : undefined,
+        uf: raw?.uf ? String(raw.uf).trim() : undefined,
+        email: raw?.email ? String(raw.email).trim() : undefined,
+        inativo: Boolean(raw?.inativo ?? false),
+      };
+    };
+
+    try {
+      const params = new URLSearchParams();
+      params.set('empresaId', String(empresa.empresa_id));
+      const url = `${API_BASE}/api/metadata/redes?${params.toString()}`;
+      const headers: Record<string, string> = { accept: 'application/json' };
+      const res = await apiClient.fetch(url, { method: 'GET', headers });
+      if (!res.ok) {
+        let message = 'Falha ao buscar redes';
+        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        return Promise.reject(message);
+      }
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      const mapped = arr.map(normalize).filter((r) => String(r.descricao || '').trim().length > 0 && !r.inativo);
+      mapped.sort((a, b) => {
         const ad = String(a.descricao || '');
         const bd = String(b.descricao || '');
         const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);

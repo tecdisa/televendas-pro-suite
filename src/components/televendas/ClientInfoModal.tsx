@@ -38,7 +38,7 @@ interface ClientDetail {
   
   // Comercial
   contatos?: Array<{ nome?: string; celular?: string; aniversario?: string }>;
-  classe?: string;
+  segmento?: string;
   checkouts?: number;
   nielsen?: string;
   rede?: string;
@@ -114,7 +114,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
             celular: raw?.celular ?? raw?.whatsapp ?? raw?.comprador_fone ?? '',
             aniversario: raw?.comprador_data_nascimento ?? '',
           }] : [],
-          classe: raw?.segmento_id ? `Segmento ${raw.segmento_id}` : '',
+          segmento: raw?.segmento_id ? `Segmento ${raw.segmento_id}` : '',
           checkouts: raw?.checkouts ?? 0,
           nielsen: raw?.nielsen ?? '',
           rede: raw?.rede_id ? `Rede ${raw.rede_id}` : '',
@@ -252,7 +252,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                 )}
                 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <ReadOnlyField label="Classe" value={data?.classe} className="md:col-span-2" />
+                  <ReadOnlyField label="Segmentos" value={data?.segmento} className="md:col-span-2" />
                   <ReadOnlyField label="Checkouts" value={data?.checkouts} />
                 </div>
                 
