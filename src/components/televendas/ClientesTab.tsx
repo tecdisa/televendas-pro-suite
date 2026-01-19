@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, Plus, Pencil, Trash2, Info, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto } from '@/services/metadataService';
@@ -81,6 +81,13 @@ const summarizeSelection = (items: string[], emptyLabel = 'Selecione...') => {
   if (filtered.length <= 2) return filtered.join(', ');
   return `${filtered.slice(0, 2).join(', ')} +${filtered.length - 2}`;
 };
+const normalizeCityKey = (value: string | null | undefined) =>
+  String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
 const normalizeTabelaIds = (value: any, fallback?: any) => {
   const ids: number[] = [];
   const pushId = (id: any) => {
@@ -185,7 +192,9 @@ export const ClientesTab = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
+  const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [clientInfoOpen, setClientInfoOpen] = useState(false);
   const [clientInfoId, setClientInfoId] = useState<number | null>(null);
@@ -290,7 +299,11 @@ export const ClientesTab = () => {
   if (!cnpjLookupRef.current) {
     cnpjLookupRef.current = debounce(async (value: string) => {
       const cleaned = normalizeCnpj(value);
-      if (cleaned.length !== 14) return;
+      if (cleaned.length !== 14) {
+        setCnpjLookupLoading(false);
+        return;
+      }
+      setCnpjLookupLoading(true);
       try {
         const result = await clientsService.lookupCnpj(cleaned);
         if (!result || !result.data) return;
@@ -331,6 +344,8 @@ export const ClientesTab = () => {
         toast.success('Dados preenchidos pela consulta de CNPJ');
       } catch (e: any) {
         toast.error(String(e));
+      } finally {
+        setCnpjLookupLoading(false);
       }
     }, 600);
   }
@@ -339,7 +354,11 @@ export const ClientesTab = () => {
   if (!cepLookupRef.current) {
     cepLookupRef.current = debounce(async (value: string) => {
       const cleaned = normalizeCep(value);
-      if (cleaned.length !== 8) return;
+      if (cleaned.length !== 8) {
+        setCepLookupLoading(false);
+        return;
+      }
+      setCepLookupLoading(true);
       try {
         const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
         if (!res.ok) {
@@ -357,12 +376,15 @@ export const ClientesTab = () => {
           endereco: toUpperValue(data.logradouro || prev.endereco),
           complemento: toUpperValue(data.complemento || prev.complemento),
           bairro: toUpperValue(data.bairro || prev.bairro),
-          cidade: toUpperValue(data.localidade || prev.cidade),
-          uf: toUpperValue(data.uf || prev.uf),
+          cidade: data.localidade ? toUpperTrimValue(data.localidade) : prev.cidade,
+          uf: data.uf ? toUpperValue(data.uf) : prev.uf,
+          cidadeId: data.localidade || data.uf ? 0 : prev.cidadeId,
         }));
         toast.success('Endereco preenchido pelo CEP');
       } catch (e: any) {
         toast.error('Erro na consulta de CEP');
+      } finally {
+        setCepLookupLoading(false);
       }
     }, 600);
   }
@@ -393,6 +415,22 @@ export const ClientesTab = () => {
       setCidadesApi([]);
     }
   }, [formData.uf, createOpen, editOpen]);
+
+  useEffect(() => {
+    if (!formData.cidade || formData.cidadeId || cidadesApi.length === 0) return;
+    const target = normalizeCityKey(formData.cidade);
+    if (!target) return;
+    const match = cidadesApi.find((c) => normalizeCityKey(c.nome_cidade) === target);
+    if (!match) return;
+    setFormData((prev) => {
+      if (prev.cidadeId) return prev;
+      return {
+        ...prev,
+        cidadeId: Number(match.cidade_id) || 0,
+        cidade: toUpperTrimValue(match.nome_cidade),
+      };
+    });
+  }, [cidadesApi, formData.cidade, formData.cidadeId]);
 
   useEffect(() => {
     if (complementarUf && (createOpen || editOpen)) {
@@ -692,8 +730,47 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
   const num = Number(value);
   return Number.isFinite(num) && num > 0 ? num : fallback;
 };
+type ClientFormData = ReturnType<typeof createEmptyFormData>;
+
+const normalizeErrorMessages = (error: unknown): string[] => {
+  if (!error) return ['Erro desconhecido'];
+  if (Array.isArray(error)) return error.map((item) => String(item)).filter(Boolean);
+  const message = typeof error === 'string' ? error : (error as any)?.message ?? String(error);
+  const parts = String(message)
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return parts.length ? parts : [String(message)];
+};
+
+const validateFormData = (data: ClientFormData): string[] => {
+  const errors: string[] = [];
+  const hasText = (value: string | number | null | undefined) => String(value ?? '').trim().length > 0;
+  const isValidId = (value: number | string | null | undefined) =>
+    Number.isFinite(Number(value)) && Number(value) > 0;
+
+  if (!hasText(data.cnpjCpf)) errors.push('Informe o CNPJ/CPF.');
+  if (!hasText(data.nome)) errors.push('Informe a Razão Social/Nome.');
+  if (!hasText(data.cep)) errors.push('Informe o CEP.');
+
+  const ufValue = String(data.uf ?? '').trim();
+  if (!ufValue || ufValue.length < 2) errors.push('Informe a UF.');
+  if (!isValidId(data.cidadeId)) errors.push('Selecione a cidade.');
+
+  if (!hasText(data.endereco)) errors.push('Informe o endereço.');
+  if (!hasText(data.bairro)) errors.push('Informe o bairro.');
+  if (!isValidId(data.segmentoId)) errors.push('Selecione o segmento.');
+  if (!isValidId(data.rotaId)) errors.push('Selecione a rota de entrega.');
+  if (!isValidId(data.formaPagtoId)) errors.push('Selecione a forma de pagamento.');
+  if (!isValidId(data.prazoPagtoId)) errors.push('Selecione o prazo de pagamento.');
+
+  const emailValue = String(data.email ?? '').trim();
+  if (emailValue && !isValidEmail(emailValue)) errors.push('Email inválido.');
+
+  return errors;
+};
   const openCreateDialog = () => {
-    setFormError(null);
+    setFormErrors([]);
     setFormData(createEmptyFormData());
     setComplementarUf('');
     setComplementarCidadeId(0);
@@ -709,16 +786,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
   };
 
   const submitCreate = async () => {
-    setFormError(null);
-    if (!formData.nome || !formData.cnpjCpf) {
-      setFormError('Preencha Nome e CNPJ/CPF');
+    setFormErrors([]);
+    const errors = validateFormData(formData);
+    if (errors.length) {
+      setFormErrors(errors);
       return;
     }
     const emailValue = formData.email.trim();
-    if (emailValue && !isValidEmail(emailValue)) {
-      setFormError('Email inválido');
-      return;
-    }
     const tabelaId = formData.tabelaIds[0];
     const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
     const representanteId = representanteIds[0];
@@ -745,7 +819,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
       setSelectedClients([]);
       loadClients();
     } catch (e: any) {
-      setFormError(String(e));
+      setFormErrors(normalizeErrorMessages(e));
     } finally {
       setFormLoading(false);
     }
@@ -758,7 +832,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
     }
     const id = selectedClients[0];
     setEditId(id);
-    setFormError(null);
+    setFormErrors([]);
     setDetailLoading(true);
     setComplementarUf('');
     setComplementarCidadeId(0);
@@ -832,7 +906,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
           prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
         });
     } catch (e: any) {
-      setFormError(String(e));
+      setFormErrors(normalizeErrorMessages(e));
     } finally {
       setDetailLoading(false);
     }
@@ -840,12 +914,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 
   const submitEdit = async () => {
     if (!editId) return;
-    setFormError(null);
-    const emailValue = formData.email.trim();
-    if (emailValue && !isValidEmail(emailValue)) {
-      setFormError('Email inválido');
+    setFormErrors([]);
+    const errors = validateFormData(formData);
+    if (errors.length) {
+      setFormErrors(errors);
       return;
     }
+    const emailValue = formData.email.trim();
     const tabelaId = formData.tabelaIds[0];
     const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
     const representanteId = representanteIds[0];
@@ -872,7 +947,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
       setSelectedClients([]);
       loadClients();
     } catch (e: any) {
-      setFormError(String(e));
+      setFormErrors(normalizeErrorMessages(e));
     } finally {
       setFormLoading(false);
     }
@@ -1114,8 +1189,14 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                           cnpjLookupRef.current?.(e.target.value);
                         }}
                       />
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}>
-                        <Search className="h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}
+                        disabled={cnpjLookupLoading}
+                      >
+                        {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -1212,8 +1293,9 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => cepLookupRef.current?.(formData.cep)}
+                        disabled={cepLookupLoading}
                       >
-                        <Search className="h-4 w-4" />
+                        {cepLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -1887,7 +1969,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
               </TabsContent>
             </div>
           </Tabs>
-          {formError && <div className="text-sm text-destructive mt-2">{formError}</div>}
+          {formErrors.length > 0 && (
+            <div className="text-sm text-destructive mt-2 space-y-1">
+              {formErrors.map((err, index) => (
+                <div key={`${err}-${index}`}>{err}</div>
+              ))}
+            </div>
+          )}
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={formLoading}>Cancelar</Button>
             <Button onClick={submitCreate} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
@@ -1919,8 +2007,14 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
                     <div className="flex gap-1">
                         <Input className="h-8 text-sm flex-1" value={formData.cnpjCpf} onChange={(e) => setFormData({ ...formData, cnpjCpf: toUpperValue(e.target.value) })} />
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}>
-                          <Search className="h-4 w-4" />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => cnpjLookupRef.current?.(formData.cnpjCpf)}
+                          disabled={cnpjLookupLoading}
+                        >
+                          {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
@@ -2007,8 +2101,9 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => cepLookupRef.current?.(formData.cep)}
+                          disabled={cepLookupLoading}
                         >
-                          <Search className="h-4 w-4" />
+                          {cepLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
@@ -2454,7 +2549,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
               </div>
             </Tabs>
           )}
-          {formError && <div className="text-sm text-destructive mt-2">{formError}</div>}
+          {formErrors.length > 0 && (
+            <div className="text-sm text-destructive mt-2 space-y-1">
+              {formErrors.map((err, index) => (
+                <div key={`${err}-${index}`}>{err}</div>
+              ))}
+            </div>
+          )}
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={formLoading}>Cancelar</Button>
             <Button onClick={submitEdit} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
