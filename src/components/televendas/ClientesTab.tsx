@@ -618,7 +618,7 @@ export const ClientesTab = () => {
     return getTabelaLabel(t).toUpperCase().includes(tabelaSearchValue);
   });
   const selectedTabelaLabels = tabelas
-    .filter((t) => formData.tabelaIds.includes(t.id))
+    .filter((t) => formData.tabelaIds.includes(Number(t.id)))
     .map((t) => getTabelaLabel(t));
   const tabelaSummary = summarizeSelection(
     selectedTabelaLabels.length ? selectedTabelaLabels : formData.tabelaIds.map(String),
@@ -1691,7 +1691,8 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                           ) : (
                             <div className="space-y-1">
                               {filteredTabelas.map((t) => {
-                                const checked = formData.tabelaIds.includes(t.id);
+                                const tId = Number(t.id);
+                                const checked = formData.tabelaIds.includes(tId);
                                 const label = getTabelaLabel(t);
                                 return (
                                   <label
@@ -1700,7 +1701,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                                   >
                                     <Checkbox
                                       checked={checked}
-                                      onCheckedChange={(value) => toggleTabelaId(t.id, value === true)}
+                                      onCheckedChange={(value) => toggleTabelaId(tId, value === true)}
                                     />
                                     <span>{label}</span>
                                   </label>
@@ -2302,7 +2303,8 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                             ) : (
                               <div className="space-y-1">
                                 {filteredTabelas.map((t) => {
-                                  const checked = formData.tabelaIds.includes(t.id);
+                                  const tId = Number(t.id);
+                                  const checked = formData.tabelaIds.includes(tId);
                                   const label = getTabelaLabel(t);
                                   return (
                                     <label
@@ -2311,7 +2313,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                                     >
                                       <Checkbox
                                         checked={checked}
-                                        onCheckedChange={(value) => toggleTabelaId(t.id, value === true)}
+                                        onCheckedChange={(value) => toggleTabelaId(tId, value === true)}
                                       />
                                       <span>{label}</span>
                                     </label>
