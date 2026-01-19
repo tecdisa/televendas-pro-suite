@@ -1094,8 +1094,8 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
           <Tabs defaultValue="identificacao" className="flex-1 min-h-0 flex flex-col">
             <TabsList className="w-auto">
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-              <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
               <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
+              <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-y-auto mt-4 px-2 pb-2">
@@ -1220,9 +1220,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                 </div>
 
                 <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-12">
+                  <div className="col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
                     <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
+                    <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })} />
                   </div>
                 </div>
 
@@ -1902,8 +1906,8 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
             <Tabs defaultValue="identificacao" className="flex-1 min-h-0 flex flex-col">
               <TabsList className="w-auto">
                 <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-                <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
                 <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
+                <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
               </TabsList>
 
               <div className="flex-1 overflow-y-auto mt-4 px-2 pb-2">
@@ -2009,7 +2013,16 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                     </div>
                   </div>
 
-                  <FormField label="Endereço *" value={formData.endereco} onChange={(v) => setFormData({ ...formData, endereco: toUpperValue(v) })} />
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-9">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
+                      <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
+                      <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })} />
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-2">
