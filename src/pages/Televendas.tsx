@@ -1,23 +1,30 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, Users, UserPlus } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PesquisaTab } from '@/components/televendas/PesquisaTab';
 import { DadosTab } from '@/components/televendas/DadosTab';
 import { ItinerariosTab } from '@/components/televendas/ItinerariosTab';
 import { VisitasTab } from '@/components/televendas/VisitasTab';
 import { ClientesTab } from '@/components/televendas/ClientesTab';
+import { FornecedoresTab } from '@/components/televendas/FornecedoresTab';
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/layout/AppSidebar';
 
 const Televendas = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('pesquisa');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'pesquisa';
   const [digitacaoOpen, setDigitacaoOpen] = useState(false);
+
+  const handleTabChange = (tab: string) => {
+    setSearchParams({ tab });
+  };
 
   const handleLogout = () => {
     authService.logout();
@@ -25,92 +32,94 @@ const Televendas = () => {
     navigate('/login');
   };
 
-  const session = authService.getSession();
   const empresa = authService.getEmpresa();
 
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'pesquisa':
+        return (
+          <ErrorBoundary>
+            <PesquisaTab onNavigateToDigitacao={() => setDigitacaoOpen(true)} />
+          </ErrorBoundary>
+        );
+      case 'dados':
+        return (
+          <ErrorBoundary>
+            <DadosTab />
+          </ErrorBoundary>
+        );
+      case 'itinerarios':
+        return (
+          <ErrorBoundary>
+            <ItinerariosTab />
+          </ErrorBoundary>
+        );
+      case 'visitas':
+        return (
+          <ErrorBoundary>
+            <VisitasTab />
+          </ErrorBoundary>
+        );
+      case 'clientes':
+        return (
+          <ErrorBoundary>
+            <ClientesTab />
+          </ErrorBoundary>
+        );
+      case 'fornecedores':
+        return (
+          <ErrorBoundary>
+            <FornecedoresTab />
+          </ErrorBoundary>
+        );
+      default:
+        return (
+          <ErrorBoundary>
+            <PesquisaTab onNavigateToDigitacao={() => setDigitacaoOpen(true)} />
+          </ErrorBoundary>
+        );
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg sm:text-2xl font-bold text-primary">ADS Vendas</h1>
-            {empresa && (
-              <p className="text-xs sm:text-sm text-muted-foreground">{empresa.fantasia?.trim() || empresa.razao_social?.trim()}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sair</span>
-            </Button>
-          </div>
+    <SidebarProvider defaultOpen>
+      <div className="min-h-screen bg-background flex w-full">
+        <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <header className="border-b bg-card sticky top-0 z-50">
+            <div className="px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger className="h-8 w-8" />
+                <div>
+                  <h1 className="text-lg sm:text-xl font-bold text-primary">ADS Vendas</h1>
+                  {empresa && (
+                    <p className="text-xs text-muted-foreground">
+                      {empresa.fantasia?.trim() || empresa.razao_social?.trim()}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Sair</span>
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 p-4 sm:p-6 overflow-auto">
+            {renderContent()}
+          </main>
+
+          <DigitacaoModal open={digitacaoOpen} onOpenChange={setDigitacaoOpen} />
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
-        <Tabs defaultValue="pesquisa" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto mb-4 sm:mb-6 -mx-2 px-2">
-            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full grid-cols-3 sm:grid-cols-5 gap-1">
-              <TabsTrigger value="pesquisa" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap px-3">
-                <Search className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Pesquisa</span>
-              </TabsTrigger>
-              <TabsTrigger value="dados" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap px-3">
-                <FileText className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Dados</span>
-              </TabsTrigger>
-              <TabsTrigger value="itinerarios" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap px-3">
-                <Route className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Itinerários</span>
-              </TabsTrigger>
-              <TabsTrigger value="visitas" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap px-3">
-                <Users className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Visitas</span>
-              </TabsTrigger>
-              <TabsTrigger value="clientes" className="flex items-center gap-1 sm:gap-2 whitespace-nowrap px-3">
-                <UserPlus className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Clientes</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="pesquisa" className="space-y-4">
-            <ErrorBoundary>
-              <PesquisaTab onNavigateToDigitacao={() => setDigitacaoOpen(true)} />
-            </ErrorBoundary>
-          </TabsContent>
-
-          <TabsContent value="dados" className="space-y-4">
-            <ErrorBoundary>
-              <DadosTab />
-            </ErrorBoundary>
-          </TabsContent>
-
-          <TabsContent value="itinerarios" className="space-y-4">
-            <ErrorBoundary>
-              <ItinerariosTab />
-            </ErrorBoundary>
-          </TabsContent>
-
-          <TabsContent value="visitas" className="space-y-4">
-            <ErrorBoundary>
-              <VisitasTab />
-            </ErrorBoundary>
-          </TabsContent>
-
-          <TabsContent value="clientes" className="space-y-4">
-            <ErrorBoundary>
-              <ClientesTab />
-            </ErrorBoundary>
-          </TabsContent>
-        </Tabs>
-
-        <DigitacaoModal open={digitacaoOpen} onOpenChange={setDigitacaoOpen} />
-      </main>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
