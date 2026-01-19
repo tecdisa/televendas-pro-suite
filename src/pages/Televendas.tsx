@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PesquisaTab } from '@/components/televendas/PesquisaTab';
 import { DadosTab } from '@/components/televendas/DadosTab';
@@ -15,6 +15,15 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
+
+const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
+  pesquisa: { title: 'Pesquisa de Pedidos', icon: Search },
+  dados: { title: 'Dados', icon: FileText },
+  itinerarios: { title: 'Itinerários', icon: Route },
+  visitas: { title: 'Visitas', icon: ClipboardList },
+  clientes: { title: 'Cadastro de Clientes', icon: Users },
+  fornecedores: { title: 'Cadastro de Fornecedores', icon: Truck },
+};
 
 const Televendas = () => {
   const navigate = useNavigate();
@@ -113,6 +122,18 @@ const Televendas = () => {
 
           {/* Main Content */}
           <main className="flex-1 p-4 sm:p-6 overflow-auto">
+            {/* Page Title */}
+            {pageTitles[activeTab] && (
+              <div className="flex items-center gap-2 mb-4">
+                {(() => {
+                  const IconComponent = pageTitles[activeTab].icon;
+                  return <IconComponent className="h-5 w-5 text-primary" />;
+                })()}
+                <h2 className="text-lg font-semibold text-foreground">
+                  {pageTitles[activeTab].title}
+                </h2>
+              </div>
+            )}
             {renderContent()}
           </main>
 
