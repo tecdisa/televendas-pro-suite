@@ -308,21 +308,23 @@ export const ClientesTab = () => {
         const result = await clientsService.lookupCnpj(cleaned);
         if (!result || !result.data) return;
         const d = result.data;
+        const estab = d.estabelecimento ?? {};
+        const cidadeObj = estab.cidade ?? {};
+        const estadoObj = estab.estado ?? {};
+        const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
+        const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
+        const cepFromCnpj = estab.cep ?? d.cep;
+        const cepValue = cepFromCnpj ? normalizeCep(String(cepFromCnpj)) : '';
+        const hasCep = cepValue.length === 8;
         setFormData((prevState) => {
           const prev = prevState;
-          const estab = d.estabelecimento ?? {};
-          const cidadeObj = estab.cidade ?? {};
-          const estadoObj = estab.estado ?? {};
-          const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
-          const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
           const enderecoFmt = [tipoLogradouro, logradouro].filter(Boolean).join(' ') || d.logradouro || prev.endereco;
           const complemento = estab.complemento ? String(estab.complemento).trim() : prev.complemento;
           const telefone1 = estab.telefone1 ? String(estab.telefone1).trim() : '';
           const ddd1 = estab.ddd1 ? String(estab.ddd1).trim() : '';
           const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
           const faxFmt = estab.fax ? String(estab.fax).trim() : prev.fax;
-
-          const cepValue = estab.cep ? normalizeCep(String(estab.cep)) : (d.cep ? normalizeCep(String(d.cep)) : prev.cep);
+          const nextCep = cepValue || normalizeCep(String(prev.cep));
           return {
             ...prev,
             cnpjCpf: cleaned,
@@ -333,14 +335,17 @@ export const ClientesTab = () => {
             bairro: toUpperValue(estab.bairro || d.bairro || prev.bairro),
             cidade: toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || prev.cidade),
             uf: toUpperValue(estadoObj.sigla || estab.uf || d.uf || prev.uf),
-            cep: formatCep(cepValue),
+            cep: formatCep(nextCep),
             complemento: toUpperValue(complemento),
             telefone: formatPhone(telefoneFmt || prev.telefone),
             fax: formatPhone(faxFmt),
             email: estab.email || prev.email,
-            cidadeId: cidadeObj.id ?? prev.cidadeId,
+            cidadeId: cidadeObj.id ?? 0,
           };
         });
+        if (hasCep) {
+          cepLookupRef.current?.(cepValue);
+        }
         toast.success('Dados preenchidos pela consulta de CNPJ');
       } catch (e: any) {
         toast.error(String(e));
@@ -417,16 +422,20 @@ export const ClientesTab = () => {
   }, [formData.uf, createOpen, editOpen]);
 
   useEffect(() => {
-    if (!formData.cidade || formData.cidadeId || cidadesApi.length === 0) return;
+    if (!formData.cidade || cidadesApi.length === 0) return;
     const target = normalizeCityKey(formData.cidade);
     if (!target) return;
+    const currentId = Number(formData.cidadeId) || 0;
+    const idMatch = currentId > 0 && cidadesApi.some((c) => Number(c.cidade_id) === currentId);
+    if (idMatch) return;
     const match = cidadesApi.find((c) => normalizeCityKey(c.nome_cidade) === target);
     if (!match) return;
+    const nextId = Number(match.cidade_id) || 0;
     setFormData((prev) => {
-      if (prev.cidadeId) return prev;
+      if (Number(prev.cidadeId) === nextId) return prev;
       return {
         ...prev,
-        cidadeId: Number(match.cidade_id) || 0,
+        cidadeId: nextId,
         cidade: toUpperTrimValue(match.nome_cidade),
       };
     });
