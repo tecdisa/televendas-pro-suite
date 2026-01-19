@@ -115,14 +115,16 @@ export const VisitasTab = () => {
         ))}
       </div>
 
-      <div className="flex gap-2 justify-end">
-        <Button onClick={handleRegistrarVisita}>
-          <UserCheck className="h-4 w-4 mr-2" />
-          Registrar Visita
+      <div className="flex flex-col sm:flex-row gap-2 justify-end">
+        <Button onClick={handleRegistrarVisita} className="w-full sm:w-auto">
+          <UserCheck className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Registrar Visita</span>
+          <span className="sm:hidden">Registrar</span>
         </Button>
-        <Button onClick={handleNovoPedido}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Pedido
+        <Button onClick={handleNovoPedido} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Novo Pedido</span>
+          <span className="sm:hidden">Pedido</span>
         </Button>
       </div>
     </div>
