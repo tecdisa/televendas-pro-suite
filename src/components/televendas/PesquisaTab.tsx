@@ -784,10 +784,10 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
       {/* Tabela */}
       <div className="border rounded-lg overflow-hidden">
         <div className="max-h-[60vh] overflow-auto scrollbar-thin">
-          <Table className="min-w-[800px]">
+          <Table className="min-w-[650px]">
             <TableHeader>
               <TableRow className="bg-table-header">
-                <TableHead className="w-[50px]">
+                <TableHead className="w-10">
                   <Checkbox
                     checked={selectAll}
                     onCheckedChange={(checked) => {
@@ -799,60 +799,60 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                     }}
                   />
                 </TableHead>
-                <TableHead className="w-[40px]">I</TableHead>
-                <TableHead className="w-[110px]">Data</TableHead>
-                <TableHead className="w-[90px]">Pedido</TableHead>
-                <TableHead className="w-[120px]">Operação</TableHead>
-                <TableHead className="w-[110px]">Cód. Cliente</TableHead>
+                <TableHead className="hidden lg:table-cell w-10">I</TableHead>
+                <TableHead className="w-24">Data</TableHead>
+                <TableHead className="w-16">Pedido</TableHead>
+                <TableHead className="hidden md:table-cell w-28">Operação</TableHead>
+                <TableHead className="hidden lg:table-cell w-24">Cód. Cliente</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="w-[120px] text-right">Valor</TableHead>
-                <TableHead className="w-[240px] text-center">Ações</TableHead>
+                <TableHead className="w-24 text-right">Valor</TableHead>
+                <TableHead className="w-28 text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {orders.map((order) => {
                 const isPendente = order.situacao === 'Pendentes';
                 const baseClasses = selectedOrders.includes(order.id) ? 'bg-table-selected' : 'hover:bg-table-hover';
-                const pendenteClasses = isPendente ? 'bg-green-500/10 hover:bg-green-500/20' : '';
+                const pendenteClasses = isPendente ? 'bg-success/10 hover:bg-success/20' : '';
                 return (
               <TableRow
                 key={order.id}
                 className={`${baseClasses} ${pendenteClasses}`}
               >
-                <TableCell className="w-[50px]">
+                <TableCell className="w-10">
                   <Checkbox
                     checked={selectedOrders.includes(order.id)}
                     onCheckedChange={() => toggleOrderSelection(order.id)}
                   />
                 </TableCell>
-                <TableCell className="w-[40px]">
+                <TableCell className="hidden lg:table-cell w-10">
                   <div className="w-4 h-4 bg-primary/20 rounded" />
                 </TableCell>
-                <TableCell className="w-[110px]">{new Date(order.data).toLocaleDateString('pt-BR')}</TableCell>
-                <TableCell className="w-[90px] font-medium">{order.id}</TableCell>
-                <TableCell className="w-[120px]">{formatOperacao(order)}</TableCell>
-                <TableCell className="w-[110px]">{formatClienteCodigo(order)}</TableCell>
-                <TableCell>{order.clienteNome}</TableCell>
-                <TableCell className="w-[120px] text-right font-medium">{formatCurrency(order.valor)}</TableCell>
-                <TableCell className="w-[240px]">
+                <TableCell className="w-24 text-xs">{new Date(order.data).toLocaleDateString('pt-BR')}</TableCell>
+                <TableCell className="w-16 font-medium text-xs">{order.id}</TableCell>
+                <TableCell className="hidden md:table-cell w-28 text-xs">{formatOperacao(order)}</TableCell>
+                <TableCell className="hidden lg:table-cell w-24 text-xs">{formatClienteCodigo(order)}</TableCell>
+                <TableCell className="text-sm truncate max-w-[150px]">{order.clienteNome}</TableCell>
+                <TableCell className="w-24 text-right font-medium text-xs">{formatCurrency(order.valor)}</TableCell>
+                <TableCell className="w-28">
                   <TooltipProvider>
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-0.5">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={() => {
                               setCurrentOrder(order);
                               if (onNavigateToDigitacao) onNavigateToDigitacao();
                             }}
                             disabled={order.transmitido === true}
                           >
-                            <FileEdit className="h-4 w-4" />
+                            <FileEdit className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Alterar pedido</TooltipContent>
+                        <TooltipContent>Alterar</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -860,15 +860,15 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={() => {
                               openPreview(order);
                             }}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Visualizar pedido</TooltipContent>
+                        <TooltipContent>Ver</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -876,7 +876,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7 hidden sm:flex"
                             onClick={() => {
                               const html = buildPrintableHtml(order);
                               const win = window.open('', '', 'width=800,height=600');
@@ -888,10 +888,10 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                               }, 100);
                             }}
                           >
-                            <Printer className="h-4 w-4" />
+                            <Printer className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Imprimir pedido</TooltipContent>
+                        <TooltipContent>Imprimir</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -899,16 +899,16 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={async () => {
                               setOrderToDelete(order);
                               setDeleteConfirmOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Excluir pedido</TooltipContent>
+                        <TooltipContent>Excluir</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -916,12 +916,12 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7 hidden md:flex"
                           >
-                            <Mail className="h-4 w-4" />
+                            <Mail className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Enviar por e-mail</TooltipContent>
+                        <TooltipContent>E-mail</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -929,7 +929,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7 hidden md:flex"
                             onClick={async () => {
                               try {
                                 await ordersService.export(order.id);
@@ -940,10 +940,10 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                               }
                             }}
                           >
-                            <Download className="h-4 w-4" />
+                            <Download className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Exportar para faturamento</TooltipContent>
+                        <TooltipContent>Exportar</TooltipContent>
                       </Tooltip>
                     </div>
                   </TooltipProvider>

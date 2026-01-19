@@ -49,7 +49,7 @@ export function FornecedoresTab() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <Input
               placeholder="Buscar por nome, código ou CNPJ..."
               value={search}
@@ -57,47 +57,49 @@ export function FornecedoresTab() {
               onKeyDown={handleKeyDown}
               className="flex-1"
             />
-            <Button onClick={handleSearch} disabled={loading}>
-              <Search className="h-4 w-4 mr-2" />
-              Buscar
+            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+              <Search className="h-4 w-4 sm:mr-2" />
+              <span className="sm:inline">Buscar</span>
             </Button>
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">Código</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Fantasia</TableHead>
-                  <TableHead>CNPJ/CPF</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+            <div className="overflow-x-auto">
+              <Table className="min-w-[500px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Carregando...
-                    </TableCell>
+                    <TableHead className="w-20">Código</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead className="hidden sm:table-cell">Fantasia</TableHead>
+                    <TableHead>CNPJ/CPF</TableHead>
                   </TableRow>
-                ) : fornecedores.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Nenhum fornecedor encontrado
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  fornecedores.map((f) => (
-                    <TableRow key={f.fornecedor_id}>
-                      <TableCell className="font-mono text-xs">{f.codigo_fornecedor || '-'}</TableCell>
-                      <TableCell className="font-medium">{f.nome_fornecedor}</TableCell>
-                      <TableCell>{f.fantasia || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{f.cnpj_cpf || '-'}</TableCell>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        Carregando...
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : fornecedores.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        Nenhum fornecedor encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    fornecedores.map((f) => (
+                      <TableRow key={f.fornecedor_id}>
+                        <TableCell className="font-mono text-xs">{f.codigo_fornecedor || '-'}</TableCell>
+                        <TableCell className="font-medium">{f.nome_fornecedor}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{f.fantasia || '-'}</TableCell>
+                        <TableCell className="font-mono text-xs">{f.cnpj_cpf || '-'}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
