@@ -102,48 +102,48 @@ export const ItinerariosTab = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto scrollbar-thin">
-            <Table className="min-w-[900px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Razão Social</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Fone</TableHead>
-                <TableHead>Horário</TableHead>
-                <TableHead>Dt. Base</TableHead>
-                <TableHead>Visita</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.map((item) => {
-                const codigoCliente = (item as any).codigoCliente ?? '';
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>{codigoCliente}</TableCell>
-                    <TableCell>{item.razaoSocial}</TableCell>
-                    <TableCell>{item.contato}</TableCell>
-                    <TableCell>{item.fone}</TableCell>
-                    <TableCell>{item.horario}</TableCell>
-                    <TableCell>{new Date(item.dtBase).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{item.visita}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="outline" onClick={() => handleReagendar(codigoCliente)}>
-                          <Calendar className="h-3 w-3 mr-1" />
-                          Re-agendar
-                        </Button>
-                        <Button size="sm" onClick={() => handleNovoPedido(codigoCliente)}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Novo Pedido
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-20">Código</TableHead>
+                  <TableHead>Razão Social</TableHead>
+                  <TableHead className="hidden md:table-cell">Contato</TableHead>
+                  <TableHead className="hidden lg:table-cell">Fone</TableHead>
+                  <TableHead className="hidden sm:table-cell w-20">Horário</TableHead>
+                  <TableHead className="hidden lg:table-cell w-24">Dt. Base</TableHead>
+                  <TableHead className="w-24">Visita</TableHead>
+                  <TableHead className="text-right w-32">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((item) => {
+                  const codigoCliente = (item as any).codigoCliente ?? '';
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs">{codigoCliente}</TableCell>
+                      <TableCell className="font-medium">{item.razaoSocial}</TableCell>
+                      <TableCell className="hidden md:table-cell">{item.contato}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{item.fone}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{item.horario}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{new Date(item.dtBase).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{item.visita}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" variant="outline" onClick={() => handleReagendar(codigoCliente)} className="h-7 px-2">
+                            <Calendar className="h-3 w-3" />
+                            <span className="hidden xl:inline ml-1">Re-agendar</span>
+                          </Button>
+                          <Button size="sm" onClick={() => handleNovoPedido(codigoCliente)} className="h-7 px-2">
+                            <Plus className="h-3 w-3" />
+                            <span className="hidden xl:inline ml-1">Pedido</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

@@ -971,12 +971,13 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
       </Card>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle>Clientes ({clients.length})</CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-2" /> Novo
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-base sm:text-lg">Clientes ({clients.length})</CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={openCreateDialog} className="flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -990,56 +991,60 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
                   setClientInfoOpen(true);
                 }}
                 disabled={selectedClients.length !== 1}
+                className="flex-1 sm:flex-none"
               >
-                <Info className="h-4 w-4 mr-2" /> Visualizar
+                <Info className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Visualizar</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={openEditDialog} disabled={selectedClients.length !== 1}>
-                <Pencil className="h-4 w-4 mr-2" /> Editar
+              <Button variant="outline" size="sm" onClick={openEditDialog} disabled={selectedClients.length !== 1} className="flex-1 sm:flex-none">
+                <Pencil className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Editar</span>
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={selectedClients.length === 0}>
-                <Trash2 className="h-4 w-4 mr-2" /> Excluir
+              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={selectedClients.length === 0} className="flex-1 sm:flex-none">
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Excluir</span>
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="max-h-[60vh] overflow-auto scrollbar-thin">
-            <Table className="min-w-[700px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox 
-                    checked={selectedClients.length === clients.length && clients.length > 0}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Código</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Cidade</TableHead>
-                <TableHead>UF</TableHead>
-                <TableHead>Bairro</TableHead>
-                <TableHead>Telefone</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell>
+            <Table className="min-w-[600px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
                     <Checkbox 
-                      checked={selectedClients.includes(client.id)}
-                      onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
+                      checked={selectedClients.length === clients.length && clients.length > 0}
+                      onCheckedChange={handleSelectAll}
                     />
-                  </TableCell>
-                  <TableCell>{client.codigoCliente ?? ''}</TableCell>
-                  <TableCell>{client.nome}</TableCell>
-                  <TableCell>{client.cidade}</TableCell>
-                  <TableCell>{client.uf}</TableCell>
-                  <TableCell>{client.bairro}</TableCell>
-                  <TableCell>{client.fone}</TableCell>
+                  </TableHead>
+                  <TableHead className="w-20">Código</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="hidden md:table-cell">Cidade</TableHead>
+                  <TableHead className="w-12">UF</TableHead>
+                  <TableHead className="hidden lg:table-cell">Bairro</TableHead>
+                  <TableHead className="hidden sm:table-cell">Telefone</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedClients.includes(client.id)}
+                        onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{client.codigoCliente ?? ''}</TableCell>
+                    <TableCell className="font-medium">{client.nome}</TableCell>
+                    <TableCell className="hidden md:table-cell">{client.cidade}</TableCell>
+                    <TableCell>{client.uf}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{client.bairro}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{client.fone}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
