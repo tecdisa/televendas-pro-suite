@@ -525,12 +525,13 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-lg border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-lg border">
         <div className="space-y-2">
-          <Label>Período</Label>
-          <div className="flex gap-2">
+          <Label className="text-xs">Período</Label>
+          <div className="flex gap-1 items-center">
             <Input
               type="date"
+              className="text-xs min-w-0 flex-1"
               value={filters.dataInicio}
               onChange={(e) => {
                 const newFilters = { ...filters, dataInicio: e.target.value };
@@ -542,9 +543,10 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                 }));
               }}
             />
-            <span className="self-center">a</span>
+            <span className="text-xs text-muted-foreground shrink-0">a</span>
             <Input
               type="date"
+              className="text-xs min-w-0 flex-1"
               value={filters.dataFim}
               onChange={(e) => {
                 const newFilters = { ...filters, dataFim: e.target.value };
@@ -562,12 +564,12 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         {/* Campo Usuário removido: não suportado pela API de pedidos */}
 
         <div className="space-y-2">
-          <Label>Situação</Label>
+          <Label className="text-xs">Situação</Label>
           <Select value={filters.situacao} onValueChange={(v) => setFilters({ ...filters, situacao: v })}>
-            <SelectTrigger>
+            <SelectTrigger className="text-xs">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-background z-50">
               <SelectItem value="__ALL__">Todos</SelectItem>
               {situacoes.map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -576,26 +578,26 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           </Select>
         </div>
 
-        <div className="flex items-end space-x-2">
+        <div className="flex items-end space-x-2 pb-2">
           <Checkbox
             id="especial"
             checked={filters.especial}
             onCheckedChange={(checked) => setFilters({ ...filters, especial: !!checked })}
           />
-          <Label htmlFor="especial">Especial</Label>
+          <Label htmlFor="especial" className="text-xs">Especial</Label>
         </div>
 
         <div className="space-y-2">
-          <Label>Operações</Label>
+          <Label className="text-xs">Operações</Label>
           <Select
             value={filters.operacoes}
             onValueChange={(v) => setFilters({ ...filters, operacoes: v === '__ALL__' ? '' : v })}
             disabled={loadingOperacoes || !!operacoesError}
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-xs">
               <SelectValue placeholder={loadingOperacoes ? 'Carregando...' : operacoesError ? 'Erro ao carregar' : 'Todas'} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-background z-50">
               <SelectItem value="__ALL__">Todas</SelectItem>
               {operacoes
                 .filter((op) => String(op.descricao || '').trim().length > 0 && String(op.codigo || '').trim().length > 0)
@@ -609,8 +611,9 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label>Pedido(s)</Label>
+          <Label className="text-xs">Pedido(s)</Label>
           <Input
+            className="text-xs"
             placeholder="IDs separados por vírgula"
             value={filters.pedidoIds}
             onChange={(e) => setFilters({ ...filters, pedidoIds: e.target.value })}
@@ -618,10 +621,10 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label>Representante</Label>
-          <Button variant="outline" className="w-full justify-start" onClick={() => setRepSearchOpen(true)}>
-            <Search className="h-4 w-4 mr-2" />
-            {representanteNome || (filters.representante ? `Código ${filters.representante}` : 'Buscar representante')}
+          <Label className="text-xs">Representante</Label>
+          <Button variant="outline" className="w-full justify-start text-xs truncate" onClick={() => setRepSearchOpen(true)}>
+            <Search className="h-3 w-3 mr-1 shrink-0" />
+            <span className="truncate">{representanteNome || (filters.representante ? `Cód. ${filters.representante}` : 'Buscar representante')}</span>
           </Button>
           <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
             <DialogContent className="max-w-2xl">
@@ -687,10 +690,10 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label>Código do cliente</Label>
-          <Button variant="outline" className="w-full justify-start" onClick={() => setClientSearchOpen(true)}>
-            <Search className="h-4 w-4 mr-2" />
-            {clienteNome || (filters.cliente ? `Código ${filters.cliente}` : 'Buscar cliente')}
+          <Label className="text-xs">Código do cliente</Label>
+          <Button variant="outline" className="w-full justify-start text-xs truncate" onClick={() => setClientSearchOpen(true)}>
+            <Search className="h-3 w-3 mr-1 shrink-0" />
+            <span className="truncate">{clienteNome || (filters.cliente ? `Cód. ${filters.cliente}` : 'Buscar cliente')}</span>
           </Button>
           <Dialog open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
             <DialogContent className="max-w-2xl">
