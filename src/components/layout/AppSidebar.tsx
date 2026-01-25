@@ -10,6 +10,8 @@ import {
   Route,
   UserPlus,
   ClipboardList,
+  Layers,
+  Grid3X3,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -66,6 +68,8 @@ const menuItems: MenuItem[] = [
     children: [
       { title: 'Clientes', path: '/televendas?tab=clientes', icon: Users },
       { title: 'Fornecedores', path: '/televendas?tab=fornecedores', icon: Truck },
+      { title: 'Grupos', path: '/televendas?tab=grupos', icon: Layers },
+      { title: 'Divisões', path: '/televendas?tab=divisoes', icon: Grid3X3 },
     ],
   },
 ];
