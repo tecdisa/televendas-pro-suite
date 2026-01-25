@@ -1214,17 +1214,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </Button>
                     </div>
                   </div>
-                  <div className="col-span-3">
-                    <Select defaultValue="Cliente">
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        <SelectItem value="Cliente">Cliente</SelectItem>
-                        <SelectItem value="Fornecedor">Fornecedor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
                     <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: toUpperValue(e.target.value) })} />
@@ -2031,15 +2020,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                           {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
                       </div>
-                    </div>
-                    <div className="col-span-3">
-                      <Select defaultValue="Cliente">
-                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          <SelectItem value="Cliente">Cliente</SelectItem>
-                          <SelectItem value="Fornecedor">Fornecedor</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
