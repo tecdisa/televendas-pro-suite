@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PesquisaTab } from '@/components/televendas/PesquisaTab';
 import { DadosTab } from '@/components/televendas/DadosTab';
@@ -10,6 +10,8 @@ import { ItinerariosTab } from '@/components/televendas/ItinerariosTab';
 import { VisitasTab } from '@/components/televendas/VisitasTab';
 import { ClientesTab } from '@/components/televendas/ClientesTab';
 import { FornecedoresTab } from '@/components/televendas/FornecedoresTab';
+import { GruposTab } from '@/components/televendas/GruposTab';
+import { DivisoesTab } from '@/components/televendas/DivisoesTab';
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
@@ -23,6 +25,8 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   visitas: { title: 'Visitas', icon: ClipboardList },
   clientes: { title: 'Cadastro de Clientes', icon: Users },
   fornecedores: { title: 'Cadastro de Fornecedores', icon: Truck },
+  grupos: { title: 'Grupos de Produtos', icon: Layers },
+  divisoes: { title: 'Divisões de Produtos', icon: Grid3X3 },
 };
 
 const Televendas = () => {
@@ -79,6 +83,18 @@ const Televendas = () => {
         return (
           <ErrorBoundary>
             <FornecedoresTab />
+          </ErrorBoundary>
+        );
+      case 'grupos':
+        return (
+          <ErrorBoundary>
+            <GruposTab />
+          </ErrorBoundary>
+        );
+      case 'divisoes':
+        return (
+          <ErrorBoundary>
+            <DivisoesTab />
           </ErrorBoundary>
         );
       default:

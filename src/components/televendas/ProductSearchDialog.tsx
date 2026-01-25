@@ -133,8 +133,8 @@ export const ProductSearchDialog = ({
       // Load fornecedores
       setLoadingFornecedores(true);
       try {
-        const data = await suppliersService.getAll();
-        setFornecedores(data);
+        const result = await suppliersService.getAll();
+        setFornecedores(result.data);
       } catch (e) {
         console.error('Erro ao carregar fornecedores:', e);
       } finally {
@@ -144,8 +144,8 @@ export const ProductSearchDialog = ({
       // Load divisões
       setLoadingDivisoes(true);
       try {
-        const data = await divisionsService.getAll();
-        setDivisoes(data);
+        const result = await divisionsService.getAll();
+        setDivisoes(result.data);
       } catch (e) {
         console.error('Erro ao carregar divisões:', e);
       } finally {
