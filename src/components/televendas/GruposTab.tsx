@@ -139,7 +139,7 @@ export function GruposTab() {
     }
   };
 
-  const FormContent = () => (
+  const formContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-12 gap-3">
         <div className="col-span-4">
@@ -277,7 +277,7 @@ export function GruposTab() {
           <DialogHeader>
             <DialogTitle>Novo Grupo</DialogTitle>
           </DialogHeader>
-          <FormContent />
+          {formContent}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={formLoading}>
@@ -299,7 +299,7 @@ export function GruposTab() {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : (
-            <FormContent />
+            {formContent}
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>

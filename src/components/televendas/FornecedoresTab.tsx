@@ -283,7 +283,7 @@ export function FornecedoresTab() {
     }
   };
 
-  const FormContent = () => (
+  const formContent = (
     <Tabs defaultValue="identificacao" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="identificacao">Identificação</TabsTrigger>
@@ -592,7 +592,7 @@ export function FornecedoresTab() {
             <DialogTitle>Novo Fornecedor</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
-            <FormContent />
+            {formContent}
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
@@ -616,7 +616,7 @@ export function FornecedoresTab() {
             </div>
           ) : (
             <ScrollArea className="max-h-[60vh] pr-4">
-              <FormContent />
+              {formContent}
             </ScrollArea>
           )}
           <DialogFooter>
