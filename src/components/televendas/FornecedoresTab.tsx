@@ -40,6 +40,8 @@ const formatPhone = (value: string | number | null | undefined) => {
   if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
   return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
 };
+const normalizePhoneDigits = (value: string | number | null | undefined) =>
+  String(value ?? '').replace(/\D+/g, '').slice(0, 11);
 const formatCep = (value: string | number | null | undefined) => {
   const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 8);
   if (!digits) return '';
@@ -189,7 +191,7 @@ export function FornecedoresTab() {
           const nextCep = cepValue || normalizeCep(String(prev.cep));
           return {
             ...prev,
-            cnpj_cpf: formatCnpj(cleaned),
+            cnpj_cpf: cleaned,
             nome_fornecedor: toUpperValue(d.razao_social || prev.nome_fornecedor),
             fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
             endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
@@ -298,7 +300,7 @@ export function FornecedoresTab() {
       if (detail) {
         setFormData({
           codigo_fornecedor: detail.codigo_fornecedor || '',
-          cnpj_cpf: formatCnpj(detail.cnpj_cpf || ''),
+          cnpj_cpf: detail.cnpj_cpf || '',
           nome_fornecedor: detail.nome_fornecedor || '',
           fantasia: detail.fantasia || '',
           endereco: detail.endereco || '',
@@ -333,9 +335,7 @@ export function FornecedoresTab() {
     }
     setFormLoading(true);
     try {
-      const codigoFornecedor = formData.codigo_fornecedor.trim() || normalizeCnpj(formData.cnpj_cpf);
       await suppliersService.create({
-        codigo_fornecedor: codigoFornecedor,
         cnpj_cpf: normalizeCnpj(formData.cnpj_cpf),
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
@@ -346,10 +346,10 @@ export function FornecedoresTab() {
         uf: formData.uf || undefined,
         cidade_id: formData.cidade_id || null,
         cep: normalizeCep(formData.cep) || undefined,
-        fone: formData.fone.replace(/\D/g, '') || undefined,
+        fone: normalizePhoneDigits(formData.fone) || undefined,
         contato: formData.contato.trim() || undefined,
         email: formData.email.trim() || undefined,
-        whatsapp: formData.whatsapp.replace(/\D/g, '') || undefined,
+        whatsapp: normalizePhoneDigits(formData.whatsapp) || undefined,
         site: formData.site.trim() || undefined,
         empresas_autorizadas: formData.empresas_autorizadas.trim() || undefined,
         obs: formData.obs.trim() || undefined,
@@ -383,10 +383,10 @@ export function FornecedoresTab() {
         uf: formData.uf || undefined,
         cidade_id: formData.cidade_id || undefined,
         cep: normalizeCep(formData.cep) || undefined,
-        fone: formData.fone.replace(/\D/g, '') || undefined,
+        fone: normalizePhoneDigits(formData.fone) || undefined,
         contato: formData.contato.trim() || undefined,
         email: formData.email.trim() || undefined,
-        whatsapp: formData.whatsapp.replace(/\D/g, '') || undefined,
+        whatsapp: normalizePhoneDigits(formData.whatsapp) || undefined,
         site: formData.site.trim() || undefined,
         empresas_autorizadas: formData.empresas_autorizadas.trim() || undefined,
         obs: formData.obs.trim() || undefined,
@@ -424,16 +424,16 @@ export function FornecedoresTab() {
         <TabsTrigger value="complementar">Dados Complementares</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="identificacao" className="space-y-4 mt-4">
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-9">
+      <TabsContent value="identificacao" className="m-0 space-y-4 mt-4">
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ/CPF *</label>
             <div className="flex gap-1">
               <Input
                 className="h-8 text-sm"
                 value={formData.cnpj_cpf}
                 onChange={(e) => {
-                  const next = formatCnpj(e.target.value);
+                  const next = e.target.value;
                   setFormData({ ...formData, cnpj_cpf: next });
                   cnpjLookupRef.current?.(next);
                 }}
@@ -458,8 +458,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12">
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social *</label>
             <Input
               className="h-8 text-sm"
@@ -469,8 +469,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12">
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
             <Input
               className="h-8 text-sm"
@@ -480,25 +480,13 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-8">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.endereco}
-              onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.numero}
-              onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })}
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+        <div className="border-b border-primary/50 pb-1 mt-4">
+          <span className="text-sm font-medium text-primary">Endereço</span>
+        </div>
+
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep</label>
             <div className="flex gap-1">
               <Input
                 className="h-8 text-sm"
@@ -522,20 +510,35 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="col-span-9">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
             <Input
               className="h-8 text-sm"
-              value={formData.bairro}
-              onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })}
+              value={formData.endereco}
+              onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
             />
           </div>
+          <div className="col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.numero}
+              onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-12 gap-3 items-end">
           <div className="col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-            <Select value={formData.uf} onValueChange={(v) => setFormData({ ...formData, uf: v, cidade_id: 0 })}>
+            <Select
+              value={formData.uf}
+              onValueChange={(v) => setFormData({ ...formData, uf: toUpperValue(v), cidade_id: 0 })}
+              disabled={ufsLoading}
+            >
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="UF" />
+                <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
                 {ufsApi.map((uf) => (
@@ -544,7 +547,7 @@ export function FornecedoresTab() {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-6">
+          <div className="col-span-5">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
             <Select
               value={formData.cidade_id ? String(formData.cidade_id) : ''}
@@ -552,7 +555,7 @@ export function FornecedoresTab() {
               disabled={cidadesLoading || !formData.uf}
             >
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder={cidadesLoading ? 'Carregando...' : 'Selecione'} />
+                <SelectValue placeholder={cidadesLoading ? 'Carregando...' : (formData.uf ? 'Selecione' : 'Selecione UF')} />
               </SelectTrigger>
               <SelectContent className="bg-background z-50 max-h-60">
                 {cidadesApi.map((c) => (
@@ -561,10 +564,20 @@ export function FornecedoresTab() {
               </SelectContent>
             </Select>
           </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+          </div>
+          <div className="col-span-3">
+            <Input
+              className="h-8 text-sm"
+              value={formData.bairro}
+              onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })}
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12">
+        <div className="grid grid-cols-12 gap-3 items-end">
+          <div className="col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
             <Input
               className="h-8 text-sm"
@@ -573,10 +586,12 @@ export function FornecedoresTab() {
             />
           </div>
         </div>
-      </TabsContent>
 
-      <TabsContent value="complementar" className="space-y-4 mt-4">
-        <div className="grid grid-cols-12 gap-3">
+        <div className="border-b border-primary/50 pb-1 mt-4">
+          <span className="text-sm font-medium text-primary">Telefones</span>
+        </div>
+
+        <div className="grid grid-cols-12 gap-3 items-end">
           <div className="col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
             <Input
@@ -603,7 +618,7 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
+        <div className="grid grid-cols-12 gap-3 items-end">
           <div className="col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
             <Input
@@ -622,8 +637,10 @@ export function FornecedoresTab() {
             />
           </div>
         </div>
+      </TabsContent>
 
-        <div className="grid grid-cols-12 gap-3">
+      <TabsContent value="complementar" className="m-0 space-y-4 mt-4">
+        <div className="grid grid-cols-12 gap-3 items-end">
           <div className="col-span-12">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresas Autorizadas</label>
             <Input

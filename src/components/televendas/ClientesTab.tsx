@@ -38,6 +38,8 @@ const formatPhone = (value: string | number | null | undefined) => {
   if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
   return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
 };
+const normalizePhoneDigits = (value: string | number | null | undefined) =>
+  String(value ?? '').replace(/\D+/g, '').slice(0, 11);
 const formatCpf = (value: string | number | null | undefined) => {
   const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 11);
   if (!digits) return '';
@@ -98,13 +100,27 @@ const normalizeTabelaIds = (value: any, fallback?: any) => {
     value.forEach((item) => {
       if (!item) return;
       if (typeof item === 'object') {
-        pushId(item.id ?? item.tabela_id ?? item.tabelaId ?? item.codigo ?? item.cod);
+        pushId(
+          item.id ??
+            item.tabela_preco_id ??
+            item.tabela_id ??
+            item.tabelaId ??
+            item.codigo ??
+            item.cod
+        );
         return;
       }
       pushId(item);
     });
   } else if (value && typeof value === 'object') {
-    pushId(value.id ?? value.tabela_id ?? value.tabelaId ?? value.codigo ?? value.cod);
+    pushId(
+      value.id ??
+        value.tabela_preco_id ??
+        value.tabela_id ??
+        value.tabelaId ??
+        value.codigo ??
+        value.cod
+    );
   } else if (value != null) {
     pushId(value);
   }
@@ -266,9 +282,13 @@ export const ClientesTab = () => {
     fax: '',
     whatsapp: '',
     email: '',
+    emailDanfe: '',
     site: '',
     rota: '',
     rotaId: 0,
+    b2bLiberado: false,
+    b2bSenha: '',
+    b2bTabelaId: 0,
     // Comercial
     contato1Nome: '',
     contato1Celular: '',
@@ -284,7 +304,7 @@ export const ClientesTab = () => {
     descontoFinanceiroBoleto: 0,
     observacaoComercial: '',
     // Financeiro
-    credito: '',
+    credito: 0,
     boleto: false,
     prazo: '',
     limite: 0,
@@ -706,9 +726,13 @@ const createEmptyFormData = () => ({
   fax: '',
   whatsapp: '',
   email: '',
+  emailDanfe: '',
   site: '',
   rota: '',
   rotaId: 0,
+  b2bLiberado: false,
+  b2bSenha: '',
+  b2bTabelaId: 0,
   contato1Nome: '',
   contato1Celular: '',
   contato1Aniversario: '',
@@ -722,7 +746,7 @@ const createEmptyFormData = () => ({
   representantes: [] as Array<{ id: string; nome: string }>,
   descontoFinanceiroBoleto: 0,
   observacaoComercial: '',
-  credito: '',
+  credito: 0,
   boleto: false,
   prazo: '',
   limite: 0,
@@ -734,6 +758,14 @@ const createEmptyFormData = () => ({
 });
 
 const normalizeCep = (v: string) => v.replace(/\D+/g, '').slice(0, 8);
+
+const normalizeDateInput = (value: unknown) => {
+  if (!value) return '';
+  const raw = String(value).trim();
+  if (!raw) return '';
+  if (raw.includes('T')) return raw.split('T')[0];
+  return raw.length >= 10 ? raw.slice(0, 10) : raw;
+};
 const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
 const ensurePositiveId = (value: number | string | undefined | null, fallback = 1) => {
   const num = Number(value);
@@ -775,6 +807,8 @@ const validateFormData = (data: ClientFormData): string[] => {
 
   const emailValue = String(data.email ?? '').trim();
   if (emailValue && !isValidEmail(emailValue)) errors.push('Email inválido.');
+  const emailDanfeValue = String(data.emailDanfe ?? '').trim();
+  if (emailDanfeValue && !isValidEmail(emailDanfeValue)) errors.push('Email DANFE inválido.');
 
   return errors;
 };
@@ -802,6 +836,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       return;
     }
     const emailValue = formData.email.trim();
+    const emailDanfeValue = formData.emailDanfe.trim();
     const tabelaId = formData.tabelaIds[0];
     const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
     const representanteId = representanteIds[0];
@@ -809,14 +844,26 @@ const validateFormData = (data: ClientFormData): string[] => {
     try {
       setFormLoading(true);
       const { representantes, tabelaIds, ...payloadBase } = formData;
-      await clientsService.create({
+      const payloadNormalized = {
         ...payloadBase,
+        telefone: normalizePhoneDigits(payloadBase.telefone),
+        fax: normalizePhoneDigits(payloadBase.fax),
+        whatsapp: normalizePhoneDigits(payloadBase.whatsapp),
+        contato1Celular: normalizePhoneDigits(payloadBase.contato1Celular),
+        contato2Celular: normalizePhoneDigits(payloadBase.contato2Celular),
+      };
+      await clientsService.create({
+        ...payloadNormalized,
         tabelaIds,
         tabelaId: tabelaId || undefined,
         representanteIds,
         representanteId: representanteId || undefined,
         redeId: redeId || undefined,
         email: emailValue,
+        emailDanfe: emailDanfeValue || undefined,
+        b2bLiberado: Boolean(formData.b2bLiberado),
+        b2bSenha: formData.b2bSenha.trim() || undefined,
+        b2bTabelaId: formData.b2bTabelaId ? Number(formData.b2bTabelaId) : undefined,
         cidadeId: Number(formData.cidadeId) || 0,
         segmentoId: ensurePositiveId(formData.segmentoId),
         rotaId: Number(formData.rotaId) || 0,
@@ -888,15 +935,33 @@ const validateFormData = (data: ClientFormData): string[] => {
           fax: formatPhone(d.fax ?? ''),
           whatsapp: formatPhone(d.whatsapp ?? ''),
           email: String(d.email ?? '').trim(),
+          emailDanfe: String(d.email_danfe ?? d.emailDanfe ?? '').trim(),
           site: String(d.site ?? ''),
           rota: toUpperValue(d.rota ?? ''),
           rotaId: Number(d.rota_id ?? d.rotaId ?? 0),
-          contato1Nome: toUpperTrimValue(d.contato ?? d.contatos?.[0]?.nome ?? ''),
-          contato1Celular: formatPhone(d.celular ?? d.contatos?.[0]?.celular ?? ''),
-          contato1Aniversario: String(d.contatos?.[0]?.aniversario ?? ''),
-          contato2Nome: toUpperValue(d.contatos?.[1]?.nome ?? ''),
-          contato2Celular: formatPhone(d.contatos?.[1]?.celular ?? ''),
-          contato2Aniversario: String(d.contatos?.[1]?.aniversario ?? ''),
+          b2bLiberado: Boolean(d.b2b_liberado ?? d.b2bLiberado ?? false),
+          b2bSenha: String(d.b2b_senha ?? d.b2bSenha ?? '').trim(),
+          b2bTabelaId: Number(d.b2b_tabela_id ?? d.b2bTabelaId ?? 0),
+          contato1Nome: toUpperTrimValue(d.contato ?? d.comprador_nome ?? d.contato1Nome ?? d.contatos?.[0]?.nome ?? ''),
+          contato1Celular: formatPhone(d.contato1Celular ?? d.comprador_fone ?? d.celular ?? d.contatos?.[0]?.celular ?? ''),
+          contato1Aniversario: normalizeDateInput(
+            d.contato1Aniversario ??
+            d.contato1_aniversario ??
+            d.contato1_data_aniversario ??
+            d.comprador_data_nascimento ??
+            d.compradorDataNascimento ??
+            d.contatos?.[0]?.aniversario ??
+            ''
+          ),
+          contato2Nome: toUpperValue(d.contato2_nome ?? d.contato2Nome ?? d.contatos?.[1]?.nome ?? ''),
+          contato2Celular: formatPhone(d.contato2_celular ?? d.contato2Celular ?? d.contatos?.[1]?.celular ?? ''),
+          contato2Aniversario: normalizeDateInput(
+            d.contato2Aniversario ??
+            d.contato2_aniversario ??
+            d.contato2_data_aniversario ??
+            d.contatos?.[1]?.aniversario ??
+            ''
+          ),
           segmentoId: ensurePositiveId(d.segmento_id ?? d.segmentoId),
           checkouts: Number(d.checkouts ?? 0),
         redeId: ensurePositiveId(d.rede_id ?? d.redeId ?? d.rede, 0),
@@ -904,7 +969,7 @@ const validateFormData = (data: ClientFormData): string[] => {
         representantes,
         descontoFinanceiroBoleto: Number(d.desconto_financeiro_boleto ?? d.descontoFinanceiroBoleto ?? 0),
         observacaoComercial: toUpperValue(d.observacao_comercial ?? d.observacaoComercial ?? ''),
-          credito: toUpperValue(d.credito ?? ''),
+          credito: Number(d.credito ?? 0) || 0,
           boleto: Boolean(d.boleto),
           prazo: String(d.prazo ?? '').trim(),
           limite: Number(d.limite_credito ?? d.limite ?? 0),
@@ -930,6 +995,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       return;
     }
     const emailValue = formData.email.trim();
+    const emailDanfeValue = formData.emailDanfe.trim();
     const tabelaId = formData.tabelaIds[0];
     const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
     const representanteId = representanteIds[0];
@@ -937,14 +1003,26 @@ const validateFormData = (data: ClientFormData): string[] => {
     try {
       setFormLoading(true);
       const { representantes, tabelaIds, ...payloadBase } = formData;
-      await clientsService.update(editId, {
+      const payloadNormalized = {
         ...payloadBase,
+        telefone: normalizePhoneDigits(payloadBase.telefone),
+        fax: normalizePhoneDigits(payloadBase.fax),
+        whatsapp: normalizePhoneDigits(payloadBase.whatsapp),
+        contato1Celular: normalizePhoneDigits(payloadBase.contato1Celular),
+        contato2Celular: normalizePhoneDigits(payloadBase.contato2Celular),
+      };
+      await clientsService.update(editId, {
+        ...payloadNormalized,
         tabelaIds,
         tabelaId: tabelaId || undefined,
         representanteIds,
         representanteId: representanteId || undefined,
         redeId: redeId || undefined,
         email: emailValue,
+        emailDanfe: emailDanfeValue || undefined,
+        b2bLiberado: Boolean(formData.b2bLiberado),
+        b2bSenha: formData.b2bSenha.trim() || undefined,
+        b2bTabelaId: formData.b2bTabelaId ? Number(formData.b2bTabelaId) : undefined,
         cidadeId: Number(formData.cidadeId) || 0,
         segmentoId: ensurePositiveId(formData.segmentoId),
         rotaId: Number(formData.rotaId) || 0,
@@ -1248,13 +1326,17 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                {/* Inscr. estadual + Contribuinte + Suframa */}
+                {/* Inscrições + Contribuinte + Suframa */}
                 <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
                     <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. municipal</label>
+                    <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: toUpperValue(e.target.value) })} />
+                  </div>
+                  <div className="col-span-3">
                     <Select defaultValue="contribuinte">
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
@@ -1266,7 +1348,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
@@ -1389,7 +1471,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" upperCase={false} />
-                <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" upperCase={false} />
+                <FormField label="Email Danfe" value={formData.emailDanfe} onChange={(v) => setFormData({ ...formData, emailDanfe: v })} className="max-w-lg" upperCase={false} />
                 <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" upperCase={false} />
 
                 <div className="max-w-lg">
@@ -1909,6 +1991,36 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Crédito</label>
+                    <Input
+                      type="number"
+                      className="h-8 text-sm text-right"
+                      value={formData.credito}
+                      onChange={(e) => setFormData({ ...formData, credito: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Aberto</label>
+                    <Input
+                      type="number"
+                      className="h-8 text-sm text-right"
+                      value={formData.aberto}
+                      onChange={(e) => setFormData({ ...formData, aberto: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
+                    <Input
+                      type="number"
+                      className="h-8 text-sm text-right"
+                      value={formData.disponivel}
+                      onChange={(e) => setFormData({ ...formData, disponivel: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-12 gap-3 items-center">
                   <div className="col-span-6 flex items-center gap-2">
                     <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
@@ -1938,36 +2050,59 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <div className="grid grid-cols-12 gap-3 items-center mt-4">
                   <div className="col-span-12 flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <Checkbox />
+                      <Checkbox
+                        checked={formData.b2bLiberado}
+                        onCheckedChange={(c) => setFormData({ ...formData, b2bLiberado: c as boolean })}
+                      />
                       <label className="text-sm">Liberado venda no B2B</label>
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-muted-foreground">Senha B2B</label>
-                      <Input className="h-8 text-sm w-32" onChange={handleUpperChange} />
+                      <Input
+                        className="h-8 text-sm w-32"
+                        value={formData.b2bSenha}
+                        onChange={(e) => setFormData({ ...formData, b2bSenha: e.target.value })}
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
-                      <Select>
-                        <SelectTrigger className="h-8 text-sm w-16">
-                          <SelectValue />
+                      <Select
+                        value={formData.b2bTabelaId ? String(formData.b2bTabelaId) : ''}
+                        onValueChange={(v) => setFormData({ ...formData, b2bTabelaId: Number(v) || 0 })}
+                      >
+                        <SelectTrigger className="h-8 text-sm w-44">
+                          <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          <SelectItem value="1">1</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
+                          {tabelas.map((t) => (
+                            <SelectItem key={t.id} value={String(t.id)}>
+                              {getTabelaLabel(t)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                 </div>
 
-                {/* Observação */}
-                <div className="border-t pt-4 mt-4">
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs.</label>
-                  <Textarea
-                    className="min-h-[80px] text-sm"
-                    value={formData.observacaoComercial}
-                    onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })}
-                  />
+                {/* Observações */}
+                <div className="border-t pt-4 mt-4 space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs. Comercial</label>
+                    <Textarea
+                      className="min-h-[80px] text-sm"
+                      value={formData.observacaoComercial}
+                      onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs. Financeiro</label>
+                    <Textarea
+                      className="min-h-[80px] text-sm"
+                      value={formData.observacaoFinanceiro}
+                      onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: toUpperValue(e.target.value) })}
+                    />
+                  </div>
                 </div>
               </TabsContent>
             </div>
@@ -2054,11 +2189,15 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
 
                   <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-4">
+                    <div className="col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
                       <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. municipal</label>
+                      <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: toUpperValue(e.target.value) })} />
+                    </div>
+                    <div className="col-span-3">
                       <Select defaultValue="contribuinte">
                         <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-background z-50">
@@ -2067,7 +2206,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
@@ -2182,7 +2321,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                   <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-lg" upperCase={false} />
-                  <FormField label="Email Danfe" value="" onChange={() => {}} className="max-w-lg" upperCase={false} />
+                  <FormField label="Email Danfe" value={formData.emailDanfe} onChange={(v) => setFormData({ ...formData, emailDanfe: v })} className="max-w-lg" upperCase={false} />
                   <FormField label="Site" value={formData.site} onChange={(v) => setFormData({ ...formData, site: v })} className="max-w-lg" upperCase={false} />
 
                   <div className="max-w-lg">
@@ -2513,31 +2652,97 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">% Desconto máximo na nota fiscal</label>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          className="h-8 text-sm text-right"
+                          value={formData.descontoFinanceiroBoleto}
+                          onChange={(e) => setFormData({ ...formData, descontoFinanceiroBoleto: parseFloat(e.target.value) || 0 })}
+                        />
+                        <span className="text-sm">(%)</span>
+                      </div>
+                    </div>
+                    <div className="col-span-6" />
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Crédito</label>
+                      <Input
+                        type="number"
+                        className="h-8 text-sm text-right"
+                        value={formData.credito}
+                        onChange={(e) => setFormData({ ...formData, credito: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Aberto</label>
+                      <Input
+                        type="number"
+                        className="h-8 text-sm text-right"
+                        value={formData.aberto}
+                        onChange={(e) => setFormData({ ...formData, aberto: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
+                      <Input
+                        type="number"
+                        className="h-8 text-sm text-right"
+                        value={formData.disponivel}
+                        onChange={(e) => setFormData({ ...formData, disponivel: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-12 gap-3 items-center mt-4">
                     <div className="col-span-12 flex items-center gap-4 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Checkbox />
+                        <Checkbox
+                          checked={formData.b2bLiberado}
+                          onCheckedChange={(c) => setFormData({ ...formData, b2bLiberado: c as boolean })}
+                        />
                         <label className="text-sm">Liberado venda no B2B</label>
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Senha B2B</label>
-                        <Input className="h-8 text-sm w-32" onChange={handleUpperChange} />
+                        <Input
+                          className="h-8 text-sm w-32"
+                          value={formData.b2bSenha}
+                          onChange={(e) => setFormData({ ...formData, b2bSenha: e.target.value })}
+                        />
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
-                        <Select>
-                          <SelectTrigger className="h-8 text-sm w-16"><SelectValue /></SelectTrigger>
+                        <Select
+                          value={formData.b2bTabelaId ? String(formData.b2bTabelaId) : ''}
+                          onValueChange={(v) => setFormData({ ...formData, b2bTabelaId: Number(v) || 0 })}
+                        >
+                          <SelectTrigger className="h-8 text-sm w-44"><SelectValue placeholder="Selecione" /></SelectTrigger>
                           <SelectContent className="bg-background z-50">
-                            <SelectItem value="1">1</SelectItem>
+                            {tabelas.map((t) => (
+                              <SelectItem key={t.id} value={String(t.id)}>
+                                {getTabelaLabel(t)}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4 mt-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs.</label>
-                    <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })} />
+                  <div className="border-t pt-4 mt-4 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs. Comercial</label>
+                      <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs. Financeiro</label>
+                      <Textarea className="min-h-[80px] text-sm" value={formData.observacaoFinanceiro} onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: toUpperValue(e.target.value) })} />
+                    </div>
                   </div>
                 </TabsContent>
               </div>

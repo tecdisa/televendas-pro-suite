@@ -59,6 +59,13 @@ interface ClientDetail {
   representantes?: Array<{ id?: string | number; nome?: string }>;
 }
 
+type TabelaPreco = {
+  id?: string | number;
+  codigo?: string;
+  descricao?: string;
+  principal?: boolean;
+};
+
 const ReadOnlyField = ({ label, value, className = '' }: { label: string; value?: string | number | null; className?: string }) => (
   <div className={className}>
     <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
@@ -74,6 +81,8 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ClientDetail | null>(null);
+  const [tabelas, setTabelas] = useState<TabelaPreco[]>([]);
+  const [tabelasError, setTabelasError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !clienteId) return;
@@ -81,8 +90,16 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
     const fetchDetail = async () => {
       setLoading(true);
       setError(null);
+      setTabelasError(null);
+      setTabelas([]);
       try {
-        const raw = await clientsService.getDetail(clienteId);
+        const [raw, tabelasRaw] = await Promise.all([
+          clientsService.getDetail(clienteId),
+          clientsService.getTabelasPrecos(clienteId).catch((e) => {
+            setTabelasError(String(e) || 'Erro ao carregar tabelas de preço');
+            return [];
+          }),
+        ]);
         // Normalize data from API
         const detail: ClientDetail = {
           // Identificação
@@ -138,6 +155,13 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
           })) : [],
         };
         setData(detail);
+        const tabelasParsed = Array.isArray(tabelasRaw) ? tabelasRaw : [];
+        setTabelas(tabelasParsed.map((t: any) => ({
+          id: t?.tabela_preco_id ?? t?.id ?? t?.tabela_id ?? '',
+          codigo: t?.codigo_tabela_preco ?? t?.codigo ?? t?.cod ?? '',
+          descricao: (t?.descricao_tabela_preco ?? t?.descricao ?? t?.tabela ?? '').toString().trim(),
+          principal: Boolean(t?.principal ?? false),
+        })));
       } catch (e: any) {
         setError(String(e) || 'Erro ao carregar dados do cliente');
       } finally {
@@ -171,11 +195,12 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
           <div className="p-4 text-center text-destructive">{error}</div>
         ) : (
           <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
               <TabsTrigger value="comercial">Comercial</TabsTrigger>
               <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
               <TabsTrigger value="itinerario">Representantes</TabsTrigger>
+              <TabsTrigger value="tabelas">Tabelas</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-y-auto mt-4">
@@ -338,6 +363,48 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                         <TableRow>
                           <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
                             Nenhum representante cadastrado
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* Tabelas de preço */}
+              <TabsContent value="tabelas" className="m-0">
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-24">Código</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="w-24 text-right">Principal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tabelasError ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-sm text-destructive">
+                            {tabelasError}
+                          </TableCell>
+                        </TableRow>
+                      ) : (tabelas && tabelas.length > 0) ? (
+                        tabelas.map((t, idx) => (
+                          <TableRow key={`${t.id ?? idx}`}>
+                            <TableCell className="font-mono text-xs">{t.codigo || t.id || '-'}</TableCell>
+                            <TableCell>{t.descricao || '-'}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={`text-xs px-2 py-0.5 rounded ${t.principal ? 'bg-green-500/10 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                                {t.principal ? 'Sim' : 'Não'}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                            Nenhuma tabela de preço cadastrada
                           </TableCell>
                         </TableRow>
                       )}

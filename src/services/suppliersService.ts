@@ -108,7 +108,6 @@ export const suppliersService = {
 
   async create(data: {
     cnpj_cpf: string;
-    codigo_fornecedor: string;
     nome_fornecedor: string;
     fantasia?: string;
     endereco?: string;
