@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Truck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
+import { clientsService } from '@/services/clientsService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
+const normalizeCityKey = (value: string | null | undefined) =>
+  String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), wait);
+  };
+};
 const formatPhone = (value: string | number | null | undefined) => {
   const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 11);
   if (!digits) return '';
@@ -74,6 +89,8 @@ export function FornecedoresTab() {
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
+  const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState(initialFormData);
 
@@ -123,6 +140,121 @@ export function FornecedoresTab() {
       setCidadesLoading(false);
     }
   };
+
+  const resolveCidadeId = async (uf: string, nomeCidade?: string) => {
+    if (!uf) return 0;
+    try {
+      const cidades = await metadataService.getCidadesPorUf(uf);
+      setCidadesApi(cidades);
+      if (!nomeCidade) return 0;
+      const target = normalizeCityKey(nomeCidade);
+      if (!target) return 0;
+      const match = cidades.find((c) => normalizeCityKey(c.nome_cidade) === target);
+      return match ? Number(match.cidade_id) || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  const cnpjLookupRef = useRef<(v: string) => void>();
+  if (!cnpjLookupRef.current) {
+    cnpjLookupRef.current = debounce(async (value: string) => {
+      const cleaned = normalizeCnpj(value);
+      if (cleaned.length !== 14) {
+        setCnpjLookupLoading(false);
+        return;
+      }
+      setCnpjLookupLoading(true);
+      try {
+        const result = await clientsService.lookupCnpj(cleaned);
+        if (!result || !result.data) return;
+        const d = result.data;
+        const estab = d.estabelecimento ?? {};
+        const cidadeObj = estab.cidade ?? {};
+        const estadoObj = estab.estado ?? {};
+        const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
+        const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
+        const cepFromCnpj = estab.cep ?? d.cep;
+        const cepValue = cepFromCnpj ? normalizeCep(String(cepFromCnpj)) : '';
+        const hasCep = cepValue.length === 8;
+        const ufValue = toUpperValue(estadoObj.sigla || estab.uf || d.uf || '');
+        const cidadeNome = cidadeObj.nome || estab.municipio || d.municipio || '';
+        const cidadeId = ufValue ? await resolveCidadeId(ufValue, cidadeNome) : 0;
+        setFormData((prev) => {
+          const enderecoFmt = [tipoLogradouro, logradouro].filter(Boolean).join(' ') || d.logradouro || prev.endereco;
+          const complemento = estab.complemento ? String(estab.complemento).trim() : prev.complemento;
+          const telefone1 = estab.telefone1 ? String(estab.telefone1).trim() : '';
+          const ddd1 = estab.ddd1 ? String(estab.ddd1).trim() : '';
+          const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
+          const nextCep = cepValue || normalizeCep(String(prev.cep));
+          return {
+            ...prev,
+            cnpj_cpf: formatCnpj(cleaned),
+            nome_fornecedor: toUpperValue(d.razao_social || prev.nome_fornecedor),
+            fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
+            endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
+            numero: toUpperValue(estab.numero || d.numero || prev.numero || ''),
+            bairro: toUpperValue(estab.bairro || d.bairro || prev.bairro),
+            uf: ufValue || prev.uf,
+            cep: formatCep(nextCep),
+            complemento: toUpperValue(complemento),
+            fone: formatPhone(telefoneFmt || prev.fone),
+            email: estab.email || prev.email,
+            cidade_id: cidadeId || prev.cidade_id,
+          };
+        });
+        if (hasCep) {
+          cepLookupRef.current?.(cepValue);
+        }
+        toast.success('Dados preenchidos pela consulta de CNPJ');
+      } catch (e: any) {
+        toast.error(String(e));
+      } finally {
+        setCnpjLookupLoading(false);
+      }
+    }, 600);
+  }
+
+  const cepLookupRef = useRef<(v: string) => void>();
+  if (!cepLookupRef.current) {
+    cepLookupRef.current = debounce(async (value: string) => {
+      const cleaned = normalizeCep(value);
+      if (cleaned.length !== 8) {
+        setCepLookupLoading(false);
+        return;
+      }
+      setCepLookupLoading(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+        if (!res.ok) {
+          toast.error('Falha ao consultar CEP');
+          return;
+        }
+        const data = await res.json();
+        if (!data || data.erro) {
+          toast.error('CEP nao encontrado');
+          return;
+        }
+        const ufValue = data.uf ? toUpperValue(data.uf) : '';
+        const cidadeNome = data.localidade ? String(data.localidade) : '';
+        const cidadeId = ufValue ? await resolveCidadeId(ufValue, cidadeNome) : 0;
+        setFormData((prev) => ({
+          ...prev,
+          cep: formatCep(cleaned),
+          endereco: toUpperValue(data.logradouro || prev.endereco),
+          complemento: toUpperValue(data.complemento || prev.complemento),
+          bairro: toUpperValue(data.bairro || prev.bairro),
+          uf: ufValue || prev.uf,
+          cidade_id: cidadeId || prev.cidade_id,
+        }));
+        toast.success('Endereco preenchido pelo CEP');
+      } catch (e: any) {
+        toast.error('Erro na consulta de CEP');
+      } finally {
+        setCepLookupLoading(false);
+      }
+    }, 600);
+  }
 
   useEffect(() => {
     loadFornecedores();
@@ -195,14 +327,15 @@ export function FornecedoresTab() {
   };
 
   const handleCreate = async () => {
-    if (!formData.codigo_fornecedor.trim() || !formData.nome_fornecedor.trim() || !formData.cnpj_cpf.trim()) {
-      toast.error('Preencha os campos obrigatórios: Código, CNPJ/CPF e Nome');
+    if (!formData.nome_fornecedor.trim() || !formData.cnpj_cpf.trim()) {
+      toast.error('Preencha os campos obrigatórios: CNPJ/CPF e Nome');
       return;
     }
     setFormLoading(true);
     try {
+      const codigoFornecedor = formData.codigo_fornecedor.trim() || normalizeCnpj(formData.cnpj_cpf);
       await suppliersService.create({
-        codigo_fornecedor: formData.codigo_fornecedor.trim(),
+        codigo_fornecedor: codigoFornecedor,
         cnpj_cpf: normalizeCnpj(formData.cnpj_cpf),
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
@@ -237,8 +370,9 @@ export function FornecedoresTab() {
     if (!editId) return;
     setFormLoading(true);
     try {
+      const codigoFornecedor = formData.codigo_fornecedor.trim();
       await suppliersService.update(editId, {
-        codigo_fornecedor: formData.codigo_fornecedor.trim(),
+        ...(codigoFornecedor ? { codigo_fornecedor: codigoFornecedor } : {}),
         cnpj_cpf: normalizeCnpj(formData.cnpj_cpf),
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
@@ -292,21 +426,28 @@ export function FornecedoresTab() {
 
       <TabsContent value="identificacao" className="space-y-4 mt-4">
         <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Código *</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.codigo_fornecedor}
-              onChange={(e) => setFormData({ ...formData, codigo_fornecedor: toUpperValue(e.target.value) })}
-            />
-          </div>
-          <div className="col-span-5">
+          <div className="col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ/CPF *</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.cnpj_cpf}
-              onChange={(e) => setFormData({ ...formData, cnpj_cpf: formatCnpj(e.target.value) })}
-            />
+            <div className="flex gap-1">
+              <Input
+                className="h-8 text-sm"
+                value={formData.cnpj_cpf}
+                onChange={(e) => {
+                  const next = formatCnpj(e.target.value);
+                  setFormData({ ...formData, cnpj_cpf: next });
+                  cnpjLookupRef.current?.(next);
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => cnpjLookupRef.current?.(formData.cnpj_cpf)}
+                disabled={cnpjLookupLoading}
+              >
+                {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           <div className="col-span-3 flex items-center gap-2 pt-5">
             <Checkbox
@@ -358,11 +499,26 @@ export function FornecedoresTab() {
           </div>
           <div className="col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.cep}
-              onChange={(e) => setFormData({ ...formData, cep: formatCep(e.target.value) })}
-            />
+            <div className="flex gap-1">
+              <Input
+                className="h-8 text-sm"
+                value={formData.cep}
+                onChange={(e) => {
+                  const next = formatCep(e.target.value);
+                  setFormData({ ...formData, cep: next });
+                  cepLookupRef.current?.(next);
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => cepLookupRef.current?.(formData.cep)}
+                disabled={cepLookupLoading}
+              >
+                {cepLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </div>
 
