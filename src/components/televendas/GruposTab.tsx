@@ -83,14 +83,13 @@ export function GruposTab() {
   };
 
   const handleCreate = async () => {
-    if (!formData.codigo_grupo.trim() || !formData.descricao_grupo.trim()) {
-      toast.error('Preencha os campos obrigatórios: Código e Descrição');
+    if (!formData.descricao_grupo.trim()) {
+      toast.error('Preencha os campos obrigatórios: Descrição');
       return;
     }
     setFormLoading(true);
     try {
       await groupsService.create({
-        codigo_grupo: formData.codigo_grupo.trim(),
         descricao_grupo: formData.descricao_grupo.trim(),
         inativo: formData.inativo,
       });
@@ -110,7 +109,6 @@ export function GruposTab() {
     setFormLoading(true);
     try {
       await groupsService.update(editId, {
-        codigo_grupo: formData.codigo_grupo.trim(),
         descricao_grupo: formData.descricao_grupo.trim(),
         inativo: formData.inativo,
       });
@@ -142,15 +140,7 @@ export function GruposTab() {
   const formContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Código *</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.codigo_grupo}
-            onChange={(e) => setFormData({ ...formData, codigo_grupo: toUpperValue(e.target.value) })}
-          />
-        </div>
-        <div className="col-span-5">
+        <div className="col-span-9">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
           <Input
             className="h-8 text-sm"
@@ -233,9 +223,9 @@ export function GruposTab() {
                     </TableRow>
                   ) : (
                     grupos.map((g) => (
-                      <TableRow key={g.grupo_id} className={g.inativo ? 'opacity-50' : ''}>
-                        <TableCell className="font-mono text-xs">{g.codigo_grupo || '-'}</TableCell>
-                        <TableCell className="font-medium">{g.descricao_grupo}</TableCell>
+                    <TableRow key={g.grupo_id} className={g.inativo ? 'opacity-50' : ''}>
+                      <TableCell className="font-mono text-xs">{g.codigo_grupo || '-'}</TableCell>
+                      <TableCell className="font-medium">{g.descricao_grupo}</TableCell>
                         <TableCell>
                           <span className={`text-xs px-2 py-0.5 rounded ${g.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
                             {g.inativo ? 'Inativo' : 'Ativo'}

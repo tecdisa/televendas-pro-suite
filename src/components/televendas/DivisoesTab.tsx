@@ -107,14 +107,13 @@ export function DivisoesTab() {
   };
 
   const handleCreate = async () => {
-    if (!formData.codigo_divisao.trim() || !formData.descricao_divisao.trim() || !formData.grupo_id) {
-      toast.error('Preencha os campos obrigatórios: Código, Grupo e Descrição');
+    if (!formData.descricao_divisao.trim() || !formData.grupo_id) {
+      toast.error('Preencha os campos obrigatórios: Grupo e Descrição');
       return;
     }
     setFormLoading(true);
     try {
       await divisionsService.create({
-        codigo_divisao: formData.codigo_divisao.trim(),
         grupo_id: formData.grupo_id,
         descricao_divisao: formData.descricao_divisao.trim(),
         inativo: formData.inativo,
@@ -135,7 +134,6 @@ export function DivisoesTab() {
     setFormLoading(true);
     try {
       await divisionsService.update(editId, {
-        codigo_divisao: formData.codigo_divisao.trim(),
         grupo_id: formData.grupo_id,
         descricao_divisao: formData.descricao_divisao.trim(),
         inativo: formData.inativo,
@@ -168,21 +166,13 @@ export function DivisoesTab() {
   const getGrupoNome = (grupoId?: number) => {
     if (!grupoId) return '-';
     const g = grupos.find((gr) => gr.grupo_id === grupoId);
-    return g ? `${g.codigo_grupo} - ${g.descricao_grupo}` : String(grupoId);
+    return g ? g.descricao_grupo : String(grupoId);
   };
 
   const formContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Código *</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.codigo_divisao}
-            onChange={(e) => setFormData({ ...formData, codigo_divisao: toUpperValue(e.target.value) })}
-          />
-        </div>
-        <div className="col-span-5">
+        <div className="col-span-9">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Grupo *</label>
           <Select
             value={formData.grupo_id ? String(formData.grupo_id) : ''}
@@ -194,7 +184,7 @@ export function DivisoesTab() {
             <SelectContent className="bg-background z-50 max-h-60">
               {grupos.map((g) => (
                 <SelectItem key={g.grupo_id} value={String(g.grupo_id)}>
-                  {g.codigo_grupo} - {g.descricao_grupo}
+                  {g.descricao_grupo}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -258,7 +248,7 @@ export function DivisoesTab() {
                   <SelectItem value="all">Todos os grupos</SelectItem>
                   {grupos.map((g) => (
                     <SelectItem key={g.grupo_id} value={String(g.grupo_id)}>
-                      {g.codigo_grupo} - {g.descricao_grupo}
+                      {g.descricao_grupo}
                     </SelectItem>
                   ))}
                 </SelectContent>

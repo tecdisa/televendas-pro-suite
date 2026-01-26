@@ -75,7 +75,7 @@ export const groupsService = {
     }
   },
 
-  async create(data: { codigo_grupo: string; descricao_grupo: string; inativo?: boolean }): Promise<Grupo> {
+  async create(data: { codigo_grupo?: string; descricao_grupo: string; inativo?: boolean }): Promise<Grupo> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
     if (!empresaId) throw new Error('Empresa não selecionada');
