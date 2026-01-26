@@ -289,7 +289,7 @@ export function GruposTab() {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : (
-            {formContent}
+            formContent
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
