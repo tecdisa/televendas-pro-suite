@@ -6,10 +6,9 @@ import {
   Users,
   Truck,
   Search,
-  FileText,
-  Route,
+  Package,
+  ShoppingCart,
   UserPlus,
-  ClipboardList,
   Layers,
   Grid3X3,
 } from 'lucide-react';
@@ -43,24 +42,11 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    title: 'Pesquisa',
-    icon: Search,
-    path: '/televendas?tab=pesquisa',
-  },
-  {
-    title: 'Dados',
-    icon: FileText,
-    path: '/televendas?tab=dados',
-  },
-  {
-    title: 'Itinerários',
-    icon: Route,
-    path: '/televendas?tab=itinerarios',
-  },
-  {
-    title: 'Visitas',
-    icon: ClipboardList,
-    path: '/televendas?tab=visitas',
+    title: 'Vendas',
+    icon: ShoppingCart,
+    children: [
+      { title: 'Pedidos', path: '/televendas?tab=pesquisa', icon: Package },
+    ],
   },
   {
     title: 'Cadastro',
@@ -83,6 +69,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    Vendas: true,
     Cadastro: true,
   });
 

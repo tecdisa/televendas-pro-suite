@@ -107,7 +107,7 @@ const Televendas = () => {
   };
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen>
       <div className="min-h-screen bg-background flex w-full">
         <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
 
