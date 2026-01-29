@@ -148,23 +148,13 @@ export function RedesTab() {
 
   const formContent = (
     <div className="space-y-4">
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-3">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.codigo_rede}
-            onChange={(e) => setFormData({ ...formData, codigo_rede: toUpperValue(e.target.value) })}
-          />
-        </div>
-        <div className="col-span-9">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.descricao_rede}
-            onChange={(e) => setFormData({ ...formData, descricao_rede: toUpperValue(e.target.value) })}
-          />
-        </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
+        <Input
+          className="h-8 text-sm"
+          value={formData.descricao_rede}
+          onChange={(e) => setFormData({ ...formData, descricao_rede: toUpperValue(e.target.value) })}
+        />
       </div>
       <div className="grid grid-cols-12 gap-3">
         <div className="col-span-8">
