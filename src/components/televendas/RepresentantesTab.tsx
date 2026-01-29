@@ -1,0 +1,599 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, UserCheck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
+
+const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
+
+const maskPhone = (v: string) => {
+  const digits = v.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 10) {
+    return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
+  }
+  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
+};
+
+const maskCep = (v: string) => {
+  const digits = v.replace(/\D/g, '').slice(0, 8);
+  return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2').trim();
+};
+
+const maskCnpjCpf = (v: string) => {
+  const digits = v.replace(/\D/g, '');
+  if (digits.length <= 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/-$/, '');
+  }
+  return digits.slice(0, 14).replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5').replace(/-$/, '');
+};
+
+const initialFormData: RepresentanteFormData = {
+  codigo_representante: '',
+  nome_representante: '',
+  cnpj_cpf: '',
+  fantasia: '',
+  endereco: '',
+  numero: '',
+  complemento: '',
+  bairro: '',
+  cidade_id: null,
+  uf: '',
+  cep: '',
+  fone: '',
+  whatsapp: '',
+  email: '',
+  data_nascimento: null,
+  supervisor: '',
+  gerente: '',
+  comissao: 0,
+  setor_id: null,
+  rotas_liberadas: '',
+  liberado_debito_credito: false,
+  bloqueia_alteracao_agenda: false,
+  quantidade_maxima_pedidos_retidos_para_sincronizar: 0,
+  observacao: '',
+  inativo: false,
+};
+
+export function RepresentantesTab() {
+  const [loading, setLoading] = useState(false);
+  const [representantes, setRepresentantes] = useState<Representante[]>([]);
+  const [search, setSearch] = useState('');
+  const [incluirInativos, setIncluirInativos] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+  const [formData, setFormData] = useState<RepresentanteFormData>(initialFormData);
+
+  const loadRepresentantes = async () => {
+    setLoading(true);
+    try {
+      const result = await representativesService.getAll(search, 1, 100, incluirInativos);
+      setRepresentantes(result.data);
+    } catch (error: any) {
+      console.error('Erro ao carregar representantes:', error);
+      toast.error(error?.message || 'Erro ao carregar representantes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRepresentantes();
+  }, [incluirInativos]);
+
+  const handleSearch = () => loadRepresentantes();
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
+  };
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditId(null);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setCreateOpen(true);
+  };
+
+  const openEdit = async (r: Representante) => {
+    setEditId(r.representante_id);
+    setFormLoading(true);
+    setEditOpen(true);
+    try {
+      const detail = await representativesService.getById(r.representante_id);
+      if (detail) {
+        setFormData({
+          codigo_representante: detail.codigo_representante || '',
+          nome_representante: detail.nome_representante || '',
+          cnpj_cpf: detail.cnpj_cpf || '',
+          fantasia: detail.fantasia || '',
+          endereco: detail.endereco || '',
+          numero: detail.numero || '',
+          complemento: detail.complemento || '',
+          bairro: detail.bairro || '',
+          cidade_id: detail.cidade_id ?? null,
+          uf: detail.uf || '',
+          cep: detail.cep || '',
+          fone: detail.fone || '',
+          whatsapp: detail.whatsapp || '',
+          email: detail.email || '',
+          data_nascimento: detail.data_nascimento || null,
+          supervisor: detail.supervisor || '',
+          gerente: detail.gerente || '',
+          comissao: detail.comissao ?? 0,
+          setor_id: detail.setor_id ?? null,
+          rotas_liberadas: detail.rotas_liberadas || '',
+          liberado_debito_credito: detail.liberado_debito_credito ?? false,
+          bloqueia_alteracao_agenda: detail.bloqueia_alteracao_agenda ?? false,
+          quantidade_maxima_pedidos_retidos_para_sincronizar: detail.quantidade_maxima_pedidos_retidos_para_sincronizar ?? 0,
+          observacao: detail.observacao || '',
+          inativo: detail.inativo ?? false,
+        });
+      }
+    } catch (e: any) {
+      toast.error('Erro ao carregar dados do representante');
+      setEditOpen(false);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!formData.nome_representante.trim()) {
+      toast.error('Preencha o campo obrigatório: Nome');
+      return;
+    }
+    setFormLoading(true);
+    try {
+      await representativesService.create(formData);
+      toast.success('Representante criado com sucesso');
+      setCreateOpen(false);
+      resetForm();
+      loadRepresentantes();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao criar representante');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!editId) return;
+    if (!formData.nome_representante.trim()) {
+      toast.error('Preencha o campo obrigatório: Nome');
+      return;
+    }
+    setFormLoading(true);
+    try {
+      await representativesService.update(editId, formData);
+      toast.success('Representante atualizado com sucesso');
+      setEditOpen(false);
+      resetForm();
+      loadRepresentantes();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao atualizar representante');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir este representante?')) return;
+    setDeleteLoading(id);
+    try {
+      await representativesService.delete(id);
+      toast.success('Representante excluído com sucesso');
+      loadRepresentantes();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao excluir representante');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  const formContent = (
+    <Tabs defaultValue="identificacao" className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="identificacao">Identificação</TabsTrigger>
+        <TabsTrigger value="endereco">Endereço</TabsTrigger>
+        <TabsTrigger value="config">Configurações</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="identificacao" className="space-y-4 mt-4">
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.codigo_representante}
+              onChange={(e) => setFormData({ ...formData, codigo_representante: toUpperValue(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-9">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.nome_representante}
+              onChange={(e) => setFormData({ ...formData, nome_representante: toUpperValue(e.target.value) })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF/CNPJ</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.cnpj_cpf}
+              onChange={(e) => setFormData({ ...formData, cnpj_cpf: maskCnpjCpf(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-8">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.fantasia}
+              onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.fone}
+              onChange={(e) => setFormData({ ...formData, fone: maskPhone(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.whatsapp}
+              onChange={(e) => setFormData({ ...formData, whatsapp: maskPhone(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Data Nascimento</label>
+            <Input
+              type="date"
+              className="h-8 text-sm"
+              value={formData.data_nascimento || ''}
+              onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value || null })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-12">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
+            <Input
+              type="email"
+              className="h-8 text-sm"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })}
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="endereco" className="space-y-4 mt-4">
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.cep}
+              onChange={(e) => setFormData({ ...formData, cep: maskCep(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-7">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.endereco}
+              onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.numero}
+              onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.complemento}
+              onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.bairro}
+              onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
+            <Input
+              className="h-8 text-sm"
+              maxLength={2}
+              value={formData.uf}
+              onChange={(e) => setFormData({ ...formData, uf: toUpperValue(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade ID</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.cidade_id ?? ''}
+              onChange={(e) => setFormData({ ...formData, cidade_id: e.target.value ? Number(e.target.value) : null })}
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="config" className="space-y-4 mt-4">
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.supervisor}
+              onChange={(e) => setFormData({ ...formData, supervisor: toUpperValue(e.target.value) })}
+            />
+          </div>
+          <div className="col-span-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.gerente}
+              onChange={(e) => setFormData({ ...formData, gerente: toUpperValue(e.target.value) })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.comissao ?? ''}
+              onChange={(e) => setFormData({ ...formData, comissao: e.target.value ? Number(e.target.value) : 0 })}
+            />
+          </div>
+          <div className="col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Setor ID</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.setor_id ?? ''}
+              onChange={(e) => setFormData({ ...formData, setor_id: e.target.value ? Number(e.target.value) : null })}
+            />
+          </div>
+          <div className="col-span-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Rotas Liberadas</label>
+            <Input
+              className="h-8 text-sm"
+              value={formData.rotas_liberadas}
+              onChange={(e) => setFormData({ ...formData, rotas_liberadas: e.target.value })}
+              placeholder="Ex: 1,2,3"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Máx. Pedidos Retidos</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.quantidade_maxima_pedidos_retidos_para_sincronizar ?? ''}
+              onChange={(e) => setFormData({ ...formData, quantidade_maxima_pedidos_retidos_para_sincronizar: e.target.value ? Number(e.target.value) : 0 })}
+            />
+          </div>
+          <div className="col-span-8 flex flex-wrap gap-4 items-end pb-1">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={formData.liberado_debito_credito}
+                onCheckedChange={(c) => setFormData({ ...formData, liberado_debito_credito: c as boolean })}
+              />
+              <label className="text-sm">Liberado Déb/Créd</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={formData.bloqueia_alteracao_agenda}
+                onCheckedChange={(c) => setFormData({ ...formData, bloqueia_alteracao_agenda: c as boolean })}
+              />
+              <label className="text-sm">Bloqueia Agenda</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={formData.inativo}
+                onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
+              />
+              <label className="text-sm">Inativo</label>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.observacao}
+            onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+          />
+        </div>
+      </TabsContent>
+    </Tabs>
+  );
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Representantes
+            </CardTitle>
+            <Button onClick={openCreate} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Representante
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <Input
+              placeholder="Buscar por nome, CPF/CNPJ ou código..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1"
+            />
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="incluirInativos"
+                checked={incluirInativos}
+                onCheckedChange={(c) => setIncluirInativos(c as boolean)}
+              />
+              <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
+            </div>
+            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+              <Search className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Buscar</span>
+            </Button>
+          </div>
+
+          <div className="border rounded-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table className="min-w-[700px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-20">Código</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
+                    <TableHead className="hidden lg:table-cell w-12">UF</TableHead>
+                    <TableHead className="hidden lg:table-cell">Telefone</TableHead>
+                    <TableHead className="hidden xl:table-cell">E-mail</TableHead>
+                    <TableHead className="w-20">Status</TableHead>
+                    <TableHead className="w-24 text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : representantes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Nenhum representante encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    representantes.map((r) => (
+                      <TableRow key={r.representante_id} className={r.inativo ? 'opacity-50' : ''}>
+                        <TableCell className="font-mono text-xs">{r.codigo_representante || '-'}</TableCell>
+                        <TableCell className="font-medium">{r.nome_representante}</TableCell>
+                        <TableCell className="hidden md:table-cell text-xs">{r.cnpj_cpf || '-'}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{r.uf || '-'}</TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs">{r.fone || '-'}</TableCell>
+                        <TableCell className="hidden xl:table-cell text-xs">{r.email || '-'}</TableCell>
+                        <TableCell>
+                          <span className={`text-xs px-2 py-0.5 rounded ${r.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
+                            {r.inativo ? 'Inativo' : 'Ativo'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => handleDelete(r.representante_id)}
+                              disabled={deleteLoading === r.representante_id}
+                            >
+                              {deleteLoading === r.representante_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Representante</DialogTitle>
+          </DialogHeader>
+          {formContent}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={formLoading}>
+              {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Representante</DialogTitle>
+          </DialogHeader>
+          {formLoading && !formData.nome_representante ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            formContent
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdate} disabled={formLoading}>
+              {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
