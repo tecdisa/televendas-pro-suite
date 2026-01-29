@@ -11,6 +11,7 @@ import {
   UserPlus,
   Layers,
   Grid3X3,
+  UserCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -54,6 +55,7 @@ const menuItems: MenuItem[] = [
     children: [
       { title: 'Clientes', path: '/televendas?tab=clientes', icon: Users },
       { title: 'Fornecedores', path: '/televendas?tab=fornecedores', icon: Truck },
+      { title: 'Representantes', path: '/televendas?tab=representantes', icon: UserCheck },
       { title: 'Grupos', path: '/televendas?tab=grupos', icon: Layers },
       { title: 'Divisões', path: '/televendas?tab=divisoes', icon: Grid3X3 },
     ],
