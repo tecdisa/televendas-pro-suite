@@ -12,6 +12,10 @@ import {
   Layers,
   Grid3X3,
   UserCheck,
+  Network,
+  Clock,
+  Target,
+  Route,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -58,6 +62,10 @@ const menuItems: MenuItem[] = [
       { title: 'Representantes', path: '/televendas?tab=representantes', icon: UserCheck },
       { title: 'Grupos', path: '/televendas?tab=grupos', icon: Layers },
       { title: 'Divisões', path: '/televendas?tab=divisoes', icon: Grid3X3 },
+      { title: 'Redes', path: '/televendas?tab=redes', icon: Network },
+      { title: 'Prazos Pagamento', path: '/televendas?tab=prazos', icon: Clock },
+      { title: 'Segmentos Venda', path: '/televendas?tab=segmentos', icon: Target },
+      { title: 'Rotas Clientes', path: '/televendas?tab=rotas', icon: Route },
     ],
   },
 ];

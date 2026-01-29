@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PesquisaTab } from '@/components/televendas/PesquisaTab';
 import { DadosTab } from '@/components/televendas/DadosTab';
@@ -13,6 +13,10 @@ import { FornecedoresTab } from '@/components/televendas/FornecedoresTab';
 import { RepresentantesTab } from '@/components/televendas/RepresentantesTab';
 import { GruposTab } from '@/components/televendas/GruposTab';
 import { DivisoesTab } from '@/components/televendas/DivisoesTab';
+import { RedesTab } from '@/components/televendas/RedesTab';
+import { PrazosPagamentosTab } from '@/components/televendas/PrazosPagamentosTab';
+import { SegmentosVendasTab } from '@/components/televendas/SegmentosVendasTab';
+import { RotasClientesTab } from '@/components/televendas/RotasClientesTab';
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
@@ -29,6 +33,10 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   representantes: { title: 'Cadastro de Representantes', icon: UserCheck },
   grupos: { title: 'Grupos de Produtos', icon: Layers },
   divisoes: { title: 'Divisões de Produtos', icon: Grid3X3 },
+  redes: { title: 'Redes', icon: Network },
+  prazos: { title: 'Prazos de Pagamento', icon: Clock },
+  segmentos: { title: 'Segmentos de Venda', icon: Target },
+  rotas: { title: 'Rotas de Clientes', icon: Route },
 };
 
 const Televendas = () => {
@@ -103,6 +111,30 @@ const Televendas = () => {
         return (
           <ErrorBoundary>
             <DivisoesTab />
+          </ErrorBoundary>
+        );
+      case 'redes':
+        return (
+          <ErrorBoundary>
+            <RedesTab />
+          </ErrorBoundary>
+        );
+      case 'prazos':
+        return (
+          <ErrorBoundary>
+            <PrazosPagamentosTab />
+          </ErrorBoundary>
+        );
+      case 'segmentos':
+        return (
+          <ErrorBoundary>
+            <SegmentosVendasTab />
+          </ErrorBoundary>
+        );
+      case 'rotas':
+        return (
+          <ErrorBoundary>
+            <RotasClientesTab />
           </ErrorBoundary>
         );
       default:
