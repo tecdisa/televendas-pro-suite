@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clientsService } from '@/services/clientsService';
+import { metadataService } from '@/services/metadataService';
 
 interface ClientInfoModalProps {
   open: boolean;
@@ -66,6 +67,19 @@ type TabelaPreco = {
   principal?: boolean;
 };
 
+const normalizeKey = (value: any) => String(value ?? '').trim();
+const formatLabel = (codigo?: string | number | null, descricao?: string | null) => {
+  const desc = String(descricao ?? '').trim();
+  if (!desc) return '';
+  const code = String(codigo ?? '').trim();
+  return code ? `${code} - ${desc}` : desc;
+};
+const findByIdOrCodigo = (list: Array<{ id?: any; codigo?: any }>, value: any) => {
+  const key = normalizeKey(value);
+  if (!key) return undefined;
+  return list.find((item) => normalizeKey(item.id) === key || normalizeKey(item.codigo) === key);
+};
+
 const ReadOnlyField = ({ label, value, className = '' }: { label: string; value?: string | number | null; className?: string }) => (
   <div className={className}>
     <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
@@ -93,13 +107,99 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
       setTabelasError(null);
       setTabelas([]);
       try {
-        const [raw, tabelasRaw] = await Promise.all([
+        const [
+          raw,
+          tabelasRaw,
+          segmentos,
+          redes,
+          prazos,
+          rotas,
+          tabelasMeta,
+        ] = await Promise.all([
           clientsService.getDetail(clienteId),
           clientsService.getTabelasPrecos(clienteId).catch((e) => {
             setTabelasError(String(e) || 'Erro ao carregar tabelas de preço');
             return [];
           }),
+          metadataService.getSegmentosVendas().catch(() => []),
+          metadataService.getRedes().catch(() => []),
+          metadataService.getPrazos().catch(() => []),
+          metadataService.getRotas().catch(() => []),
+          metadataService.getTabelas().catch(() => []),
         ]);
+        const segmentoId = raw?.segmento_id ?? raw?.segmentoId ?? raw?.segmento;
+        const segmentoDesc =
+          raw?.segmento?.descricao ??
+          raw?.segmento?.descricao_segmento ??
+          raw?.segmento_descricao ??
+          raw?.segmentoDescricao ??
+          '';
+        const segmentoMatch = findByIdOrCodigo(segmentos, segmentoId);
+        const segmentoLabel =
+          segmentoDesc ||
+          (segmentoMatch ? formatLabel(segmentoMatch.codigo, segmentoMatch.descricao) : '') ||
+          (segmentoId ? `Segmento ${segmentoId}` : '');
+
+        const redeId = raw?.rede_id ?? raw?.redeId ?? raw?.rede;
+        const redeDesc =
+          raw?.rede?.descricao ??
+          raw?.rede?.descricao_rede ??
+          raw?.rede_descricao ??
+          raw?.redeDescricao ??
+          '';
+        const redeMatch = findByIdOrCodigo(redes, redeId);
+        const redeLabel =
+          redeDesc ||
+          (redeMatch ? formatLabel(redeMatch.codigo, redeMatch.descricao) : '') ||
+          (redeId ? `Rede ${redeId}` : '');
+
+        const prazoId =
+          raw?.prazo_pagto_id ??
+          raw?.prazoPagtoId ??
+          raw?.prazo_pagto ??
+          raw?.prazo;
+        const prazoDesc =
+          raw?.prazo?.descricao ??
+          raw?.prazo?.descricao_prazo_pagto ??
+          raw?.prazo_descricao ??
+          raw?.prazoDescricao ??
+          '';
+        const prazoMatch = findByIdOrCodigo(prazos, prazoId);
+        const prazoLabel =
+          prazoDesc ||
+          (prazoMatch ? formatLabel(prazoMatch.codigo, prazoMatch.descricao) : '') ||
+          (prazoId ? `Prazo ${prazoId}` : '');
+
+        const rotaDesc =
+          raw?.rota?.descricao_rota ??
+          raw?.rota?.descricao ??
+          raw?.rota_descricao ??
+          '';
+        const rotaId = raw?.rota_id ?? raw?.rotaId ?? raw?.rota;
+        const rotaMatch = Array.isArray(rotas)
+          ? rotas.find((r) =>
+              normalizeKey(r.id) === normalizeKey(rotaId) ||
+              normalizeKey(r.codigo_rota) === normalizeKey(rotaId)
+            )
+          : undefined;
+        const rotaLabel = rotaDesc
+          ? (raw?.rota?.codigo_rota ? `${raw.rota.codigo_rota} - ${String(rotaDesc).trim()}` : String(rotaDesc).trim())
+          : rotaMatch
+            ? (rotaMatch.codigo_rota ? `${rotaMatch.codigo_rota} - ${rotaMatch.label}` : rotaMatch.label)
+            : (rotaId ? `Rota ${rotaId}` : '');
+
+        const b2bTabelaId = raw?.b2b_tabela_id ?? raw?.b2bTabelaId ?? raw?.b2bTabela;
+        const b2bTabelaDesc =
+          raw?.b2b_tabela?.descricao ??
+          raw?.b2b_tabela_descricao ??
+          raw?.tabela_descricao ??
+          raw?.b2bTabelaDescricao ??
+          '';
+        const b2bTabelaMatch = findByIdOrCodigo(tabelasMeta, b2bTabelaId);
+        const b2bTabelaLabel =
+          b2bTabelaDesc ||
+          (b2bTabelaMatch ? formatLabel(b2bTabelaMatch.codigo, b2bTabelaMatch.descricao) : '') ||
+          (b2bTabelaId ? `Tabela ${b2bTabelaId}` : '');
         // Normalize data from API
         const detail: ClientDetail = {
           // Identificação
@@ -121,9 +221,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
           fax: raw?.fax ?? '',
           email: raw?.email ?? '',
           site: raw?.site ?? '',
-          rota: raw?.rota?.descricao_rota 
-            ? (raw.rota.codigo_rota ? `${raw.rota.codigo_rota} - ${raw.rota.descricao_rota.trim()}` : raw.rota.descricao_rota.trim())
-            : (raw?.rota_id ? `Rota ${raw.rota_id}` : ''),
+          rota: rotaLabel,
           
           // Comercial
           contatos: raw?.comprador_nome ? [{
@@ -131,18 +229,18 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
             celular: raw?.celular ?? raw?.whatsapp ?? raw?.comprador_fone ?? '',
             aniversario: raw?.comprador_data_nascimento ?? '',
           }] : [],
-          segmento: raw?.segmento_id ? `Segmento ${raw.segmento_id}` : '',
+          segmento: segmentoLabel,
           checkouts: raw?.checkouts ?? 0,
           nielsen: raw?.nielsen ?? '',
-          rede: raw?.rede_id ? `Rede ${raw.rede_id}` : '',
-          tabelas: raw?.b2b_tabela_id ? `Tabela ${raw.b2b_tabela_id}` : '',
+          rede: redeLabel,
+          tabelas: b2bTabelaLabel,
           descontoFinanceiroBoleto: raw?.desconto_financeiro_boleto ?? raw?.descontoFinanceiroBoleto ?? 0,
           observacaoComercial: raw?.observacao_comercial ?? raw?.observacaoComercial ?? raw?.observacao ?? '',
           
           // Financeiro
           credito: raw?.b2b_liberado ? 'Liberado' : 'Bloqueado',
           boleto: raw?.boleto ?? raw?.usa_boleto ?? false,
-          prazo: raw?.prazo_pagto_id ? `Prazo ${raw.prazo_pagto_id}` : '',
+          prazo: prazoLabel,
           limite: raw?.limite_credito ?? raw?.limite ?? 0,
           aberto: raw?.aberto ?? raw?.valor_aberto ?? 0,
           disponivel: raw?.disponivel ?? raw?.limite_disponivel ?? 0,

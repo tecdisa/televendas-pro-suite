@@ -634,11 +634,14 @@ export const ClientesTab = () => {
     }
   };
 
-  const loadClients = async () => {
-    const data = await clientsService.search(filters.search, {
-      uf: filters.uf !== 'all' ? filters.uf : undefined,
-      cidade: filters.cidade !== 'all' ? filters.cidade : undefined,
-      bairro: filters.bairro
+  const loadClients = async (nextFilters?: typeof filters) => {
+    const active = nextFilters ?? filters;
+    const ignoreFilters = active.todos;
+    const data = await clientsService.search({
+      query: ignoreFilters ? undefined : active.search,
+      uf: !ignoreFilters && active.uf !== 'all' ? active.uf : undefined,
+      cidade: !ignoreFilters && active.cidade !== 'all' ? active.cidade : undefined,
+      bairro: !ignoreFilters && active.bairro ? active.bairro.trim() : undefined,
     });
     setClients(data);
   };
@@ -793,6 +796,7 @@ const validateFormData = (data: ClientFormData): string[] => {
   if (!hasText(data.cnpjCpf)) errors.push('Informe o CNPJ/CPF.');
   if (!hasText(data.nome)) errors.push('Informe a Razão Social/Nome.');
   if (!hasText(data.cep)) errors.push('Informe o CEP.');
+  if (!hasText(data.telefone)) errors.push('Informe o telefone fixo.');
 
   const ufValue = String(data.uf ?? '').trim();
   if (!ufValue || ufValue.length < 2) errors.push('Informe a UF.');
@@ -804,6 +808,8 @@ const validateFormData = (data: ClientFormData): string[] => {
   if (!isValidId(data.rotaId)) errors.push('Selecione a rota de entrega.');
   if (!isValidId(data.formaPagtoId)) errors.push('Selecione a forma de pagamento.');
   if (!isValidId(data.prazoPagtoId)) errors.push('Selecione o prazo de pagamento.');
+  if (!Array.isArray(data.tabelaIds) || data.tabelaIds.length === 0) errors.push('Selecione ao menos uma tabela de preços.');
+  if (!Array.isArray(data.representantes) || data.representantes.length === 0) errors.push('Selecione o representante.');
 
   const emailValue = String(data.email ?? '').trim();
   if (emailValue && !isValidEmail(emailValue)) errors.push('Email inválido.');
@@ -846,6 +852,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       const { representantes, tabelaIds, ...payloadBase } = formData;
       const payloadNormalized = {
         ...payloadBase,
+        site: payloadBase.site?.trim() || undefined,
         telefone: normalizePhoneDigits(payloadBase.telefone),
         fax: normalizePhoneDigits(payloadBase.fax),
         whatsapp: normalizePhoneDigits(payloadBase.whatsapp),
@@ -1005,6 +1012,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       const { representantes, tabelaIds, ...payloadBase } = formData;
       const payloadNormalized = {
         ...payloadBase,
+        site: payloadBase.site?.trim() || undefined,
         telefone: normalizePhoneDigits(payloadBase.telefone),
         fax: normalizePhoneDigits(payloadBase.fax),
         whatsapp: normalizePhoneDigits(payloadBase.whatsapp),
@@ -1121,7 +1129,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <Checkbox 
                   id="todos"
                   checked={filters.todos}
-                  onCheckedChange={(checked) => setFilters({...filters, todos: checked as boolean})}
+                  onCheckedChange={(checked) => {
+                    const next = { ...filters, todos: checked as boolean };
+                    setFilters(next);
+                    loadClients(next);
+                  }}
                 />
                 <label htmlFor="todos" className="text-sm font-medium">
                   Mostrar todos
