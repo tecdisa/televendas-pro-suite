@@ -4,37 +4,55 @@ import { apiClient } from '@/utils/apiClient';
 
 export interface FormaPagamento {
   forma_pagto_id: number;
+  codigo_formapagto: string;
   descricao_forma_pagto: string;
+  somente_avista?: boolean;
   boleto?: boolean;
-  cartao?: boolean;
-  envia_mobile?: boolean;
-  permite_gerar_receber?: boolean;
+  cartao_debito?: boolean;
+  cartao_credito?: boolean;
+  pix?: boolean;
+  indice_financeiro?: number | null;
+  taxa_adicional?: number | null;
+  liberado_app_mobile?: boolean;
+  liberado_b2b?: boolean;
+  liberado_b2c?: boolean;
   prazo_pagto_id?: number | null;
-  meio_pagamento_id?: number | null;
   inativo?: boolean;
 }
 
 export interface FormaPagamentoFormData {
+  codigo_formapagto?: string;
   descricao_forma_pagto: string;
+  somente_avista?: boolean;
   boleto?: boolean;
-  cartao?: boolean;
-  envia_mobile?: boolean;
-  permite_gerar_receber?: boolean;
+  cartao_debito?: boolean;
+  cartao_credito?: boolean;
+  pix?: boolean;
+  indice_financeiro?: number | null;
+  taxa_adicional?: number | null;
+  liberado_app_mobile?: boolean;
+  liberado_b2b?: boolean;
+  liberado_b2c?: boolean;
   prazo_pagto_id?: number | null;
-  meio_pagamento_id?: number | null;
   inativo?: boolean;
 }
 
 function normalize(raw: any): FormaPagamento {
   return {
     forma_pagto_id: raw.forma_pagto_id ?? raw.formaPagtoId ?? raw.id ?? 0,
+    codigo_formapagto: raw.codigo_formapagto ?? raw.codigoFormapagto ?? '',
     descricao_forma_pagto: raw.descricao_forma_pagto ?? raw.descricaoFormaPagto ?? raw.descricao ?? '',
+    somente_avista: raw.somente_avista ?? raw.somenteAvista ?? false,
     boleto: raw.boleto ?? false,
-    cartao: raw.cartao ?? false,
-    envia_mobile: raw.envia_mobile ?? raw.enviaMobile ?? false,
-    permite_gerar_receber: raw.permite_gerar_receber ?? raw.permiteGerarReceber ?? false,
+    cartao_debito: raw.cartao_debito ?? raw.cartaoDebito ?? false,
+    cartao_credito: raw.cartao_credito ?? raw.cartaoCredito ?? false,
+    pix: raw.pix ?? false,
+    indice_financeiro: raw.indice_financeiro ?? raw.indiceFinanceiro ?? null,
+    taxa_adicional: raw.taxa_adicional ?? raw.taxaAdicional ?? null,
+    liberado_app_mobile: raw.liberado_app_mobile ?? raw.liberadoAppMobile ?? false,
+    liberado_b2b: raw.liberado_b2b ?? raw.liberadoB2b ?? false,
+    liberado_b2c: raw.liberado_b2c ?? raw.liberadoB2c ?? false,
     prazo_pagto_id: raw.prazo_pagto_id ?? raw.prazoPagtoId ?? null,
-    meio_pagamento_id: raw.meio_pagamento_id ?? raw.meioPagamentoId ?? null,
     inativo: raw.inativo ?? false,
   };
 }
@@ -61,7 +79,7 @@ export const formasPagamentoService = {
     params.set('limit', String(limit));
     if (incluirInativos) params.set('incluirInativos', 'true');
 
-    const url = `${API_BASE}/api/formas-pagamento?${params.toString()}`;
+    const url = `${API_BASE}/api/formas-pagamentos?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
@@ -85,7 +103,7 @@ export const formasPagamentoService = {
 
   async getById(id: number): Promise<FormaPagamento | null> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/formas-pagamento/${id}?empresaId=${empresaId}`;
+    const url = `${API_BASE}/api/formas-pagamentos/${id}?empresaId=${empresaId}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
@@ -103,17 +121,22 @@ export const formasPagamentoService = {
 
   async create(data: FormaPagamentoFormData): Promise<FormaPagamento> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/formas-pagamento`;
+    const url = `${API_BASE}/api/formas-pagamentos`;
     const body = {
       empresaId,
       data: {
         descricao_forma_pagto: data.descricao_forma_pagto,
+        somente_avista: data.somente_avista ?? false,
         boleto: data.boleto ?? false,
-        cartao: data.cartao ?? false,
-        envia_mobile: data.envia_mobile ?? false,
-        permite_gerar_receber: data.permite_gerar_receber ?? false,
+        cartao_debito: data.cartao_debito ?? false,
+        cartao_credito: data.cartao_credito ?? false,
+        pix: data.pix ?? false,
+        indice_financeiro: data.indice_financeiro ?? null,
+        taxa_adicional: data.taxa_adicional ?? null,
+        liberado_app_mobile: data.liberado_app_mobile ?? false,
+        liberado_b2b: data.liberado_b2b ?? false,
+        liberado_b2c: data.liberado_b2c ?? false,
         prazo_pagto_id: data.prazo_pagto_id ?? null,
-        meio_pagamento_id: data.meio_pagamento_id ?? null,
         inativo: data.inativo ?? false,
       },
     };
@@ -138,7 +161,7 @@ export const formasPagamentoService = {
 
   async update(id: number, data: Partial<FormaPagamentoFormData>): Promise<FormaPagamento> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/formas-pagamento/${id}?empresaId=${empresaId}`;
+    const url = `${API_BASE}/api/formas-pagamentos/${id}?empresaId=${empresaId}`;
     const body = { data };
 
     const res = await apiClient.fetch(url, {
@@ -161,7 +184,7 @@ export const formasPagamentoService = {
 
   async delete(id: number): Promise<void> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/formas-pagamento/${id}?empresaId=${empresaId}`;
+    const url = `${API_BASE}/api/formas-pagamentos/${id}?empresaId=${empresaId}`;
 
     const res = await apiClient.fetch(url, { method: 'DELETE' });
 
