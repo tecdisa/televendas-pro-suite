@@ -180,7 +180,7 @@ export function FormasPagamentoTab() {
   };
 
   const formContent = (
-    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1 -mx-1">
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
         <Input
