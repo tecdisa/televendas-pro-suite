@@ -282,14 +282,14 @@ export function FormasPagamentoTab() {
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo de Pagamento</label>
         <Select
-          value={formData.prazo_pagto_id?.toString() || ''}
-          onValueChange={(val) => setFormData({ ...formData, prazo_pagto_id: val ? Number(val) : null })}
+          value={formData.prazo_pagto_id?.toString() || 'none'}
+          onValueChange={(val) => setFormData({ ...formData, prazo_pagto_id: val === 'none' ? null : Number(val) })}
         >
           <SelectTrigger className="h-8 text-sm">
             <SelectValue placeholder="Selecione um prazo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Nenhum</SelectItem>
+            <SelectItem value="none">Nenhum</SelectItem>
             {prazos.map((p) => (
               <SelectItem key={p.prazo_pagto_id} value={p.prazo_pagto_id.toString()}>
                 {p.descricao_prazo_pagto}
