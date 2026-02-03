@@ -1071,7 +1071,7 @@ const validateFormData = (data: ClientFormData): string[] => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Filtros</CardTitle>
-            <Button onClick={loadClients} size="sm">
+            <Button onClick={() => loadClients()} size="sm">
               <Search className="h-4 w-4 mr-2" /> Filtrar
             </Button>
           </div>
