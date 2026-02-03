@@ -74,7 +74,7 @@ const formatLabel = (codigo?: string | number | null, descricao?: string | null)
   const code = String(codigo ?? '').trim();
   return code ? `${code} - ${desc}` : desc;
 };
-const findByIdOrCodigo = (list: Array<{ id?: any; codigo?: any }>, value: any) => {
+const findByIdOrCodigo = (list: Array<{ id?: any; codigo?: any; descricao?: any }>, value: any) => {
   const key = normalizeKey(value);
   if (!key) return undefined;
   return list.find((item) => normalizeKey(item.id) === key || normalizeKey(item.codigo) === key);
