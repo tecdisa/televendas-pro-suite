@@ -16,6 +16,7 @@ import {
   Clock,
   Target,
   Route,
+  CreditCard,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -64,6 +65,7 @@ const menuItems: MenuItem[] = [
       { title: 'Divisões', path: '/televendas?tab=divisoes', icon: Grid3X3 },
       { title: 'Redes', path: '/televendas?tab=redes', icon: Network },
       { title: 'Prazos Pagamento', path: '/televendas?tab=prazos', icon: Clock },
+      { title: 'Formas Pagamento', path: '/televendas?tab=formas-pagamento', icon: CreditCard },
       { title: 'Segmentos Venda', path: '/televendas?tab=segmentos', icon: Target },
       { title: 'Rotas Clientes', path: '/televendas?tab=rotas', icon: Route },
     ],

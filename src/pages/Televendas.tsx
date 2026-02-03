@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PesquisaTab } from '@/components/televendas/PesquisaTab';
 import { DadosTab } from '@/components/televendas/DadosTab';
@@ -15,6 +15,7 @@ import { GruposTab } from '@/components/televendas/GruposTab';
 import { DivisoesTab } from '@/components/televendas/DivisoesTab';
 import { RedesTab } from '@/components/televendas/RedesTab';
 import { PrazosPagamentosTab } from '@/components/televendas/PrazosPagamentosTab';
+import { FormasPagamentoTab } from '@/components/televendas/FormasPagamentoTab';
 import { SegmentosVendasTab } from '@/components/televendas/SegmentosVendasTab';
 import { RotasClientesTab } from '@/components/televendas/RotasClientesTab';
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
@@ -35,6 +36,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   divisoes: { title: 'Divisões de Produtos', icon: Grid3X3 },
   redes: { title: 'Redes', icon: Network },
   prazos: { title: 'Prazos de Pagamento', icon: Clock },
+  'formas-pagamento': { title: 'Formas de Pagamento', icon: CreditCard },
   segmentos: { title: 'Segmentos de Venda', icon: Target },
   rotas: { title: 'Rotas de Clientes', icon: Route },
 };
@@ -123,6 +125,12 @@ const Televendas = () => {
         return (
           <ErrorBoundary>
             <PrazosPagamentosTab />
+          </ErrorBoundary>
+        );
+      case 'formas-pagamento':
+        return (
+          <ErrorBoundary>
+            <FormasPagamentoTab />
           </ErrorBoundary>
         );
       case 'segmentos':
