@@ -15,25 +15,19 @@ const toUpperValue = (value: string | number | null | undefined) => String(value
 
 const initialFormData: FormaPagamentoFormData = {
   descricao_forma_pagto: '',
+  somente_avista: false,
   boleto: false,
-  cartao: false,
-  envia_mobile: false,
-  permite_gerar_receber: false,
+  cartao_debito: false,
+  cartao_credito: false,
+  pix: false,
+  indice_financeiro: null,
+  taxa_adicional: null,
+  liberado_app_mobile: false,
+  liberado_b2b: false,
+  liberado_b2c: false,
   prazo_pagto_id: null,
-  meio_pagamento_id: null,
   inativo: false,
 };
-
-// Lista fixa de meios de pagamento baseada na imagem
-const meiosPagamento = [
-  { id: 1, descricao: 'Dinheiro' },
-  { id: 2, descricao: 'Cheque' },
-  { id: 3, descricao: 'Cartão de Crédito' },
-  { id: 4, descricao: 'Cartão de Débito' },
-  { id: 5, descricao: 'Boleto' },
-  { id: 6, descricao: 'PIX' },
-  { id: 7, descricao: 'Transferência' },
-];
 
 export function FormasPagamentoTab() {
   const [loading, setLoading] = useState(false);
@@ -99,12 +93,17 @@ export function FormasPagamentoTab() {
       if (detail) {
         setFormData({
           descricao_forma_pagto: detail.descricao_forma_pagto || '',
+          somente_avista: detail.somente_avista ?? false,
           boleto: detail.boleto ?? false,
-          cartao: detail.cartao ?? false,
-          envia_mobile: detail.envia_mobile ?? false,
-          permite_gerar_receber: detail.permite_gerar_receber ?? false,
+          cartao_debito: detail.cartao_debito ?? false,
+          cartao_credito: detail.cartao_credito ?? false,
+          pix: detail.pix ?? false,
+          indice_financeiro: detail.indice_financeiro ?? null,
+          taxa_adicional: detail.taxa_adicional ?? null,
+          liberado_app_mobile: detail.liberado_app_mobile ?? false,
+          liberado_b2b: detail.liberado_b2b ?? false,
+          liberado_b2c: detail.liberado_b2c ?? false,
           prazo_pagto_id: detail.prazo_pagto_id ?? null,
-          meio_pagamento_id: detail.meio_pagamento_id ?? null,
           inativo: detail.inativo ?? false,
         });
       }
@@ -169,20 +168,19 @@ export function FormasPagamentoTab() {
     }
   };
 
-  const getMeioPagamentoDescricao = (id: number | null | undefined) => {
-    if (!id) return '-';
-    const meio = meiosPagamento.find(m => m.id === id);
-    return meio ? meio.descricao : '-';
-  };
-
   const getPrazoDescricao = (id: number | null | undefined) => {
     if (!id) return '-';
     const prazo = prazos.find(p => p.prazo_pagto_id === id);
     return prazo ? prazo.descricao_prazo_pagto : '-';
   };
 
+  const formatNumber = (value: number | null | undefined) => {
+    if (value === null || value === undefined) return '-';
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const formContent = (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
         <Input
@@ -192,7 +190,14 @@ export function FormasPagamentoTab() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.somente_avista}
+            onCheckedChange={(c) => setFormData({ ...formData, somente_avista: c as boolean })}
+          />
+          <label className="text-sm">Somente à vista</label>
+        </div>
         <div className="flex items-center gap-2">
           <Checkbox
             checked={formData.boleto}
@@ -202,24 +207,45 @@ export function FormasPagamentoTab() {
         </div>
         <div className="flex items-center gap-2">
           <Checkbox
-            checked={formData.permite_gerar_receber}
-            onCheckedChange={(c) => setFormData({ ...formData, permite_gerar_receber: c as boolean })}
+            checked={formData.cartao_debito}
+            onCheckedChange={(c) => setFormData({ ...formData, cartao_debito: c as boolean })}
           />
-          <label className="text-sm">Permite gerar a Receber</label>
+          <label className="text-sm">Cartão Débito</label>
         </div>
         <div className="flex items-center gap-2">
           <Checkbox
-            checked={formData.cartao}
-            onCheckedChange={(c) => setFormData({ ...formData, cartao: c as boolean })}
+            checked={formData.cartao_credito}
+            onCheckedChange={(c) => setFormData({ ...formData, cartao_credito: c as boolean })}
           />
-          <label className="text-sm">Cartão</label>
+          <label className="text-sm">Cartão Crédito</label>
         </div>
         <div className="flex items-center gap-2">
           <Checkbox
-            checked={formData.envia_mobile}
-            onCheckedChange={(c) => setFormData({ ...formData, envia_mobile: c as boolean })}
+            checked={formData.pix}
+            onCheckedChange={(c) => setFormData({ ...formData, pix: c as boolean })}
           />
-          <label className="text-sm">Envia Mobile</label>
+          <label className="text-sm">PIX</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.liberado_app_mobile}
+            onCheckedChange={(c) => setFormData({ ...formData, liberado_app_mobile: c as boolean })}
+          />
+          <label className="text-sm">Liberado App Mobile</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.liberado_b2b}
+            onCheckedChange={(c) => setFormData({ ...formData, liberado_b2b: c as boolean })}
+          />
+          <label className="text-sm">Liberado B2B</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.liberado_b2c}
+            onCheckedChange={(c) => setFormData({ ...formData, liberado_b2c: c as boolean })}
+          />
+          <label className="text-sm">Liberado B2C</label>
         </div>
         <div className="flex items-center gap-2">
           <Checkbox
@@ -230,8 +256,31 @@ export function FormasPagamentoTab() {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Índice Financeiro</label>
+          <Input
+            type="number"
+            step="0.01"
+            className="h-8 text-sm"
+            value={formData.indice_financeiro ?? ''}
+            onChange={(e) => setFormData({ ...formData, indice_financeiro: e.target.value ? parseFloat(e.target.value) : null })}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Taxa Adicional</label>
+          <Input
+            type="number"
+            step="0.01"
+            className="h-8 text-sm"
+            value={formData.taxa_adicional ?? ''}
+            onChange={(e) => setFormData({ ...formData, taxa_adicional: e.target.value ? parseFloat(e.target.value) : null })}
+          />
+        </div>
+      </div>
+
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo de Pagamento</label>
         <Select
           value={formData.prazo_pagto_id?.toString() || ''}
           onValueChange={(val) => setFormData({ ...formData, prazo_pagto_id: val ? Number(val) : null })}
@@ -244,26 +293,6 @@ export function FormasPagamentoTab() {
             {prazos.map((p) => (
               <SelectItem key={p.prazo_pagto_id} value={p.prazo_pagto_id.toString()}>
                 {p.descricao_prazo_pagto}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Meio de pagamento</label>
-        <Select
-          value={formData.meio_pagamento_id?.toString() || ''}
-          onValueChange={(val) => setFormData({ ...formData, meio_pagamento_id: val ? Number(val) : null })}
-        >
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue placeholder="Selecione um meio de pagamento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Nenhum</SelectItem>
-            {meiosPagamento.map((m) => (
-              <SelectItem key={m.id} value={m.id.toString()}>
-                {m.id.toString().padStart(2, '0')} - {m.descricao}
               </SelectItem>
             ))}
           </SelectContent>
@@ -290,7 +319,7 @@ export function FormasPagamentoTab() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <Input
-              placeholder="Buscar por descrição..."
+              placeholder="Buscar por descrição ou código..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -312,13 +341,15 @@ export function FormasPagamentoTab() {
 
           <div className="border rounded-md overflow-hidden">
             <div className="overflow-x-auto">
-              <Table className="min-w-[600px]">
+              <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-24">Código</TableHead>
                     <TableHead>Descrição</TableHead>
-                    <TableHead className="hidden md:table-cell w-20">Boleto</TableHead>
-                    <TableHead className="hidden md:table-cell w-20">Cartão</TableHead>
-                    <TableHead className="hidden lg:table-cell">Meio Pagto</TableHead>
+                    <TableHead className="hidden md:table-cell w-16">Boleto</TableHead>
+                    <TableHead className="hidden md:table-cell w-16">Créd.</TableHead>
+                    <TableHead className="hidden md:table-cell w-16">Déb.</TableHead>
+                    <TableHead className="hidden lg:table-cell w-16">PIX</TableHead>
                     <TableHead className="w-20">Status</TableHead>
                     <TableHead className="w-24 text-right">Ações</TableHead>
                   </TableRow>
@@ -326,23 +357,25 @@ export function FormasPagamentoTab() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                       </TableCell>
                     </TableRow>
                   ) : formas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhuma forma de pagamento encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
                     formas.map((f) => (
                       <TableRow key={f.forma_pagto_id} className={f.inativo ? 'opacity-50' : ''}>
+                        <TableCell className="text-xs text-muted-foreground">{f.codigo_formapagto || '-'}</TableCell>
                         <TableCell className="font-medium">{f.descricao_forma_pagto}</TableCell>
                         <TableCell className="hidden md:table-cell">{f.boleto ? 'Sim' : 'Não'}</TableCell>
-                        <TableCell className="hidden md:table-cell">{f.cartao ? 'Sim' : 'Não'}</TableCell>
-                        <TableCell className="hidden lg:table-cell text-xs">{getMeioPagamentoDescricao(f.meio_pagamento_id)}</TableCell>
+                        <TableCell className="hidden md:table-cell">{f.cartao_credito ? 'Sim' : 'Não'}</TableCell>
+                        <TableCell className="hidden md:table-cell">{f.cartao_debito ? 'Sim' : 'Não'}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{f.pix ? 'Sim' : 'Não'}</TableCell>
                         <TableCell>
                           <span className={`text-xs px-2 py-0.5 rounded ${f.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
                             {f.inativo ? 'Inativo' : 'Ativo'}
