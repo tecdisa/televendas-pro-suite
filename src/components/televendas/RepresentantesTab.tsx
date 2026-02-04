@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,18 @@ import { Search, UserCheck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
+import { clientsService } from '@/services/clientsService';
+
+const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), wait);
+  };
+};
+
+const normalizeCnpj = (value: string) => value.replace(/\D/g, '').slice(0, 14);
+const normalizeCep = (value: string) => value.replace(/\D/g, '').slice(0, 8);
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -80,6 +92,105 @@ export function RepresentantesTab() {
   const [ufsLoading, setUfsLoading] = useState(false);
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
+  const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
+  const [cepLookupLoading, setCepLookupLoading] = useState(false);
+
+  // CNPJ Lookup
+  const cnpjLookupRef = useRef<(v: string) => void>();
+  if (!cnpjLookupRef.current) {
+    cnpjLookupRef.current = debounce(async (value: string) => {
+      const cleaned = normalizeCnpj(value);
+      if (cleaned.length !== 14) {
+        setCnpjLookupLoading(false);
+        return;
+      }
+      setCnpjLookupLoading(true);
+      try {
+        const result = await clientsService.lookupCnpj(cleaned);
+        if (!result || !result.data) return;
+        const d = result.data;
+        const estab = d.estabelecimento ?? {};
+        const cidadeObj = estab.cidade ?? {};
+        const estadoObj = estab.estado ?? {};
+        const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
+        const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
+        const cepFromCnpj = estab.cep ?? d.cep;
+        const cepValue = cepFromCnpj ? normalizeCep(String(cepFromCnpj)) : '';
+        const hasCep = cepValue.length === 8;
+        setFormData((prev) => {
+          const enderecoFmt = [tipoLogradouro, logradouro].filter(Boolean).join(' ') || d.logradouro || prev.endereco;
+          const complemento = estab.complemento ? String(estab.complemento).trim() : prev.complemento;
+          const telefone1 = estab.telefone1 ? String(estab.telefone1).trim() : '';
+          const ddd1 = estab.ddd1 ? String(estab.ddd1).trim() : '';
+          const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
+          const nextCep = cepValue || normalizeCep(String(prev.cep || ''));
+          const nextUf = toUpperValue(estadoObj.sigla || estab.uf || d.uf || prev.uf);
+          return {
+            ...prev,
+            cnpj_cpf: maskCnpjCpf(cleaned),
+            nome_representante: toUpperValue(d.razao_social || prev.nome_representante),
+            fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
+            endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
+            numero: toUpperValue(estab.numero || d.numero || prev.numero || ''),
+            bairro: toUpperValue(estab.bairro || d.bairro || prev.bairro),
+            uf: nextUf,
+            cep: maskCep(nextCep),
+            complemento: toUpperValue(complemento),
+            fone: maskPhone(telefoneFmt || prev.fone || ''),
+            email: estab.email || prev.email,
+            cidade_id: cidadeObj.id ?? prev.cidade_id,
+          };
+        });
+        if (hasCep) {
+          cepLookupRef.current?.(cepValue);
+        }
+        toast.success('Dados preenchidos pela consulta de CNPJ');
+      } catch (e: any) {
+        toast.error(String(e));
+      } finally {
+        setCnpjLookupLoading(false);
+      }
+    }, 600);
+  }
+
+  // CEP Lookup
+  const cepLookupRef = useRef<(v: string) => void>();
+  if (!cepLookupRef.current) {
+    cepLookupRef.current = debounce(async (value: string) => {
+      const cleaned = normalizeCep(value);
+      if (cleaned.length !== 8) {
+        setCepLookupLoading(false);
+        return;
+      }
+      setCepLookupLoading(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+        if (!res.ok) {
+          toast.error('Falha ao consultar CEP');
+          return;
+        }
+        const data = await res.json();
+        if (!data || data.erro) {
+          toast.error('CEP não encontrado');
+          return;
+        }
+        setFormData((prev) => ({
+          ...prev,
+          cep: maskCep(cleaned),
+          endereco: toUpperValue(data.logradouro || prev.endereco),
+          complemento: toUpperValue(data.complemento || prev.complemento),
+          bairro: toUpperValue(data.bairro || prev.bairro),
+          uf: data.uf ? toUpperValue(data.uf) : prev.uf,
+          cidade_id: data.localidade || data.uf ? null : prev.cidade_id,
+        }));
+        toast.success('Endereço preenchido pelo CEP');
+      } catch (e: any) {
+        toast.error('Erro na consulta de CEP');
+      } finally {
+        setCepLookupLoading(false);
+      }
+    }, 600);
+  }
 
   const loadUfs = async () => {
     setUfsLoading(true);
@@ -287,11 +398,26 @@ export function RepresentantesTab() {
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF/CNPJ</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.cnpj_cpf}
-              onChange={(e) => setFormData({ ...formData, cnpj_cpf: maskCnpjCpf(e.target.value) })}
-            />
+            <div className="flex gap-1">
+              <Input
+                className="h-8 text-sm flex-1"
+                value={formData.cnpj_cpf}
+                onChange={(e) => {
+                  const next = maskCnpjCpf(e.target.value);
+                  setFormData({ ...formData, cnpj_cpf: next });
+                  cnpjLookupRef.current?.(next);
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => cnpjLookupRef.current?.(formData.cnpj_cpf || '')}
+                disabled={cnpjLookupLoading}
+              >
+                {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           <div className="col-span-8">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
@@ -346,11 +472,26 @@ export function RepresentantesTab() {
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.cep}
-              onChange={(e) => setFormData({ ...formData, cep: maskCep(e.target.value) })}
-            />
+            <div className="flex gap-1">
+              <Input
+                className="h-8 text-sm flex-1"
+                value={formData.cep}
+                onChange={(e) => {
+                  const next = maskCep(e.target.value);
+                  setFormData({ ...formData, cep: next });
+                  cepLookupRef.current?.(next);
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => cepLookupRef.current?.(formData.cep || '')}
+                disabled={cepLookupLoading}
+              >
+                {cepLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           <div className="col-span-7">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
