@@ -1889,6 +1889,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                             </div>
                           )}
                         </ScrollArea>
+                        <DialogFooter>
+                          <Button onClick={() => onTabelaDialogChange(false)}>Confirmar</Button>
+                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
@@ -1963,6 +1966,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                             </div>
                           )}
                         </ScrollArea>
+                        <DialogFooter>
+                          <Button onClick={() => setRepSearchOpen(false)}>Confirmar</Button>
+                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
@@ -2562,6 +2568,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                               </div>
                             )}
                           </ScrollArea>
+                          <DialogFooter>
+                            <Button onClick={() => onTabelaDialogChange(false)}>Confirmar</Button>
+                          </DialogFooter>
                         </DialogContent>
                       </Dialog>
                     </div>
@@ -2628,6 +2637,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                             </div>
                           )}
                           </ScrollArea>
+                          <DialogFooter>
+                            <Button onClick={() => setRepSearchOpen(false)}>Confirmar</Button>
+                          </DialogFooter>
                         </DialogContent>
                       </Dialog>
                     </div>
