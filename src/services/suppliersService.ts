@@ -24,6 +24,7 @@ export interface Fornecedor {
   empresas_autorizadas?: string;
   obs?: string;
   inativo?: boolean;
+  revenda?: boolean;
 }
 
 export interface FornecedorResponse {
@@ -56,6 +57,7 @@ function normalizeFornecedor(raw: any): Fornecedor {
     empresas_autorizadas: raw?.empresas_autorizadas ?? undefined,
     obs: raw?.obs?.trim() ?? undefined,
     inativo: Boolean(raw?.inativo ?? false),
+    revenda: Boolean(raw?.revenda ?? false),
   };
 }
 
@@ -125,6 +127,7 @@ export const suppliersService = {
     empresas_autorizadas?: string;
     obs?: string;
     inativo?: boolean;
+    revenda?: boolean;
   }): Promise<Fornecedor> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
