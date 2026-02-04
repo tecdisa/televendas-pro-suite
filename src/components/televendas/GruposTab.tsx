@@ -18,8 +18,11 @@ const initialFormData = {
 };
 
 export function GruposTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -29,11 +32,22 @@ export function GruposTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState(initialFormData);
 
-  const loadGrupos = async () => {
+  const loadGrupos = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setGrupos([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await groupsService.getAll(search, 1, 100, incluirInativos);
-      setGrupos(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await groupsService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      setGrupos((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error) {
       console.error('Erro ao carregar grupos:', error);
       toast.error('Erro ao carregar grupos');
@@ -43,10 +57,10 @@ export function GruposTab() {
   };
 
   useEffect(() => {
-    loadGrupos();
+    loadGrupos(true);
   }, [incluirInativos]);
 
-  const handleSearch = () => loadGrupos();
+  const handleSearch = () => loadGrupos(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -96,7 +110,7 @@ export function GruposTab() {
       toast.success('Grupo criado com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadGrupos();
+      loadGrupos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar grupo');
     } finally {
@@ -115,7 +129,7 @@ export function GruposTab() {
       toast.success('Grupo atualizado com sucesso');
       setEditOpen(false);
       resetForm();
-      loadGrupos();
+      loadGrupos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar grupo');
     } finally {
@@ -129,11 +143,22 @@ export function GruposTab() {
     try {
       await groupsService.delete(id);
       toast.success('Grupo excluído com sucesso');
-      loadGrupos();
+      loadGrupos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir grupo');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && grupos.length === 0;
+  const isLoadingMore = loading && grupos.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadGrupos();
     }
   };
 
@@ -198,8 +223,9 @@ export function GruposTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[400px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[400px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Código</TableHead>
@@ -209,7 +235,7 @@ export function GruposTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -223,7 +249,7 @@ export function GruposTab() {
                     </TableRow>
                   ) : (
                     grupos.map((g) => (
-                    <TableRow key={g.grupo_id} className={g.inativo ? 'opacity-50' : ''}>
+                      <TableRow key={g.grupo_id} className={g.inativo ? 'opacity-50' : ''}>
                       <TableCell className="font-mono text-xs">{g.codigo_grupo || '-'}</TableCell>
                       <TableCell className="font-medium">{g.descricao_grupo}</TableCell>
                         <TableCell>
@@ -254,8 +280,16 @@ export function GruposTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

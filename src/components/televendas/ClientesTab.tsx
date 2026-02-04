@@ -191,8 +191,12 @@ const FormField = ({ label, value, onChange, type = 'text', className = '', uppe
 );
 
 export const ClientesTab = () => {
+  const CLIENT_LIMIT = 100;
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
+  const [clientsPage, setClientsPage] = useState(1);
+  const [clientsHasMore, setClientsHasMore] = useState(true);
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     uf: 'all',
@@ -417,7 +421,7 @@ export const ClientesTab = () => {
   console.log('ClientesTab rendering', { clients });
 
   useEffect(() => {
-    loadClients();
+    loadClients(undefined, true);
   }, []);
 
   // Carregar rotas, tabelas e UFs quando abrir os dialogs de criação/edição
@@ -634,16 +638,32 @@ export const ClientesTab = () => {
     }
   };
 
-  const loadClients = async (nextFilters?: typeof filters) => {
+  const loadClients = async (nextFilters?: typeof filters, reset = false) => {
+    if (clientsLoading) return;
     const active = nextFilters ?? filters;
     const ignoreFilters = active.todos;
-    const data = await clientsService.search({
-      query: ignoreFilters ? undefined : active.search,
-      uf: !ignoreFilters && active.uf !== 'all' ? active.uf : undefined,
-      cidade: !ignoreFilters && active.cidade !== 'all' ? active.cidade : undefined,
-      bairro: !ignoreFilters && active.bairro ? active.bairro.trim() : undefined,
-    });
-    setClients(data);
+    const nextPage = reset ? 1 : clientsPage + 1;
+    if (reset) {
+      setClients([]);
+      setClientsPage(1);
+      setClientsHasMore(true);
+    }
+    setClientsLoading(true);
+    try {
+      const data = await clientsService.search({
+        query: ignoreFilters ? undefined : active.search,
+        uf: !ignoreFilters && active.uf !== 'all' ? active.uf : undefined,
+        cidade: !ignoreFilters && active.cidade !== 'all' ? active.cidade : undefined,
+        bairro: !ignoreFilters && active.bairro ? active.bairro.trim() : undefined,
+      }, undefined, nextPage, CLIENT_LIMIT);
+      setClients((prev) => (reset ? data : [...prev, ...data]));
+      setClientsPage(nextPage);
+      setClientsHasMore(Array.isArray(data) && data.length === CLIENT_LIMIT);
+    } catch (e: any) {
+      toast.error(String(e?.message || e || 'Erro ao carregar clientes'));
+    } finally {
+      setClientsLoading(false);
+    }
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -678,6 +698,17 @@ export const ClientesTab = () => {
     toast.success(`Criando pedidos para ${selectedClients.length} cliente(s) com operação: ${selectedOperacao}`);
     setDialogOpen(false);
     setSelectedClients([]);
+  };
+
+  const isClientsInitialLoading = clientsLoading && clients.length === 0;
+  const isClientsLoadingMore = clientsLoading && clients.length > 0;
+
+  const handleClientsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!clientsHasMore || clientsLoading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadClients(undefined, false);
+    }
   };
 
   const ufs = [...new Set(clients.map(c => c.uf))];
@@ -880,7 +911,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       toast.success('Cliente criado com sucesso');
       setCreateOpen(false);
       setSelectedClients([]);
-      loadClients();
+      loadClients(undefined, true);
     } catch (e: any) {
       setFormErrors(normalizeErrorMessages(e));
     } finally {
@@ -1040,7 +1071,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       toast.success('Cliente atualizado com sucesso');
       setEditOpen(false);
       setSelectedClients([]);
-      loadClients();
+      loadClients(undefined, true);
     } catch (e: any) {
       setFormErrors(normalizeErrorMessages(e));
     } finally {
@@ -1059,7 +1090,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       }
       toast.success(`${selectedClients.length} cliente(s) excluído(s)`);
       setSelectedClients([]);
-      loadClients();
+      loadClients(undefined, true);
     } catch (e: any) {
       toast.error(String(e));
     }
@@ -1071,7 +1102,7 @@ const validateFormData = (data: ClientFormData): string[] => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Filtros</CardTitle>
-            <Button onClick={() => loadClients()} size="sm">
+            <Button onClick={() => loadClients(undefined, true)} size="sm">
               <Search className="h-4 w-4 mr-2" /> Filtrar
             </Button>
           </div>
@@ -1084,7 +1115,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 placeholder="Nome ou código"
                 value={filters.search}
                 onChange={(e) => setFilters({...filters, search: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients()}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
               />
             </div>
             <div>
@@ -1121,7 +1152,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 placeholder="Bairro"
                 value={filters.bairro}
                 onChange={(e) => setFilters({...filters, bairro: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients()}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
               />
             </div>
             <div className="flex items-end">
@@ -1132,7 +1163,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   onCheckedChange={(checked) => {
                     const next = { ...filters, todos: checked as boolean };
                     setFilters(next);
-                    loadClients(next);
+                    loadClients(next, true);
                   }}
                 />
                 <label htmlFor="todos" className="text-sm font-medium">
@@ -1182,7 +1213,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="max-h-[60vh] overflow-auto scrollbar-thin">
+          <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleClientsScroll}>
             <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
@@ -1201,22 +1232,43 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
-                      <Checkbox 
-                        checked={selectedClients.includes(client.id)}
-                        onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
-                      />
+                {isClientsInitialLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{client.codigoCliente ?? ''}</TableCell>
-                    <TableCell className="font-medium">{client.nome}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.cidade}</TableCell>
-                    <TableCell>{client.uf}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{client.bairro}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{client.fone}</TableCell>
                   </TableRow>
-                ))}
+                ) : clients.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Nenhum cliente encontrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  clients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedClients.includes(client.id)}
+                          onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{client.codigoCliente ?? ''}</TableCell>
+                      <TableCell className="font-medium">{client.nome}</TableCell>
+                      <TableCell className="hidden md:table-cell">{client.cidade}</TableCell>
+                      <TableCell>{client.uf}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{client.bairro}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{client.fone}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+                {isClientsLoadingMore && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>

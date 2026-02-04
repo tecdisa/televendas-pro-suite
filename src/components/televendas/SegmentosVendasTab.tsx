@@ -18,8 +18,11 @@ const initialFormData: SegmentoVendaFormData = {
 };
 
 export function SegmentosVendasTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [segmentos, setSegmentos] = useState<SegmentoVenda[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -29,11 +32,22 @@ export function SegmentosVendasTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<SegmentoVendaFormData>(initialFormData);
 
-  const loadSegmentos = async () => {
+  const loadSegmentos = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setSegmentos([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await segmentosVendasService.getAll(search, 1, 100, incluirInativos);
-      setSegmentos(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await segmentosVendasService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      setSegmentos((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(result.page ?? nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error: any) {
       console.error('Erro ao carregar segmentos:', error);
       toast.error(error?.message || 'Erro ao carregar segmentos de venda');
@@ -43,10 +57,10 @@ export function SegmentosVendasTab() {
   };
 
   useEffect(() => {
-    loadSegmentos();
+    loadSegmentos(true);
   }, [incluirInativos]);
 
-  const handleSearch = () => loadSegmentos();
+  const handleSearch = () => loadSegmentos(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -93,7 +107,7 @@ export function SegmentosVendasTab() {
       toast.success('Segmento de venda criado com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadSegmentos();
+      loadSegmentos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar segmento de venda');
     } finally {
@@ -113,7 +127,7 @@ export function SegmentosVendasTab() {
       toast.success('Segmento de venda atualizado com sucesso');
       setEditOpen(false);
       resetForm();
-      loadSegmentos();
+      loadSegmentos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar segmento de venda');
     } finally {
@@ -127,11 +141,22 @@ export function SegmentosVendasTab() {
     try {
       await segmentosVendasService.delete(id);
       toast.success('Segmento de venda excluído com sucesso');
-      loadSegmentos();
+      loadSegmentos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir segmento de venda');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && segmentos.length === 0;
+  const isLoadingMore = loading && segmentos.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadSegmentos();
     }
   };
 
@@ -194,8 +219,9 @@ export function SegmentosVendasTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[400px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[400px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Código</TableHead>
@@ -205,7 +231,7 @@ export function SegmentosVendasTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -250,8 +276,16 @@ export function SegmentosVendasTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

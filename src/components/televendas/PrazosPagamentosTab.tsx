@@ -31,8 +31,11 @@ const initialFormData: PrazoPagamentoFormData = {
 };
 
 export function PrazosPagamentosTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [prazos, setPrazos] = useState<PrazoPagamento[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -42,11 +45,22 @@ export function PrazosPagamentosTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<PrazoPagamentoFormData>(initialFormData);
 
-  const loadPrazos = async () => {
+  const loadPrazos = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setPrazos([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await prazosPagamentosService.getAll(search, 1, 100, incluirInativos);
-      setPrazos(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await prazosPagamentosService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      setPrazos((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(result.page ?? nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error: any) {
       console.error('Erro ao carregar prazos:', error);
       toast.error(error?.message || 'Erro ao carregar prazos de pagamento');
@@ -56,10 +70,10 @@ export function PrazosPagamentosTab() {
   };
 
   useEffect(() => {
-    loadPrazos();
+    loadPrazos(true);
   }, [incluirInativos]);
 
-  const handleSearch = () => loadPrazos();
+  const handleSearch = () => loadPrazos(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -122,7 +136,7 @@ export function PrazosPagamentosTab() {
       toast.success('Prazo de pagamento criado com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadPrazos();
+      loadPrazos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar prazo de pagamento');
     } finally {
@@ -146,7 +160,7 @@ export function PrazosPagamentosTab() {
       toast.success('Prazo de pagamento atualizado com sucesso');
       setEditOpen(false);
       resetForm();
-      loadPrazos();
+      loadPrazos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar prazo de pagamento');
     } finally {
@@ -160,11 +174,22 @@ export function PrazosPagamentosTab() {
     try {
       await prazosPagamentosService.delete(id);
       toast.success('Prazo de pagamento excluído com sucesso');
-      loadPrazos();
+      loadPrazos(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir prazo de pagamento');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && prazos.length === 0;
+  const isLoadingMore = loading && prazos.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadPrazos();
     }
   };
 
@@ -342,8 +367,9 @@ export function PrazosPagamentosTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[600px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-20">Código</TableHead>
@@ -356,7 +382,7 @@ export function PrazosPagamentosTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -404,8 +430,16 @@ export function PrazosPagamentosTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

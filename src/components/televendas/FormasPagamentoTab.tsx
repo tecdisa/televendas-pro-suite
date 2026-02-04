@@ -30,8 +30,11 @@ const initialFormData: FormaPagamentoFormData = {
 };
 
 export function FormasPagamentoTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [prazos, setPrazos] = useState<PrazoPagamento[]>([]);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
@@ -42,11 +45,22 @@ export function FormasPagamentoTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<FormaPagamentoFormData>(initialFormData);
 
-  const loadFormas = async () => {
+  const loadFormas = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setFormas([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await formasPagamentoService.getAll(search, 1, 100, incluirInativos);
-      setFormas(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await formasPagamentoService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      setFormas((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(result.page ?? nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error: any) {
       console.error('Erro ao carregar formas:', error);
       toast.error(error?.message || 'Erro ao carregar formas de pagamento');
@@ -65,11 +79,11 @@ export function FormasPagamentoTab() {
   };
 
   useEffect(() => {
-    loadFormas();
+    loadFormas(true);
     loadPrazos();
   }, [incluirInativos]);
 
-  const handleSearch = () => loadFormas();
+  const handleSearch = () => loadFormas(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -126,7 +140,7 @@ export function FormasPagamentoTab() {
       toast.success('Forma de pagamento criada com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadFormas();
+      loadFormas(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar forma de pagamento');
     } finally {
@@ -146,7 +160,7 @@ export function FormasPagamentoTab() {
       toast.success('Forma de pagamento atualizada com sucesso');
       setEditOpen(false);
       resetForm();
-      loadFormas();
+      loadFormas(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar forma de pagamento');
     } finally {
@@ -160,11 +174,22 @@ export function FormasPagamentoTab() {
     try {
       await formasPagamentoService.delete(id);
       toast.success('Forma de pagamento excluída com sucesso');
-      loadFormas();
+      loadFormas(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir forma de pagamento');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && formas.length === 0;
+  const isLoadingMore = loading && formas.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadFormas();
     }
   };
 
@@ -340,8 +365,9 @@ export function FormasPagamentoTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[800px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Código</TableHead>
@@ -355,7 +381,7 @@ export function FormasPagamentoTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -404,8 +430,16 @@ export function FormasPagamentoTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -331,7 +331,7 @@ const extractRepresentanteCodigo = (raw: any): string | undefined => {
 
 
 export const ordersService = {
-  list: async (filters?: any, _page: number = 1, _limit: number = 100) => {
+  list: async (filters?: any, page: number = 1, limit: number = 100) => {
     const empresa = authService.getEmpresa();
     if (!empresa) return Promise.reject('Empresa não selecionada');
     const token = authService.getToken();
@@ -355,6 +355,8 @@ export const ordersService = {
         if (filters.dataFim) params.set('dataFim', String(filters.dataFim));
         if (filters.cliente) params.set('cliente', String(filters.cliente));
       }
+      if (page) params.set('page', String(page));
+      if (limit) params.set('limit', String(limit));
       const url = `${API_BASE}/api/pedidos?${params.toString()}`;
       const headers: Record<string, string> = { accept: 'application/json' };
       const res = await apiClient.fetch(url, {

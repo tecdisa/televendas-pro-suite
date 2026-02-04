@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Search, X, FileEdit, Trash2, Mail, Download, Printer, File, Eye } from 'lucide-react';
+import { Search, X, FileEdit, Trash2, Mail, Download, Printer, File, Eye, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ordersService, type Order } from '@/services/ordersService';
 import { clientsService, type Client } from '@/services/clientsService';
@@ -35,6 +35,7 @@ interface PesquisaTabProps {
 export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
   const today = getTodayStr();
+  const ORDER_LIMIT = 100;
   const { orders, selectedOrders, setOrders, toggleOrderSelection, clearSelection, setCurrentOrder } = useStore();
   
   // Recupera filtros de data salvos ou usa data de hoje
@@ -163,9 +164,12 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [clientPage, setClientPage] = useState(1);
   const [clientHasMore, setClientHasMore] = useState(true);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersHasMore, setOrdersHasMore] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
-    loadOrders();
+    loadOrders(true);
   }, []);
 
   // Carrega operações ao montar
@@ -187,26 +191,56 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadOrders = async () => {
+  const loadOrders = async (reset = false) => {
     // Evita chamada quando empresa não está selecionada (ex.: navegação/redirect em andamento)
     const empresa = authService.getEmpresa();
     if (!empresa) return;
+    if (ordersLoading) return;
+    if (reset) {
+      setOrders([]);
+      setOrdersPage(1);
+      setOrdersHasMore(true);
+    }
+    setOrdersLoading(true);
     try {
-      const data = await ordersService.list(filters);
-      setOrders(data);
+      const nextPage = reset ? 1 : ordersPage + 1;
+      const data = await ordersService.list(filters, nextPage, ORDER_LIMIT);
+      const existing = reset ? [] : orders;
+      const combined = [...existing, ...data];
+      const seen = new Set<number>();
+      const deduped = combined.filter((o) => (seen.has(o.id) ? false : (seen.add(o.id), true)));
+      setOrders(deduped);
+      setOrdersPage(nextPage);
+      const received = Array.isArray(data) ? data.length : 0;
+      const appended = deduped.length - existing.length;
+      const nextHasMore = received === ORDER_LIMIT && appended > 0;
+      setOrdersHasMore(nextHasMore);
     } catch (e: any) {
       // Silencia rejeições esperadas na transição e registra no console
       console.warn('Falha ao carregar pedidos:', e);
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
   const handlePesquisar = () => {
-    loadOrders();
+    loadOrders(true);
   };
 
   const handleNovoPedido = () => {
     setCurrentOrder(null);
     if (onNavigateToDigitacao) onNavigateToDigitacao();
+  };
+
+  const isOrdersInitialLoading = ordersLoading && orders.length === 0;
+  const isOrdersLoadingMore = ordersLoading && orders.length > 0;
+
+  const handleOrdersScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!ordersHasMore || ordersLoading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadOrders(false);
+    }
   };
 
   const REP_LIMIT = 100;
@@ -412,7 +446,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         }
         return prev;
       });
-      loadOrders();
+      loadOrders(true);
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao excluir pedido');
     } finally {
@@ -783,7 +817,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
 
       {/* Tabela */}
       <div className="border rounded-lg overflow-hidden">
-        <div className="max-h-[60vh] overflow-auto scrollbar-thin">
+        <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleOrdersScroll}>
           <Table className="min-w-[650px]">
             <TableHeader>
               <TableRow className="bg-table-header">
@@ -810,154 +844,168 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => {
-                const isPendente = order.situacao === 'Pendentes';
-                const baseClasses = selectedOrders.includes(order.id) ? 'bg-table-selected' : 'hover:bg-table-hover';
-                const pendenteClasses = isPendente ? 'bg-success/10 hover:bg-success/20' : '';
-                return (
-              <TableRow
-                key={order.id}
-                className={`${baseClasses} ${pendenteClasses}`}
-              >
-                <TableCell className="w-10">
-                  <Checkbox
-                    checked={selectedOrders.includes(order.id)}
-                    onCheckedChange={() => toggleOrderSelection(order.id)}
-                  />
-                </TableCell>
-                <TableCell className="hidden lg:table-cell w-10">
-                  <div className="w-4 h-4 bg-primary/20 rounded" />
-                </TableCell>
-                <TableCell className="w-24 text-xs">{new Date(order.data).toLocaleDateString('pt-BR')}</TableCell>
-                <TableCell className="w-16 font-medium text-xs">{order.id}</TableCell>
-                <TableCell className="hidden md:table-cell w-28 text-xs">{formatOperacao(order)}</TableCell>
-                <TableCell className="hidden lg:table-cell w-24 text-xs">{formatClienteCodigo(order)}</TableCell>
-                <TableCell className="text-sm truncate max-w-[150px]">{order.clienteNome}</TableCell>
-                <TableCell className="w-24 text-right font-medium text-xs">{formatCurrency(order.valor)}</TableCell>
-                <TableCell className="w-28">
-                  <TooltipProvider>
-                    <div className="flex items-center justify-center gap-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              setCurrentOrder(order);
-                              if (onNavigateToDigitacao) onNavigateToDigitacao();
-                            }}
-                            disabled={order.transmitido === true}
-                          >
-                            <FileEdit className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Alterar</TooltipContent>
-                      </Tooltip>
+              {isOrdersInitialLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                  </TableCell>
+                </TableRow>
+              ) : orders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center h-32 text-muted-foreground">
+                    Nenhum pedido encontrado
+                  </TableCell>
+                </TableRow>
+              ) : (
+                orders.map((order) => {
+                  const isPendente = order.situacao === 'Pendentes';
+                  const baseClasses = selectedOrders.includes(order.id) ? 'bg-table-selected' : 'hover:bg-table-hover';
+                  const pendenteClasses = isPendente ? 'bg-success/10 hover:bg-success/20' : '';
+                  return (
+                    <TableRow
+                      key={order.id}
+                      className={`${baseClasses} ${pendenteClasses}`}
+                    >
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={selectedOrders.includes(order.id)}
+                          onCheckedChange={() => toggleOrderSelection(order.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell w-10">
+                        <div className="w-4 h-4 bg-primary/20 rounded" />
+                      </TableCell>
+                      <TableCell className="w-24 text-xs">{new Date(order.data).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className="w-16 font-medium text-xs">{order.id}</TableCell>
+                      <TableCell className="hidden md:table-cell w-28 text-xs">{formatOperacao(order)}</TableCell>
+                      <TableCell className="hidden lg:table-cell w-24 text-xs">{formatClienteCodigo(order)}</TableCell>
+                      <TableCell className="text-sm truncate max-w-[150px]">{order.clienteNome}</TableCell>
+                      <TableCell className="w-24 text-right font-medium text-xs">{formatCurrency(order.valor)}</TableCell>
+                      <TableCell className="w-28">
+                        <TooltipProvider>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    setCurrentOrder(order);
+                                    if (onNavigateToDigitacao) onNavigateToDigitacao();
+                                  }}
+                                  disabled={order.transmitido === true}
+                                >
+                                  <FileEdit className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Alterar</TooltipContent>
+                            </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              openPreview(order);
-                            }}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Ver</TooltipContent>
-                      </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    openPreview(order);
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Ver</TooltipContent>
+                            </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hidden sm:flex"
-                            onClick={() => {
-                              const html = buildPrintableHtml(order);
-                              const win = window.open('', '', 'width=800,height=600');
-                              if (!win) return;
-                              win.document.write(html);
-                              win.document.close();
-                              setTimeout(() => {
-                                try { win.print(); } catch {}
-                              }, 100);
-                            }}
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Imprimir</TooltipContent>
-                      </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hidden sm:flex"
+                                  onClick={() => {
+                                    const html = buildPrintableHtml(order);
+                                    const win = window.open('', '', 'width=800,height=600');
+                                    if (!win) return;
+                                    win.document.write(html);
+                                    win.document.close();
+                                    setTimeout(() => {
+                                      try { win.print(); } catch {}
+                                    }, 100);
+                                  }}
+                                >
+                                  <Printer className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Imprimir</TooltipContent>
+                            </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={async () => {
-                              setOrderToDelete(order);
-                              setDeleteConfirmOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Excluir</TooltipContent>
-                      </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={async () => {
+                                    setOrderToDelete(order);
+                                    setDeleteConfirmOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir</TooltipContent>
+                            </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hidden md:flex"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>E-mail</TooltipContent>
-                      </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hidden md:flex"
+                                >
+                                  <Mail className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>E-mail</TooltipContent>
+                            </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hidden md:flex"
-                            onClick={async () => {
-                              try {
-                                await ordersService.export(order.id);
-                                toast.success('Pedido exportado para faturamento');
-                                loadOrders();
-                              } catch (e: any) {
-                                toast.error(`Erro ao exportar: ${e.message || e}`);
-                              }
-                            }}
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Exportar</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TooltipProvider>
-                </TableCell>
-              </TableRow>
-              );
-            })}
-            {orders.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center h-32 text-muted-foreground">
-                  Nenhum pedido encontrado
-                </TableCell>
-              </TableRow>
-            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hidden md:flex"
+                                  onClick={async () => {
+                                    try {
+                                      await ordersService.export(order.id);
+                                      toast.success('Pedido exportado para faturamento');
+                                      loadOrders(true);
+                                    } catch (e: any) {
+                                      toast.error(`Erro ao exportar: ${e.message || e}`);
+                                    }
+                                  }}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Exportar</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+              {isOrdersLoadingMore && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                  </TableCell>
+                </TableRow>
+              )}
           </TableBody>
         </Table>
         </div>

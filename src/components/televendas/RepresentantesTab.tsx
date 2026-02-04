@@ -76,8 +76,11 @@ const initialFormData: RepresentanteFormData = {
 };
 
 export function RepresentantesTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [representantes, setRepresentantes] = useState<Representante[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -240,11 +243,22 @@ export function RepresentantesTab() {
     }
   };
 
-  const loadRepresentantes = async () => {
+  const loadRepresentantes = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setRepresentantes([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await representativesService.getAll(search, 1, 100, incluirInativos);
-      setRepresentantes(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await representativesService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      setRepresentantes((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(result.page ?? nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error: any) {
       console.error('Erro ao carregar representantes:', error);
       toast.error(error?.message || 'Erro ao carregar representantes');
@@ -254,7 +268,7 @@ export function RepresentantesTab() {
   };
 
   useEffect(() => {
-    loadRepresentantes();
+    loadRepresentantes(true);
   }, [incluirInativos]);
 
   // Carregar UFs quando abrir os dialogs de criação/edição
@@ -301,7 +315,7 @@ export function RepresentantesTab() {
     }
   }, [cidadesApi, formData.cidade_id, pendingCidadeNome]);
 
-  const handleSearch = () => loadRepresentantes();
+  const handleSearch = () => loadRepresentantes(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -372,7 +386,7 @@ export function RepresentantesTab() {
       toast.success('Representante criado com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadRepresentantes();
+      loadRepresentantes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar representante');
     } finally {
@@ -392,7 +406,7 @@ export function RepresentantesTab() {
       toast.success('Representante atualizado com sucesso');
       setEditOpen(false);
       resetForm();
-      loadRepresentantes();
+      loadRepresentantes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar representante');
     } finally {
@@ -406,11 +420,22 @@ export function RepresentantesTab() {
     try {
       await representativesService.delete(id);
       toast.success('Representante excluído com sucesso');
-      loadRepresentantes();
+      loadRepresentantes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir representante');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && representantes.length === 0;
+  const isLoadingMore = loading && representantes.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadRepresentantes();
     }
   };
 
@@ -746,8 +771,9 @@ export function RepresentantesTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[700px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-20">Código</TableHead>
@@ -761,7 +787,7 @@ export function RepresentantesTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -810,8 +836,16 @@ export function RepresentantesTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -9,7 +9,11 @@ import { toast } from 'sonner';
 import { itinerarios, representantes } from '@/mocks/data';
 
 export const ItinerariosTab = () => {
+  const PAGE_LIMIT = 100;
   const [filteredData, setFilteredData] = useState(itinerarios);
+  const [visibleData, setVisibleData] = useState(itinerarios.slice(0, PAGE_LIMIT));
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(itinerarios.length > PAGE_LIMIT);
   const [filters, setFilters] = useState({
     representante: 'all',
     cidade: '',
@@ -36,7 +40,27 @@ export const ItinerariosTab = () => {
     }
 
     setFilteredData(filtered);
+    setPage(1);
+    setVisibleData(filtered.slice(0, PAGE_LIMIT));
+    setHasMore(filtered.length > PAGE_LIMIT);
   }, [filters]);
+
+  const loadMore = () => {
+    if (!hasMore) return;
+    const nextPage = page + 1;
+    const nextItems = filteredData.slice(0, nextPage * PAGE_LIMIT);
+    setVisibleData(nextItems);
+    setPage(nextPage);
+    setHasMore(nextItems.length < filteredData.length);
+  };
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadMore();
+    }
+  };
 
   const handleReagendar = (codigoCliente: string) => {
     toast.info(`Reagendando visita para cliente (código ${codigoCliente})`);
@@ -101,7 +125,7 @@ export const ItinerariosTab = () => {
           <CardTitle>Itinerários ({filteredData.length} clientes)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
             <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
@@ -116,7 +140,7 @@ export const ItinerariosTab = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredData.map((item) => {
+                {visibleData.map((item) => {
                   const codigoCliente = (item as any).codigoCliente ?? '';
                   return (
                     <TableRow key={item.id}>
@@ -142,6 +166,13 @@ export const ItinerariosTab = () => {
                     </TableRow>
                   );
                 })}
+                {hasMore && visibleData.length > 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                      Role para carregar mais...
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>

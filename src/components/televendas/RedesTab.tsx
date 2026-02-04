@@ -6,14 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-} from '@/components/ui/pagination';
-import { ChevronLeft, ChevronRight, Search, Network, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Search, Network, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { redesService, Rede, RedeFormData } from '@/services/redesService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
@@ -38,7 +31,7 @@ export function RedesTab() {
   const [loading, setLoading] = useState(false);
   const [redes, setRedes] = useState<Rede[]>([]);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -76,13 +69,22 @@ export function RedesTab() {
       .finally(() => setCidadesLoading(false));
   }, [formData.uf]);
 
-  const loadRedes = async (nextPage = page) => {
+  const loadRedes = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setRedes([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
+      const nextPage = reset ? 1 : page + 1;
       const result = await redesService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
-      setRedes(result.data);
-      setTotal(result.total ?? result.data.length);
+      setRedes((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(result.page ?? nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error: any) {
       console.error('Erro ao carregar redes:', error);
       toast.error(error?.message || 'Erro ao carregar redes');
@@ -92,14 +94,10 @@ export function RedesTab() {
   };
 
   useEffect(() => {
-    setPage(1);
-    loadRedes(1);
+    loadRedes(true);
   }, [incluirInativos]);
 
-  const handleSearch = () => {
-    setPage(1);
-    loadRedes(1);
-  };
+  const handleSearch = () => loadRedes(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -154,7 +152,7 @@ export function RedesTab() {
       toast.success('Rede criada com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadRedes(page);
+      loadRedes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar rede');
     } finally {
@@ -179,7 +177,7 @@ export function RedesTab() {
       toast.success('Rede atualizada com sucesso');
       setEditOpen(false);
       resetForm();
-      loadRedes(page);
+      loadRedes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar rede');
     } finally {
@@ -193,11 +191,7 @@ export function RedesTab() {
     try {
       await redesService.delete(id);
       toast.success('Rede excluída com sucesso');
-      const totalAfter = Math.max(0, total - 1);
-      const totalPagesAfter = Math.max(1, Math.ceil(totalAfter / PAGE_LIMIT));
-      const nextPage = Math.min(page, totalPagesAfter);
-      setPage(nextPage);
-      loadRedes(nextPage);
+      loadRedes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir rede');
     } finally {
@@ -274,20 +268,16 @@ export function RedesTab() {
     </div>
   );
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
-  const showingFrom = total === 0 ? 0 : (page - 1) * PAGE_LIMIT + 1;
-  const showingTo = total === 0 ? 0 : Math.min(page * PAGE_LIMIT, total);
-  const pageItems: Array<number | 'ellipsis'> = (() => {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const items: Array<number | 'ellipsis'> = [1];
-    const windowStart = Math.max(2, page - 1);
-    const windowEnd = Math.min(totalPages - 1, page + 1);
-    if (windowStart > 2) items.push('ellipsis');
-    for (let p = windowStart; p <= windowEnd; p += 1) items.push(p);
-    if (windowEnd < totalPages - 1) items.push('ellipsis');
-    items.push(totalPages);
-    return items;
-  })();
+  const isInitialLoading = loading && redes.length === 0;
+  const isLoadingMore = loading && redes.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadRedes();
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -328,8 +318,9 @@ export function RedesTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[500px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[500px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-20">Código</TableHead>
@@ -342,7 +333,7 @@ export function RedesTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -390,65 +381,18 @@ export function RedesTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-              <div className="text-xs text-muted-foreground">
-                Mostrando {showingFrom}-{showingTo} de {total}
-              </div>
-              <Pagination className="justify-end sm:justify-center">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (page > 1 && !loading) loadRedes(page - 1);
-                      }}
-                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      <span>Anterior</span>
-                    </PaginationLink>
-                  </PaginationItem>
-                  {pageItems.map((item, idx) => (
-                    <PaginationItem key={`${item}-${idx}`}>
-                      {item === 'ellipsis' ? (
-                        <PaginationEllipsis />
-                      ) : (
-                        <PaginationLink
-                          href="#"
-                          isActive={item === page}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (item !== page && !loading) loadRedes(item);
-                          }}
-                        >
-                          {item}
-                        </PaginationLink>
-                      )}
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (page < totalPages && !loading) loadRedes(page + 1);
-                      }}
-                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
-                    >
-                      <span>Próxima</span>
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </PaginationLink>
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </CardContent>
       </Card>
 

@@ -85,8 +85,11 @@ const initialFormData = {
 };
 
 export function FornecedoresTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -103,11 +106,22 @@ export function FornecedoresTab() {
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
 
-  const loadFornecedores = async () => {
+  const loadFornecedores = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setFornecedores([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await suppliersService.getAll(search);
-      setFornecedores(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT);
+      setFornecedores((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error) {
       console.error('Erro ao carregar fornecedores:', error);
       toast.error('Erro ao carregar fornecedores');
@@ -260,7 +274,7 @@ export function FornecedoresTab() {
   }
 
   useEffect(() => {
-    loadFornecedores();
+    loadFornecedores(true);
   }, []);
 
   useEffect(() => {
@@ -277,7 +291,7 @@ export function FornecedoresTab() {
     }
   }, [formData.uf, createOpen, editOpen]);
 
-  const handleSearch = () => loadFornecedores();
+  const handleSearch = () => loadFornecedores(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -361,7 +375,7 @@ export function FornecedoresTab() {
       toast.success('Fornecedor criado com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadFornecedores();
+      loadFornecedores(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar fornecedor');
     } finally {
@@ -399,7 +413,7 @@ export function FornecedoresTab() {
       toast.success('Fornecedor atualizado com sucesso');
       setEditOpen(false);
       resetForm();
-      loadFornecedores();
+      loadFornecedores(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar fornecedor');
     } finally {
@@ -413,11 +427,22 @@ export function FornecedoresTab() {
     try {
       await suppliersService.delete(id);
       toast.success('Fornecedor excluído com sucesso');
-      loadFornecedores();
+      loadFornecedores(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir fornecedor');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && fornecedores.length === 0;
+  const isLoadingMore = loading && fornecedores.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadFornecedores();
     }
   };
 
@@ -710,8 +735,9 @@ export function FornecedoresTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[600px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-20">Código</TableHead>
@@ -722,7 +748,7 @@ export function FornecedoresTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -764,8 +790,16 @@ export function FornecedoresTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

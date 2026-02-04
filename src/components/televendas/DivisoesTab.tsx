@@ -21,8 +21,11 @@ const initialFormData = {
 };
 
 export function DivisoesTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [gruposLoading, setGruposLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -35,11 +38,22 @@ export function DivisoesTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState(initialFormData);
 
-  const loadDivisoes = async () => {
+  const loadDivisoes = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setDivisoes([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await divisionsService.getAll(search, filterGrupoId, 1, 100, incluirInativos);
-      setDivisoes(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await divisionsService.getAll(search, filterGrupoId, nextPage, PAGE_LIMIT, incluirInativos);
+      setDivisoes((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error) {
       console.error('Erro ao carregar divisões:', error);
       toast.error('Erro ao carregar divisões');
@@ -62,14 +76,14 @@ export function DivisoesTab() {
 
   useEffect(() => {
     loadGrupos();
-    loadDivisoes();
+    loadDivisoes(true);
   }, []);
 
   useEffect(() => {
-    loadDivisoes();
+    loadDivisoes(true);
   }, [incluirInativos, filterGrupoId]);
 
-  const handleSearch = () => loadDivisoes();
+  const handleSearch = () => loadDivisoes(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -121,7 +135,7 @@ export function DivisoesTab() {
       toast.success('Divisão criada com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadDivisoes();
+      loadDivisoes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar divisão');
     } finally {
@@ -141,7 +155,7 @@ export function DivisoesTab() {
       toast.success('Divisão atualizada com sucesso');
       setEditOpen(false);
       resetForm();
-      loadDivisoes();
+      loadDivisoes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar divisão');
     } finally {
@@ -155,11 +169,22 @@ export function DivisoesTab() {
     try {
       await divisionsService.delete(id);
       toast.success('Divisão excluída com sucesso');
-      loadDivisoes();
+      loadDivisoes(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir divisão');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && divisoes.length === 0;
+  const isLoadingMore = loading && divisoes.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadDivisoes();
     }
   };
 
@@ -271,8 +296,9 @@ export function DivisoesTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[500px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[500px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Código</TableHead>
@@ -283,7 +309,7 @@ export function DivisoesTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -331,8 +357,16 @@ export function DivisoesTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -18,8 +18,11 @@ const initialFormData: RotaClienteFormData = {
 };
 
 export function RotasClientesTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [rotas, setRotas] = useState<RotaCliente[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -29,11 +32,22 @@ export function RotasClientesTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RotaClienteFormData>(initialFormData);
 
-  const loadRotas = async () => {
+  const loadRotas = async (reset = false) => {
+    if (loading) return;
     setLoading(true);
+    if (reset) {
+      setRotas([]);
+      setPage(1);
+      setHasMore(true);
+    }
     try {
-      const result = await rotasClientesService.getAll(search, 1, 100, incluirInativos);
-      setRotas(result.data);
+      const nextPage = reset ? 1 : page + 1;
+      const result = await rotasClientesService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      setRotas((prev) => (reset ? result.data : [...prev, ...result.data]));
+      setPage(result.page ?? nextPage);
+      const total = result.total ?? 0;
+      const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
+      setHasMore(nextHasMore);
     } catch (error: any) {
       console.error('Erro ao carregar rotas:', error);
       toast.error(error?.message || 'Erro ao carregar rotas');
@@ -43,10 +57,10 @@ export function RotasClientesTab() {
   };
 
   useEffect(() => {
-    loadRotas();
+    loadRotas(true);
   }, [incluirInativos]);
 
-  const handleSearch = () => loadRotas();
+  const handleSearch = () => loadRotas(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -93,7 +107,7 @@ export function RotasClientesTab() {
       toast.success('Rota criada com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadRotas();
+      loadRotas(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar rota');
     } finally {
@@ -113,7 +127,7 @@ export function RotasClientesTab() {
       toast.success('Rota atualizada com sucesso');
       setEditOpen(false);
       resetForm();
-      loadRotas();
+      loadRotas(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar rota');
     } finally {
@@ -127,11 +141,22 @@ export function RotasClientesTab() {
     try {
       await rotasClientesService.delete(id);
       toast.success('Rota excluída com sucesso');
-      loadRotas();
+      loadRotas(true);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir rota');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const isInitialLoading = loading && rotas.length === 0;
+  const isLoadingMore = loading && rotas.length > 0;
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!hasMore || loading) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadRotas();
     }
   };
 
@@ -194,8 +219,9 @@ export function RotasClientesTab() {
           </div>
 
           <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[400px]">
+            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[400px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Código</TableHead>
@@ -205,7 +231,7 @@ export function RotasClientesTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {isInitialLoading ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -250,8 +276,16 @@ export function RotasClientesTab() {
                       </TableRow>
                     ))
                   )}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </div>
         </CardContent>
