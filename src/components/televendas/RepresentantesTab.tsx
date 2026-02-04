@@ -121,6 +121,8 @@ export function RepresentantesTab() {
         const estab = d.estabelecimento ?? {};
         const cidadeObj = estab.cidade ?? {};
         const estadoObj = estab.estado ?? {};
+        const nextUf = toUpperValue(estadoObj.sigla || estab.uf || d.uf || '');
+        const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
         const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
         const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
         const cepFromCnpj = estab.cep ?? d.cep;
@@ -133,8 +135,6 @@ export function RepresentantesTab() {
           const ddd1 = estab.ddd1 ? String(estab.ddd1).trim() : '';
           const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
           const nextCep = cepValue || normalizeCep(String(prev.cep || ''));
-          const nextUf = toUpperValue(estadoObj.sigla || estab.uf || d.uf || prev.uf);
-          const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
           return {
             ...prev,
             cnpj_cpf: maskCnpjCpf(cleaned),
@@ -143,18 +143,35 @@ export function RepresentantesTab() {
             endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
             numero: toUpperValue(estab.numero || d.numero || prev.numero || ''),
             bairro: toUpperValue(estab.bairro || d.bairro || prev.bairro),
-            uf: nextUf,
+            uf: nextUf || prev.uf,
             cep: maskCep(nextCep),
             complemento: toUpperValue(complemento),
             fone: maskPhone(telefoneFmt || prev.fone || ''),
             email: estab.email || prev.email,
-            cidade_id: cidadeObj.id ?? null,
+            // a seleção vem por match do nome após carregar cidades
+            cidade_id: null,
           };
         });
         // Salvar o nome da cidade para fazer match depois que carregar as cidades
-        const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
-        if (cidadeNome) {
-          setPendingCidadeNome(cidadeNome);
+        if (cidadeNome) setPendingCidadeNome(cidadeNome);
+
+        // Garante o auto-match mesmo se o carregamento de cidades (por efeito) demorar/não rodar
+        if (nextUf && cidadeNome) {
+          try {
+            const cidades = await metadataService.getCidadesPorUf(nextUf);
+            setCidadesApi(cidades);
+            const target = normalizeCityKey(cidadeNome);
+            const match = cidades.find((c) => normalizeCityKey(c.nome_cidade) === target);
+            if (match) {
+              setFormData((prev) => ({
+                ...prev,
+                uf: nextUf || prev.uf,
+                cidade_id: match.cidade_id,
+              }));
+            }
+          } catch (e) {
+            // silencioso: mantém o fluxo sem bloquear o preenchimento do restante
+          }
         }
         if (hasCep) {
           cepLookupRef.current?.(cepValue);
