@@ -81,6 +81,7 @@ const initialFormData = {
   empresas_autorizadas: '',
   obs: '',
   inativo: false,
+  revenda: false,
 };
 
 export function FornecedoresTab() {
@@ -318,6 +319,7 @@ export function FornecedoresTab() {
           empresas_autorizadas: detail.empresas_autorizadas || '',
           obs: detail.obs || '',
           inativo: detail.inativo || false,
+          revenda: detail.revenda || false,
         });
       }
     } catch (e) {
@@ -354,6 +356,7 @@ export function FornecedoresTab() {
         empresas_autorizadas: formData.empresas_autorizadas.trim() || undefined,
         obs: formData.obs.trim() || undefined,
         inativo: formData.inativo,
+        revenda: formData.revenda,
       });
       toast.success('Fornecedor criado com sucesso');
       setCreateOpen(false);
@@ -391,6 +394,7 @@ export function FornecedoresTab() {
         empresas_autorizadas: formData.empresas_autorizadas.trim() || undefined,
         obs: formData.obs.trim() || undefined,
         inativo: formData.inativo,
+        revenda: formData.revenda,
       });
       toast.success('Fornecedor atualizado com sucesso');
       setEditOpen(false);
@@ -449,12 +453,21 @@ export function FornecedoresTab() {
               </Button>
             </div>
           </div>
-          <div className="col-span-3 flex items-center gap-2 pt-5">
-            <Checkbox
-              checked={formData.inativo}
-              onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
-            />
-            <label className="text-sm">Inativo</label>
+          <div className="col-span-4 flex items-center gap-4 pt-5">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={formData.inativo}
+                onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
+              />
+              <label className="text-sm">Inativo</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={formData.revenda}
+                onCheckedChange={(c) => setFormData({ ...formData, revenda: c as boolean })}
+              />
+              <label className="text-sm">Revenda</label>
+            </div>
           </div>
         </div>
 
