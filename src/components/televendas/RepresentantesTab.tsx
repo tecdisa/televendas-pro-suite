@@ -94,6 +94,15 @@ export function RepresentantesTab() {
   const [cidadesLoading, setCidadesLoading] = useState(false);
   const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
+  const [pendingCidadeNome, setPendingCidadeNome] = useState<string>(''); // Para auto-match após carregar cidades
+
+  const normalizeCityKey = (value: string | null | undefined) =>
+    String(value ?? '')
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
 
   // CNPJ Lookup
   const cnpjLookupRef = useRef<(v: string) => void>();
@@ -125,6 +134,7 @@ export function RepresentantesTab() {
           const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
           const nextCep = cepValue || normalizeCep(String(prev.cep || ''));
           const nextUf = toUpperValue(estadoObj.sigla || estab.uf || d.uf || prev.uf);
+          const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
           return {
             ...prev,
             cnpj_cpf: maskCnpjCpf(cleaned),
@@ -138,9 +148,14 @@ export function RepresentantesTab() {
             complemento: toUpperValue(complemento),
             fone: maskPhone(telefoneFmt || prev.fone || ''),
             email: estab.email || prev.email,
-            cidade_id: cidadeObj.id ?? prev.cidade_id,
+            cidade_id: cidadeObj.id ?? null,
           };
         });
+        // Salvar o nome da cidade para fazer match depois que carregar as cidades
+        const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
+        if (cidadeNome) {
+          setPendingCidadeNome(cidadeNome);
+        }
         if (hasCep) {
           cepLookupRef.current?.(cepValue);
         }
@@ -249,13 +264,33 @@ export function RepresentantesTab() {
     }
   }, [formData.uf, createOpen, editOpen]);
 
-  // Auto-seleciona cidade se bater o ID ao carregar cidades
+  // Auto-seleciona cidade pelo nome quando as cidades são carregadas (após CNPJ lookup)
   useEffect(() => {
-    if (!formData.cidade_id || cidadesApi.length === 0) return;
-    const match = cidadesApi.find(c => c.cidade_id === formData.cidade_id);
-    if (!match) return;
-    // Já está selecionado, não precisa fazer nada
-  }, [cidadesApi, formData.cidade_id]);
+    if (cidadesApi.length === 0) return;
+    
+    // Se já tem cidade_id válida e está na lista, não precisa fazer nada
+    if (formData.cidade_id) {
+      const idMatch = cidadesApi.some(c => c.cidade_id === formData.cidade_id);
+      if (idMatch) {
+        setPendingCidadeNome('');
+        return;
+      }
+    }
+    
+    // Tenta match pelo nome da cidade pendente
+    if (!pendingCidadeNome) return;
+    const target = normalizeCityKey(pendingCidadeNome);
+    if (!target) return;
+    
+    const match = cidadesApi.find(c => normalizeCityKey(c.nome_cidade) === target);
+    if (match) {
+      setFormData(prev => ({
+        ...prev,
+        cidade_id: match.cidade_id,
+      }));
+      setPendingCidadeNome('');
+    }
+  }, [cidadesApi, formData.cidade_id, pendingCidadeNome]);
 
   const handleSearch = () => loadRepresentantes();
   const handleKeyDown = (e: React.KeyboardEvent) => {
