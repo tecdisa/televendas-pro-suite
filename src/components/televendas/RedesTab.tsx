@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Pagination,
   PaginationContent,
@@ -15,18 +16,18 @@ import {
 import { ChevronLeft, ChevronRight, Search, Network, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { redesService, Rede, RedeFormData } from '@/services/redesService';
+import { metadataService, Uf, Cidade } from '@/services/metadataService';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
-const UF_LIST = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-];
+interface ExtendedFormData extends Omit<RedeFormData, 'cidade'> {
+  cidade_id: number | null;
+}
 
-const initialFormData: RedeFormData = {
+const initialFormData: ExtendedFormData = {
   codigo_rede: '',
   descricao_rede: '',
-  cidade: '',
+  cidade_id: null,
   uf: '',
   email: '',
   inativo: false,
@@ -45,7 +46,35 @@ export function RedesTab() {
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [formData, setFormData] = useState<RedeFormData>(initialFormData);
+  const [formData, setFormData] = useState<ExtendedFormData>(initialFormData);
+
+  // UF and Cidade states
+  const [ufsApi, setUfsApi] = useState<Uf[]>([]);
+  const [ufsLoading, setUfsLoading] = useState(false);
+  const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
+  const [cidadesLoading, setCidadesLoading] = useState(false);
+
+  // Load UFs on mount
+  useEffect(() => {
+    setUfsLoading(true);
+    metadataService.getUfs()
+      .then(setUfsApi)
+      .catch(() => toast.error('Erro ao carregar UFs'))
+      .finally(() => setUfsLoading(false));
+  }, []);
+
+  // Load cities when UF changes
+  useEffect(() => {
+    if (!formData.uf) {
+      setCidadesApi([]);
+      return;
+    }
+    setCidadesLoading(true);
+    metadataService.getCidadesPorUf(formData.uf)
+      .then(setCidadesApi)
+      .catch(() => toast.error('Erro ao carregar cidades'))
+      .finally(() => setCidadesLoading(false));
+  }, [formData.uf]);
 
   const loadRedes = async (nextPage = page) => {
     setLoading(true);
@@ -95,7 +124,7 @@ export function RedesTab() {
         setFormData({
           codigo_rede: detail.codigo_rede || '',
           descricao_rede: detail.descricao_rede || '',
-          cidade: detail.cidade || '',
+          cidade_id: detail.cidade_id ?? null,
           uf: detail.uf || '',
           email: detail.email || '',
           inativo: detail.inativo ?? false,
@@ -116,7 +145,12 @@ export function RedesTab() {
     }
     setFormLoading(true);
     try {
-      await redesService.create(formData);
+      // Find cidade name from cidade_id
+      const cidadeObj = cidadesApi.find((c) => c.cidade_id === formData.cidade_id);
+      await redesService.create({
+        ...formData,
+        cidade: cidadeObj?.nome_cidade || '',
+      });
       toast.success('Rede criada com sucesso');
       setCreateOpen(false);
       resetForm();
@@ -136,7 +170,12 @@ export function RedesTab() {
     }
     setFormLoading(true);
     try {
-      await redesService.update(editId, formData);
+      // Find cidade name from cidade_id
+      const cidadeObj = cidadesApi.find((c) => c.cidade_id === formData.cidade_id);
+      await redesService.update(editId, {
+        ...formData,
+        cidade: cidadeObj?.nome_cidade || '',
+      });
       toast.success('Rede atualizada com sucesso');
       setEditOpen(false);
       resetForm();
@@ -177,26 +216,41 @@ export function RedesTab() {
         />
       </div>
       <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-8">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.cidade}
-            onChange={(e) => setFormData({ ...formData, cidade: toUpperValue(e.target.value) })}
-          />
-        </div>
         <div className="col-span-4">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-          <select
-            className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-            value={formData.uf}
-            onChange={(e) => setFormData({ ...formData, uf: e.target.value })}
+          <Select
+            value={formData.uf || 'none'}
+            onValueChange={(v) => setFormData({ ...formData, uf: v === 'none' ? '' : v, cidade_id: null })}
+            disabled={ufsLoading}
           >
-            <option value="">Selecione</option>
-            {UF_LIST.map((uf) => (
-              <option key={uf} value={uf}>{uf}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Selecione</SelectItem>
+              {ufsApi.map((u) => (
+                <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-8">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
+          <Select
+            value={formData.cidade_id ? String(formData.cidade_id) : 'none'}
+            onValueChange={(v) => setFormData({ ...formData, cidade_id: v === 'none' ? null : Number(v) })}
+            disabled={!formData.uf || cidadesLoading}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder={cidadesLoading ? 'Carregando...' : 'Selecione'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Selecione</SelectItem>
+              {cidadesApi.map((c) => (
+                <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="grid grid-cols-12 gap-3">

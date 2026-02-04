@@ -7,6 +7,7 @@ export interface Rede {
   codigo_rede?: string;
   descricao_rede: string;
   cidade?: string;
+  cidade_id?: number | null;
   uf?: string;
   email?: string;
   inativo?: boolean;
@@ -16,6 +17,7 @@ export interface RedeFormData {
   codigo_rede?: string;
   descricao_rede: string;
   cidade?: string;
+  cidade_id?: number | null;
   uf?: string;
   email?: string;
   inativo?: boolean;
@@ -27,6 +29,7 @@ function normalizeRede(raw: any): Rede {
     codigo_rede: raw.codigo_rede ?? raw.codigoRede ?? '',
     descricao_rede: raw.descricao_rede ?? raw.descricaoRede ?? raw.descricao ?? '',
     cidade: raw.cidade ?? '',
+    cidade_id: raw.cidade_id ?? raw.cidadeId ?? null,
     uf: raw.uf ?? '',
     email: raw.email ?? '',
     inativo: raw.inativo ?? false,
