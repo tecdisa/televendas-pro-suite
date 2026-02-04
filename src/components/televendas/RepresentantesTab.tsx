@@ -123,6 +123,9 @@ export function RepresentantesTab() {
         const estadoObj = estab.estado ?? {};
         const nextUf = toUpperValue(estadoObj.sigla || estab.uf || d.uf || '');
         const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
+        const cidadeIdRaw = (cidadeObj as any)?.id ?? (cidadeObj as any)?.cidade_id ?? (cidadeObj as any)?.cidadeId;
+        const cidadeIdFromCnpj = Number(cidadeIdRaw);
+        const cidadeId = Number.isFinite(cidadeIdFromCnpj) && cidadeIdFromCnpj > 0 ? cidadeIdFromCnpj : null;
         const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
         const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
         const cepFromCnpj = estab.cep ?? d.cep;
@@ -148,31 +151,12 @@ export function RepresentantesTab() {
             complemento: toUpperValue(complemento),
             fone: maskPhone(telefoneFmt || prev.fone || ''),
             email: estab.email || prev.email,
-            // a seleção vem por match do nome após carregar cidades
-            cidade_id: null,
+            // Igual ao cadastro de clientes: já seta o cidade_id vindo da consulta
+            cidade_id: cidadeId,
           };
         });
-        // Salvar o nome da cidade para fazer match depois que carregar as cidades
-        if (cidadeNome) setPendingCidadeNome(cidadeNome);
-
-        // Garante o auto-match mesmo se o carregamento de cidades (por efeito) demorar/não rodar
-        if (nextUf && cidadeNome) {
-          try {
-            const cidades = await metadataService.getCidadesPorUf(nextUf);
-            setCidadesApi(cidades);
-            const target = normalizeCityKey(cidadeNome);
-            const match = cidades.find((c) => normalizeCityKey(c.nome_cidade) === target);
-            if (match) {
-              setFormData((prev) => ({
-                ...prev,
-                uf: nextUf || prev.uf,
-                cidade_id: match.cidade_id,
-              }));
-            }
-          } catch (e) {
-            // silencioso: mantém o fluxo sem bloquear o preenchimento do restante
-          }
-        }
+        // Fallback: se a API não trouxer cidade_id, tenta casar por nome quando as cidades carregarem
+        if (!cidadeId && cidadeNome) setPendingCidadeNome(cidadeNome);
         if (hasCep) {
           cepLookupRef.current?.(cepValue);
         }
