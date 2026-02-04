@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, UserCheck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
+import { metadataService, Uf, Cidade } from '@/services/metadataService';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -73,6 +75,36 @@ export function RepresentantesTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RepresentanteFormData>(initialFormData);
 
+  // UFs e Cidades
+  const [ufsApi, setUfsApi] = useState<Uf[]>([]);
+  const [ufsLoading, setUfsLoading] = useState(false);
+  const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
+  const [cidadesLoading, setCidadesLoading] = useState(false);
+
+  const loadUfs = async () => {
+    setUfsLoading(true);
+    try {
+      const data = await metadataService.getUfs();
+      setUfsApi(data);
+    } catch (e) {
+      console.error('Erro ao carregar UFs:', e);
+    } finally {
+      setUfsLoading(false);
+    }
+  };
+
+  const loadCidades = async (uf: string) => {
+    setCidadesLoading(true);
+    try {
+      const data = await metadataService.getCidadesPorUf(uf);
+      setCidadesApi(data);
+    } catch (e) {
+      console.error('Erro ao carregar cidades:', e);
+    } finally {
+      setCidadesLoading(false);
+    }
+  };
+
   const loadRepresentantes = async () => {
     setLoading(true);
     try {
@@ -89,6 +121,30 @@ export function RepresentantesTab() {
   useEffect(() => {
     loadRepresentantes();
   }, [incluirInativos]);
+
+  // Carregar UFs quando abrir os dialogs de criação/edição
+  useEffect(() => {
+    if (createOpen || editOpen) {
+      loadUfs();
+    }
+  }, [createOpen, editOpen]);
+
+  // Carregar cidades quando UF mudar
+  useEffect(() => {
+    if (formData.uf && (createOpen || editOpen)) {
+      loadCidades(formData.uf);
+    } else {
+      setCidadesApi([]);
+    }
+  }, [formData.uf, createOpen, editOpen]);
+
+  // Auto-seleciona cidade se bater o ID ao carregar cidades
+  useEffect(() => {
+    if (!formData.cidade_id || cidadesApi.length === 0) return;
+    const match = cidadesApi.find(c => c.cidade_id === formData.cidade_id);
+    if (!match) return;
+    // Já está selecionado, não precisa fazer nada
+  }, [cidadesApi, formData.cidade_id]);
 
   const handleSearch = () => loadRepresentantes();
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -332,21 +388,37 @@ export function RepresentantesTab() {
           </div>
           <div className="col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-            <Input
-              className="h-8 text-sm"
-              maxLength={2}
-              value={formData.uf}
-              onChange={(e) => setFormData({ ...formData, uf: toUpperValue(e.target.value) })}
-            />
+            <Select
+              value={formData.uf || ''}
+              onValueChange={(v) => setFormData({ ...formData, uf: v, cidade_id: null })}
+              disabled={ufsLoading}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {ufsApi.map(u => (
+                  <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade ID</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.cidade_id ?? ''}
-              onChange={(e) => setFormData({ ...formData, cidade_id: e.target.value ? Number(e.target.value) : null })}
-            />
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
+            <Select
+              value={formData.cidade_id ? String(formData.cidade_id) : ''}
+              onValueChange={(v) => setFormData({ ...formData, cidade_id: parseInt(v) || null })}
+              disabled={cidadesLoading || !formData.uf}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder={cidadesLoading ? '...' : (formData.uf ? 'Sel.' : 'UF')} />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50 max-h-60">
+                {cidadesApi.map(c => (
+                  <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </TabsContent>
