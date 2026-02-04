@@ -155,8 +155,12 @@ export function RepresentantesTab() {
             cidade_id: cidadeId,
           };
         });
-        // Fallback: se a API não trouxer cidade_id, tenta casar por nome quando as cidades carregarem
-        if (!cidadeId && cidadeNome) setPendingCidadeNome(cidadeNome);
+        // Sempre tenta casar por nome quando as cidades carregarem (cidade_id externo pode não bater)
+        if (cidadeNome) {
+          setPendingCidadeNome(cidadeNome);
+        } else {
+          setPendingCidadeNome('');
+        }
         if (hasCep) {
           cepLookupRef.current?.(cepValue);
         }
@@ -190,6 +194,7 @@ export function RepresentantesTab() {
           toast.error('CEP não encontrado');
           return;
         }
+        const cidadeNomeCep = data.localidade ? toUpperValue(data.localidade) : '';
         setFormData((prev) => ({
           ...prev,
           cep: maskCep(cleaned),
@@ -199,6 +204,9 @@ export function RepresentantesTab() {
           uf: data.uf ? toUpperValue(data.uf) : prev.uf,
           cidade_id: data.localidade || data.uf ? null : prev.cidade_id,
         }));
+        if (cidadeNomeCep) {
+          setPendingCidadeNome(cidadeNomeCep);
+        }
         toast.success('Endereço preenchido pelo CEP');
       } catch (e: any) {
         toast.error('Erro na consulta de CEP');
@@ -301,6 +309,7 @@ export function RepresentantesTab() {
   const resetForm = () => {
     setFormData(initialFormData);
     setEditId(null);
+    setPendingCidadeNome('');
   };
 
   const openCreate = () => {
@@ -310,6 +319,7 @@ export function RepresentantesTab() {
 
   const openEdit = async (r: Representante) => {
     setEditId(r.representante_id);
+    setPendingCidadeNome('');
     setFormLoading(true);
     setEditOpen(true);
     try {
@@ -567,7 +577,10 @@ export function RepresentantesTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
             <Select
               value={formData.uf || ''}
-              onValueChange={(v) => setFormData({ ...formData, uf: v, cidade_id: null })}
+              onValueChange={(v) => {
+                setFormData({ ...formData, uf: v, cidade_id: null });
+                setPendingCidadeNome('');
+              }}
               disabled={ufsLoading}
             >
               <SelectTrigger className="h-8 text-sm">
