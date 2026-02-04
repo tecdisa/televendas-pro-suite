@@ -178,6 +178,11 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   );
   const clampDesconto = useCallback(
     (valor: number, max?: number) => {
+      // Never allow negative discounts
+      if (valor < 0) {
+        toast.error('Desconto não pode ser negativo.');
+        return 0;
+      }
       if (!bloqueiaDescontoAcimaTabela) return valor;
       const maxValue = normalizeMaxDesconto(max);
       if (maxValue == null) return valor;
