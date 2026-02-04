@@ -5,7 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Network, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination';
+import { ChevronLeft, ChevronRight, Search, Network, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { redesService, Rede, RedeFormData } from '@/services/redesService';
 
@@ -26,8 +33,11 @@ const initialFormData: RedeFormData = {
 };
 
 export function RedesTab() {
+  const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [redes, setRedes] = useState<Rede[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -37,11 +47,13 @@ export function RedesTab() {
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RedeFormData>(initialFormData);
 
-  const loadRedes = async () => {
+  const loadRedes = async (nextPage = page) => {
     setLoading(true);
     try {
-      const result = await redesService.getAll(search, 1, 100, incluirInativos);
+      const result = await redesService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
       setRedes(result.data);
+      setTotal(result.total ?? result.data.length);
+      setPage(result.page ?? nextPage);
     } catch (error: any) {
       console.error('Erro ao carregar redes:', error);
       toast.error(error?.message || 'Erro ao carregar redes');
@@ -51,10 +63,14 @@ export function RedesTab() {
   };
 
   useEffect(() => {
-    loadRedes();
+    setPage(1);
+    loadRedes(1);
   }, [incluirInativos]);
 
-  const handleSearch = () => loadRedes();
+  const handleSearch = () => {
+    setPage(1);
+    loadRedes(1);
+  };
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
   };
@@ -104,7 +120,7 @@ export function RedesTab() {
       toast.success('Rede criada com sucesso');
       setCreateOpen(false);
       resetForm();
-      loadRedes();
+      loadRedes(page);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar rede');
     } finally {
@@ -124,7 +140,7 @@ export function RedesTab() {
       toast.success('Rede atualizada com sucesso');
       setEditOpen(false);
       resetForm();
-      loadRedes();
+      loadRedes(page);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar rede');
     } finally {
@@ -138,7 +154,11 @@ export function RedesTab() {
     try {
       await redesService.delete(id);
       toast.success('Rede excluída com sucesso');
-      loadRedes();
+      const totalAfter = Math.max(0, total - 1);
+      const totalPagesAfter = Math.max(1, Math.ceil(totalAfter / PAGE_LIMIT));
+      const nextPage = Math.min(page, totalPagesAfter);
+      setPage(nextPage);
+      loadRedes(nextPage);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao excluir rede');
     } finally {
@@ -199,6 +219,21 @@ export function RedesTab() {
       </div>
     </div>
   );
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+  const showingFrom = total === 0 ? 0 : (page - 1) * PAGE_LIMIT + 1;
+  const showingTo = total === 0 ? 0 : Math.min(page * PAGE_LIMIT, total);
+  const pageItems: Array<number | 'ellipsis'> = (() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const items: Array<number | 'ellipsis'> = [1];
+    const windowStart = Math.max(2, page - 1);
+    const windowEnd = Math.min(totalPages - 1, page + 1);
+    if (windowStart > 2) items.push('ellipsis');
+    for (let p = windowStart; p <= windowEnd; p += 1) items.push(p);
+    if (windowEnd < totalPages - 1) items.push('ellipsis');
+    items.push(totalPages);
+    return items;
+  })();
 
   return (
     <div className="space-y-4">
@@ -305,6 +340,61 @@ export function RedesTab() {
               </Table>
             </div>
           </div>
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {showingFrom}-{showingTo} de {total}
+              </div>
+              <Pagination className="justify-end sm:justify-center">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page > 1 && !loading) loadRedes(page - 1);
+                      }}
+                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      <span>Anterior</span>
+                    </PaginationLink>
+                  </PaginationItem>
+                  {pageItems.map((item, idx) => (
+                    <PaginationItem key={`${item}-${idx}`}>
+                      {item === 'ellipsis' ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          href="#"
+                          isActive={item === page}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (item !== page && !loading) loadRedes(item);
+                          }}
+                        >
+                          {item}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page < totalPages && !loading) loadRedes(page + 1);
+                      }}
+                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                    >
+                      <span>Próxima</span>
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </PaginationLink>
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
