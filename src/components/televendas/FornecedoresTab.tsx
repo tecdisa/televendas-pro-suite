@@ -107,7 +107,7 @@ export function FornecedoresTab() {
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
 
-  const loadFornecedores = async (reset = false) => {
+  const loadFornecedores = async (reset = false, inativosOverride?: boolean) => {
     if (loading) return;
     setLoading(true);
     if (reset) {
@@ -117,7 +117,8 @@ export function FornecedoresTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      const incluirInativosValue = inativosOverride !== undefined ? inativosOverride : incluirInativos;
+      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, incluirInativosValue);
       setFornecedores((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(nextPage);
       const total = result.total ?? 0;
@@ -276,7 +277,7 @@ export function FornecedoresTab() {
 
   useEffect(() => {
     loadFornecedores(true);
-  }, [incluirInativos]);
+  }, []);
 
   useEffect(() => {
     if (createOpen || editOpen) {
@@ -733,7 +734,11 @@ export function FornecedoresTab() {
               <Checkbox
                 id="incluirInativos"
                 checked={incluirInativos}
-                onCheckedChange={(c) => setIncluirInativos(c as boolean)}
+                onCheckedChange={(c) => {
+                  const newValue = c as boolean;
+                  setIncluirInativos(newValue);
+                  loadFornecedores(true, newValue);
+                }}
               />
               <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
             </div>
