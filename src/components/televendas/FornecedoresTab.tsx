@@ -91,6 +91,7 @@ export function FornecedoresTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
+  const [incluirInativos, setIncluirInativos] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -116,7 +117,7 @@ export function FornecedoresTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT);
+      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
       setFornecedores((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(nextPage);
       const total = result.total ?? 0;
@@ -275,7 +276,7 @@ export function FornecedoresTab() {
 
   useEffect(() => {
     loadFornecedores(true);
-  }, []);
+  }, [incluirInativos]);
 
   useEffect(() => {
     if (createOpen || editOpen) {
@@ -728,6 +729,14 @@ export function FornecedoresTab() {
               onKeyDown={handleKeyDown}
               className="flex-1"
             />
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="incluirInativos"
+                checked={incluirInativos}
+                onCheckedChange={(c) => setIncluirInativos(c as boolean)}
+              />
+              <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
+            </div>
             <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="sm:inline">Buscar</span>
