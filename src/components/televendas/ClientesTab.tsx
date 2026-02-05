@@ -1358,7 +1358,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-                    <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm bg-muted" value={formData.codigoCliente} readOnly />
                   </div>
                   <div className="col-span-3 flex items-center gap-2">
                     <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
@@ -2228,7 +2228,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-                      <Input className="h-8 text-sm" value={formData.codigoCliente} onChange={(e) => setFormData({ ...formData, codigoCliente: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm bg-muted" value={formData.codigoCliente} readOnly />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
                       <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
