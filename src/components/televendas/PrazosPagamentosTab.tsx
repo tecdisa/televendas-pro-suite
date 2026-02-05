@@ -185,6 +185,18 @@ export function PrazosPagamentosTab() {
   const isInitialLoading = loading && prazos.length === 0;
   const isLoadingMore = loading && prazos.length > 0;
 
+  const calcularPrazoMedio = (prazosEmDias?: string | null, numParcelas?: number | null): string => {
+    if (!prazosEmDias || !numParcelas || numParcelas <= 0) return '-';
+    const dias = prazosEmDias
+      .split(/[,;/\s]+/)
+      .map((d) => parseInt(d.trim(), 10))
+      .filter((n) => !isNaN(n) && n >= 0);
+    if (dias.length === 0) return '-';
+    const soma = dias.reduce((acc, d) => acc + d, 0);
+    const media = soma / numParcelas;
+    return media % 1 === 0 ? String(media) : media.toFixed(1);
+  };
+
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     if (!hasMore || loading) return;
@@ -376,6 +388,7 @@ export function PrazosPagamentosTab() {
                     <TableHead>Descrição</TableHead>
                     <TableHead className="hidden md:table-cell w-20">Parcelas</TableHead>
                     <TableHead className="hidden lg:table-cell">Prazos</TableHead>
+                    <TableHead className="hidden md:table-cell w-24">Prazo Médio</TableHead>
                     <TableHead className="hidden xl:table-cell w-20">À Vista</TableHead>
                     <TableHead className="w-20">Status</TableHead>
                     <TableHead className="w-24 text-right">Ações</TableHead>
@@ -384,13 +397,13 @@ export function PrazosPagamentosTab() {
                 <TableBody>
                   {isInitialLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                       </TableCell>
                     </TableRow>
                   ) : prazos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhum prazo de pagamento encontrado
                       </TableCell>
                     </TableRow>
@@ -401,6 +414,7 @@ export function PrazosPagamentosTab() {
                         <TableCell className="font-medium">{p.descricao_prazo_pagto}</TableCell>
                         <TableCell className="hidden md:table-cell">{p.numero_de_parcelas || '-'}</TableCell>
                         <TableCell className="hidden lg:table-cell text-xs">{p.prazos_em_dias || '-'}</TableCell>
+                        <TableCell className="hidden md:table-cell text-xs">{calcularPrazoMedio(p.prazos_em_dias, p.numero_de_parcelas)}</TableCell>
                         <TableCell className="hidden xl:table-cell">{p.avista ? 'Sim' : 'Não'}</TableCell>
                         <TableCell>
                           <span className={`text-xs px-2 py-0.5 rounded ${p.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
@@ -432,7 +446,7 @@ export function PrazosPagamentosTab() {
                   )}
                   {isLoadingMore && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                       </TableCell>
                     </TableRow>
