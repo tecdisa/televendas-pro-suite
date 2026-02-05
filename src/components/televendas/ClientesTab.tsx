@@ -1140,9 +1140,23 @@ const validateFormData = (data: ClientFormData): string[] => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Filtros</CardTitle>
-            <Button onClick={() => loadClients(undefined, true)} size="sm">
-              <Search className="h-4 w-4 mr-2" /> Filtrar
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const defaultFilters = { search: '', uf: 'all', cidade: 'all', bairro: '', todos: false };
+                  setFilters(defaultFilters);
+                  setFilterCidades([]);
+                  loadClients(defaultFilters, true);
+                }}
+              >
+                Limpar
+              </Button>
+              <Button onClick={() => loadClients(undefined, true)} size="sm">
+                <Search className="h-4 w-4 mr-2" /> Filtrar
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
