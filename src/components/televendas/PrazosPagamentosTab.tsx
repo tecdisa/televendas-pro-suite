@@ -185,9 +185,10 @@ export function PrazosPagamentosTab() {
   const isInitialLoading = loading && prazos.length === 0;
   const isLoadingMore = loading && prazos.length > 0;
 
-  const calcularPrazoMedio = (prazosEmDias?: string | null, numParcelas?: number | null): string => {
-    if (!prazosEmDias || !numParcelas || numParcelas <= 0) return '-';
-    const dias = prazosEmDias
+  const calcularPrazoMedio = (prazosEmDias?: string | number | null, numParcelas?: number | null): string => {
+    if (prazosEmDias == null || !numParcelas || numParcelas <= 0) return '-';
+    const prazosStr = String(prazosEmDias);
+    const dias = prazosStr
       .split(/[,;/\s]+/)
       .map((d) => parseInt(d.trim(), 10))
       .filter((n) => !isNaN(n) && n >= 0);
