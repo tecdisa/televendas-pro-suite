@@ -452,9 +452,9 @@ export function RepresentantesTab() {
           <div className="col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.codigo_representante}
-              onChange={(e) => setFormData({ ...formData, codigo_representante: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-9">
