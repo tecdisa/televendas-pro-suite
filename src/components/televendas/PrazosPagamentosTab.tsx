@@ -194,8 +194,7 @@ export function PrazosPagamentosTab() {
       .filter((n) => !isNaN(n) && n >= 0);
     if (dias.length === 0) return '-';
     const soma = dias.reduce((acc, d) => acc + d, 0);
-    const media = soma / numParcelas;
-    return media % 1 === 0 ? String(media) : media.toFixed(1);
+    return String(Math.round(soma / numParcelas));
   };
 
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
