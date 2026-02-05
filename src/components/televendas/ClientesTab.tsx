@@ -259,6 +259,12 @@ export const ClientesTab = () => {
   const [cidadesCobranca, setCidadesCobranca] = useState<Cidade[]>([]);
   const [cidadesCobrancaLoading, setCidadesCobrancaLoading] = useState(false);
 
+  // UFs e Cidades para filtros
+  const [filterUfs, setFilterUfs] = useState<Uf[]>([]);
+  const [filterUfsLoading, setFilterUfsLoading] = useState(false);
+  const [filterCidades, setFilterCidades] = useState<Cidade[]>([]);
+  const [filterCidadesLoading, setFilterCidadesLoading] = useState(false);
+
   const onTabelaDialogChange = (open: boolean) => {
     setTabelaSearchOpen(open);
     if (!open) setTabelaSearch('');
@@ -422,6 +428,7 @@ export const ClientesTab = () => {
 
   useEffect(() => {
     loadClients(undefined, true);
+    loadFilterUfs();
   }, []);
 
   // Carregar rotas, tabelas e UFs quando abrir os dialogs de criação/edição
@@ -480,6 +487,15 @@ export const ClientesTab = () => {
       setCidadesCobranca([]);
     }
   }, [cobrancaUf, createOpen, editOpen]);
+
+  // Carregar cidades quando UF do filtro mudar
+  useEffect(() => {
+    if (filters.uf && filters.uf !== 'all') {
+      loadFilterCidades(filters.uf);
+    } else {
+      setFilterCidades([]);
+    }
+  }, [filters.uf]);
 
   useEffect(() => {
     if (!createOpen && !editOpen) {
@@ -638,6 +654,30 @@ export const ClientesTab = () => {
     }
   };
 
+  const loadFilterUfs = async () => {
+    setFilterUfsLoading(true);
+    try {
+      const data = await metadataService.getUfs();
+      setFilterUfs(data);
+    } catch (e) {
+      console.error('Erro ao carregar UFs para filtro:', e);
+    } finally {
+      setFilterUfsLoading(false);
+    }
+  };
+
+  const loadFilterCidades = async (uf: string) => {
+    setFilterCidadesLoading(true);
+    try {
+      const data = await metadataService.getCidadesPorUf(uf);
+      setFilterCidades(data);
+    } catch (e) {
+      console.error('Erro ao carregar cidades para filtro:', e);
+    } finally {
+      setFilterCidadesLoading(false);
+    }
+  };
+
   const loadClients = async (nextFilters?: typeof filters, reset = false) => {
     if (clientsLoading) return;
     const active = nextFilters ?? filters;
@@ -711,8 +751,6 @@ export const ClientesTab = () => {
     }
   };
 
-  const ufs = [...new Set(clients.map(c => c.uf))];
-  const cidades = [...new Set(clients.map(c => c.cidade))];
   const tabelaSearchValue = tabelaSearch.trim().toUpperCase();
   const filteredTabelas = tabelas.filter((t) => {
     if (!tabelaSearchValue) return true;
@@ -1120,28 +1158,39 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">UF</label>
-              <Select value={filters.uf} onValueChange={(v) => setFilters({...filters, uf: v})}>
+              <Select 
+                value={filters.uf} 
+                onValueChange={(v) => {
+                  const newFilters = { ...filters, uf: v, cidade: 'all' };
+                  setFilters(newFilters);
+                }}
+                disabled={filterUfsLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
+                  <SelectValue placeholder={filterUfsLoading ? 'Carregando...' : 'Todos'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  {ufs.map(uf => (
-                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                  {filterUfs.map(uf => (
+                    <SelectItem key={uf.uf} value={uf.uf}>{uf.uf}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Cidade</label>
-              <Select value={filters.cidade} onValueChange={(v) => setFilters({...filters, cidade: v})}>
+              <Select 
+                value={filters.cidade} 
+                onValueChange={(v) => setFilters({...filters, cidade: v})}
+                disabled={filterCidadesLoading || filters.uf === 'all'}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas" />
+                  <SelectValue placeholder={filterCidadesLoading ? 'Carregando...' : (filters.uf === 'all' ? 'Selecione UF' : 'Todas')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {cidades.map(cidade => (
-                    <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
+                  {filterCidades.map(cidade => (
+                    <SelectItem key={cidade.cidade_id} value={cidade.nome_cidade}>{cidade.nome_cidade}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
