@@ -8,6 +8,52 @@ export interface ClientRota {
   descricao_rota?: string;
 }
 
+export interface ClientRepresentante {
+  cliente_id: number;
+  codigo_cliente?: string;
+  nome_cliente: string;
+  fantasia?: string;
+  cnpj_cpf?: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  fone?: string;
+  email?: string;
+  segmento_id?: number;
+  rota_id?: number;
+  rede_id?: number;
+  inativo?: boolean;
+  representante_id?: number;
+  frequencia_visita_em_dias?: number;
+  database_visita?: string;
+  horario_visita?: string;
+  master?: boolean;
+}
+
+function normalizeClientRepresentante(raw: any): ClientRepresentante {
+  return {
+    cliente_id: raw?.cliente_id ?? raw?.id ?? 0,
+    codigo_cliente: raw?.codigo_cliente ?? raw?.codigoCliente ?? undefined,
+    nome_cliente: raw?.nome_cliente ?? raw?.nome ?? '',
+    fantasia: raw?.fantasia ?? undefined,
+    cnpj_cpf: raw?.cnpj_cpf ?? raw?.cnpjCpf ?? undefined,
+    uf: raw?.uf ?? '',
+    cidade: raw?.cidade ?? raw?.municipio ?? '',
+    bairro: raw?.bairro ?? '',
+    fone: raw?.fone ?? raw?.telefone ?? '',
+    email: raw?.email ?? '',
+    segmento_id: raw?.segmento_id ?? undefined,
+    rota_id: raw?.rota_id ?? undefined,
+    rede_id: raw?.rede_id ?? undefined,
+    inativo: raw?.inativo ?? false,
+    representante_id: raw?.representante_id ?? undefined,
+    frequencia_visita_em_dias: raw?.frequencia_visita_em_dias ?? undefined,
+    database_visita: raw?.database_visita ?? undefined,
+    horario_visita: raw?.horario_visita ?? undefined,
+    master: raw?.master ?? false,
+  };
+}
+
 export interface Client {
   id: number;
   codigoCliente?: string;
@@ -542,6 +588,40 @@ export const clientsService = {
       }
       const data = await res.json();
       return Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+    } catch (e) {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
+
+  // Get clients by representative - GET /api/clientes/representantes/:repId/clientes
+  getByRepresentante: async (
+    repId: number,
+    page = 1,
+    limit = 50,
+  ): Promise<{ data: ClientRepresentante[]; page: number; limit: number; total: number }> => {
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(limit));
+      const url = `${API_BASE}/api/clientes/representantes/${encodeURIComponent(repId)}/clientes?${params.toString()}`;
+      const headers: Record<string, string> = { accept: 'application/json' };
+      const res = await apiClient.fetch(url, { method: 'GET', headers });
+      if (!res.ok) {
+        let message = 'Falha ao buscar clientes do representante';
+        try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
+        return Promise.reject(message);
+      }
+      const json = await res.json();
+      const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+      return {
+        data: arr.map(normalizeClientRepresentante),
+        page: json?.page ?? page,
+        limit: json?.limit ?? limit,
+        total: json?.total ?? arr.length,
+      };
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
