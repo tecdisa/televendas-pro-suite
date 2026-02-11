@@ -102,22 +102,22 @@ export function ClientesPorRepresentanteTab() {
     }
   }, [filters.uf]);
 
-  // Load clients for the selected representative
+  // Load clients for the selected representative using dedicated endpoint
   const loadClients = async (overrideFilters?: typeof filters) => {
     if (!selectedRep) return;
     setClientsLoading(true);
     setSelectedClientIds(new Set());
     const f = overrideFilters ?? filters;
     try {
-      const searchFilters: any = {
-        representanteId: String(selectedRep.representante_id),
-      };
-      if (f.search) searchFilters.query = f.search;
-      if (f.uf && f.uf !== 'all') searchFilters.uf = f.uf;
-      if (f.cidade && f.cidade !== 'all') searchFilters.cidade = f.cidade;
-      if (f.bairro) searchFilters.bairro = f.bairro;
-
-      const result = await clientsService.search(searchFilters, undefined, 1, PAGE_LIMIT);
+      const result = await clientsService.getByRepresentante({
+        representanteId: selectedRep.representante_id,
+        q: f.search || undefined,
+        uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
+        cidade: f.cidade && f.cidade !== 'all' ? f.cidade : undefined,
+        bairro: f.bairro || undefined,
+        page: 1,
+        limit: PAGE_LIMIT,
+      });
       setClients(result);
     } catch (e: any) {
       toast.error('Erro ao carregar clientes do representante');

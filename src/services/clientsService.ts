@@ -546,4 +546,44 @@ export const clientsService = {
       return Promise.reject('Erro de conexão com o servidor');
     }
   },
+
+  // GET /api/clientes/por-representante
+  getByRepresentante: async (params: {
+    representante?: string;
+    representanteId?: number;
+    q?: string;
+    uf?: string;
+    cidade?: string;
+    bairro?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<Client[]> => {
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    const qs = new URLSearchParams();
+    if (params.representante) qs.set('representante', params.representante);
+    if (params.representanteId) qs.set('representanteId', String(params.representanteId));
+    if (params.q) qs.set('q', params.q);
+    if (params.uf) qs.set('uf', params.uf);
+    if (params.cidade) qs.set('cidade', params.cidade);
+    if (params.bairro) qs.set('bairro', params.bairro);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+
+    try {
+      const url = `${API_BASE}/api/clientes/por-representante?${qs.toString()}`;
+      const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
+      if (!res.ok) {
+        let message = 'Falha ao buscar clientes por representante';
+        try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
+        return Promise.reject(message);
+      }
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      return arr.map(normalizeClient);
+    } catch {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
 };
