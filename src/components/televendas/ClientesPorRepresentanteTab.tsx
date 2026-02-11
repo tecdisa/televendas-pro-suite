@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { representativesService, Representante } from '@/services/representativesService';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Uf, Cidade, Rota, Rede, SegmentoVenda } from '@/services/metadataService';
+import { apiClient } from '@/utils/apiClient';
+import { API_BASE } from '@/utils/env';
 
 export function ClientesPorRepresentanteTab() {
   const PAGE_LIMIT = 100;
@@ -282,21 +284,32 @@ export function ClientesPorRepresentanteTab() {
   };
 
   const handleCopyConfirm = async () => {
-    if (!selectedRep || copySelectedIds.size === 0) {
-      toast.error('Selecione ao menos um cliente para copiar');
+    if (!selectedRep || !copyFromRep) {
+      toast.error('Selecione um representante de origem');
       return;
     }
     setCopyLoading(true);
     try {
-      const promises = Array.from(copySelectedIds).map(clientId =>
-        clientsService.update(clientId, { representanteId: String(selectedRep.representante_id) })
+      const res = await apiClient.fetch(
+        `${API_BASE}/api/representantes/${selectedRep.representante_id}/copiar-clientes`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({ representanteOrigemId: copyFromRep.representante_id }),
+        }
       );
-      await Promise.all(promises);
-      toast.success(`${copySelectedIds.size} cliente(s) copiado(s) com sucesso`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || err?.error || 'Falha ao copiar clientes');
+      }
+      const result = await res.json();
+      toast.success(
+        `Copiados: ${result.totalCriados ?? 0} | Ignorados (duplicados): ${result.totalIgnorados ?? 0}`
+      );
       setCopyOpen(false);
       loadClients();
     } catch (e: any) {
-      toast.error('Erro ao copiar clientes');
+      toast.error(e?.message || 'Erro ao copiar clientes');
     } finally {
       setCopyLoading(false);
     }
