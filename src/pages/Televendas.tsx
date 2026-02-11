@@ -18,6 +18,7 @@ import { PrazosPagamentosTab } from '@/components/televendas/PrazosPagamentosTab
 import { FormasPagamentoTab } from '@/components/televendas/FormasPagamentoTab';
 import { SegmentosVendasTab } from '@/components/televendas/SegmentosVendasTab';
 import { RotasClientesTab } from '@/components/televendas/RotasClientesTab';
+import { ClientesPorRepresentanteTab } from '@/components/televendas/ClientesPorRepresentanteTab';
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
@@ -39,6 +40,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'formas-pagamento': { title: 'Formas de Pagamento', icon: CreditCard },
   segmentos: { title: 'Segmentos de Venda', icon: Target },
   rotas: { title: 'Rotas de Clientes', icon: Route },
+  'clientes-representante': { title: 'Clientes por Representante', icon: Users },
 };
 
 const Televendas = () => {
@@ -143,6 +145,12 @@ const Televendas = () => {
         return (
           <ErrorBoundary>
             <RotasClientesTab />
+          </ErrorBoundary>
+        );
+      case 'clientes-representante':
+        return (
+          <ErrorBoundary>
+            <ClientesPorRepresentanteTab />
           </ErrorBoundary>
         );
       default:
