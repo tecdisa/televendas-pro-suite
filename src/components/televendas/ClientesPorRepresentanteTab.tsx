@@ -9,11 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Loader2, Download, Copy, Trash2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { representativesService, Representante } from '@/services/representativesService';
-import { clientsService, Client, ClientRepresentante } from '@/services/clientsService';
+import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Uf, Cidade, Rota, Rede, SegmentoVenda } from '@/services/metadataService';
 
 export function ClientesPorRepresentanteTab() {
-  const PAGE_LIMIT = 50;
+  const PAGE_LIMIT = 100;
 
   // Representative selection
   const [representantes, setRepresentantes] = useState<Representante[]>([]);
@@ -22,11 +22,8 @@ export function ClientesPorRepresentanteTab() {
   const [selectedRep, setSelectedRep] = useState<Representante | null>(null);
 
   // Client listing for selected representative
-  const [clients, setClients] = useState<ClientRepresentante[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [clientsTotal, setClientsTotal] = useState(0);
-  const [clientsPage, setClientsPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
 
   // Filters
@@ -62,7 +59,7 @@ export function ClientesPorRepresentanteTab() {
   const [copyRepSearch, setCopyRepSearch] = useState('');
   const [copyRepList, setCopyRepList] = useState<Representante[]>([]);
   const [copyRepLoading, setCopyRepLoading] = useState(false);
-  const [copyClients, setCopyClients] = useState<ClientRepresentante[]>([]);
+  const [copyClients, setCopyClients] = useState<Client[]>([]);
   const [copyClientsLoading, setCopyClientsLoading] = useState(false);
   const [copySelectedIds, setCopySelectedIds] = useState<Set<number>>(new Set());
   const [copyLoading, setCopyLoading] = useState(false);
@@ -106,21 +103,23 @@ export function ClientesPorRepresentanteTab() {
     }
   }, [filters.uf]);
 
-  // Load clients for the selected representative using dedicated endpoint
-  const loadClients = async (reset = true) => {
+  // Load clients for the selected representative
+  const loadClients = async (overrideFilters?: typeof filters) => {
     if (!selectedRep) return;
     setClientsLoading(true);
-    if (reset) {
-      setSelectedClientIds(new Set());
-      setClientsPage(1);
-    }
-    const nextPage = reset ? 1 : clientsPage + 1;
+    setSelectedClientIds(new Set());
+    const f = overrideFilters ?? filters;
     try {
-      const result = await clientsService.getByRepresentante(selectedRep.representante_id, nextPage, PAGE_LIMIT);
-      setClients(prev => reset ? result.data : [...prev, ...result.data]);
-      setClientsPage(result.page);
-      setClientsTotal(result.total);
-      setHasMore(nextPage * PAGE_LIMIT < result.total);
+      const searchFilters: any = {
+        representanteId: String(selectedRep.representante_id),
+      };
+      if (f.search) searchFilters.query = f.search;
+      if (f.uf && f.uf !== 'all') searchFilters.uf = f.uf;
+      if (f.cidade && f.cidade !== 'all') searchFilters.cidade = f.cidade;
+      if (f.bairro) searchFilters.bairro = f.bairro;
+
+      const result = await clientsService.search(searchFilters, undefined, 1, PAGE_LIMIT);
+      setClients(result);
     } catch (e: any) {
       toast.error('Erro ao carregar clientes do representante');
     } finally {
@@ -145,7 +144,7 @@ export function ClientesPorRepresentanteTab() {
     const def = { search: '', uf: 'all', cidade: 'all', bairro: '' };
     setFilters(def);
     setFilterCidades([]);
-    loadClients(true);
+    loadClients(def);
   };
 
   // Toggle selection
@@ -160,7 +159,7 @@ export function ClientesPorRepresentanteTab() {
     if (selectedClientIds.size === clients.length) {
       setSelectedClientIds(new Set());
     } else {
-      setSelectedClientIds(new Set(clients.map(c => c.cliente_id)));
+      setSelectedClientIds(new Set(clients.map(c => c.id)));
     }
   };
 
@@ -273,8 +272,8 @@ export function ClientesPorRepresentanteTab() {
     setCopyClientsLoading(true);
     setCopySelectedIds(new Set());
     try {
-      const result = await clientsService.getByRepresentante(rep.representante_id, 1, 200);
-      setCopyClients(result.data);
+      const result = await clientsService.search({ representanteId: String(rep.representante_id) } as any, undefined, 1, 200);
+      setCopyClients(result);
     } catch {
       toast.error('Erro ao carregar clientes do representante');
     } finally {
@@ -314,7 +313,7 @@ export function ClientesPorRepresentanteTab() {
     if (copySelectedIds.size === copyClients.length) {
       setCopySelectedIds(new Set());
     } else {
-      setCopySelectedIds(new Set(copyClients.map(c => c.cliente_id)));
+      setCopySelectedIds(new Set(copyClients.map(c => c.id)));
     }
   };
 
@@ -485,33 +484,29 @@ export function ClientesPorRepresentanteTab() {
                       </TableHead>
                       <TableHead className="w-20">ID</TableHead>
                       <TableHead>Nome</TableHead>
-                      <TableHead className="w-20">Visita</TableHead>
-                      <TableHead className="w-16">Horário</TableHead>
-                      <TableHead className="w-24">Dt. Base</TableHead>
                       <TableHead className="w-24">Cidade</TableHead>
                       <TableHead className="w-12">UF</TableHead>
+                      <TableHead className="w-28">Bairro</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {clients.map(c => (
-                      <TableRow key={c.cliente_id}>
+                      <TableRow key={c.id}>
                         <TableCell>
-                          <Checkbox checked={selectedClientIds.has(c.cliente_id)} onCheckedChange={() => toggleClient(c.cliente_id)} />
+                          <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
                         </TableCell>
-                        <TableCell className="text-xs">{c.codigo_cliente || c.cliente_id}</TableCell>
-                        <TableCell className="text-xs">{c.nome_cliente}</TableCell>
-                        <TableCell className="text-xs">{c.frequencia_visita_em_dias ? `${c.frequencia_visita_em_dias}d` : 'Não definido'}</TableCell>
-                        <TableCell className="text-xs">{c.horario_visita || ''}</TableCell>
-                        <TableCell className="text-xs">{c.database_visita || ''}</TableCell>
+                        <TableCell className="text-xs">{c.codigoCliente || c.id}</TableCell>
+                        <TableCell className="text-xs">{c.nome}</TableCell>
                         <TableCell className="text-xs">{c.cidade}</TableCell>
                         <TableCell className="text-xs">{c.uf}</TableCell>
+                        <TableCell className="text-xs">{c.bairro}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Registro: {clientsTotal}</p>
+            <p className="text-xs text-muted-foreground mt-2">Registro: {clients.length}</p>
           </CardContent>
         </Card>
       )}
@@ -694,10 +689,10 @@ export function ClientesPorRepresentanteTab() {
                       </TableHeader>
                       <TableBody>
                         {copyClients.map(c => (
-                          <TableRow key={c.cliente_id}>
-                            <TableCell><Checkbox checked={copySelectedIds.has(c.cliente_id)} onCheckedChange={() => toggleCopyClient(c.cliente_id)} /></TableCell>
-                            <TableCell className="text-xs">{c.codigo_cliente || c.cliente_id}</TableCell>
-                            <TableCell className="text-xs">{c.nome_cliente}</TableCell>
+                          <TableRow key={c.id}>
+                            <TableCell><Checkbox checked={copySelectedIds.has(c.id)} onCheckedChange={() => toggleCopyClient(c.id)} /></TableCell>
+                            <TableCell className="text-xs">{c.codigoCliente || c.id}</TableCell>
+                            <TableCell className="text-xs">{c.nome}</TableCell>
                             <TableCell className="text-xs">{c.cidade}</TableCell>
                             <TableCell className="text-xs">{c.uf}</TableCell>
                           </TableRow>
