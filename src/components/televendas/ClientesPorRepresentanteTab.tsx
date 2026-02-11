@@ -61,9 +61,6 @@ export function ClientesPorRepresentanteTab() {
   const [copyRepSearch, setCopyRepSearch] = useState('');
   const [copyRepList, setCopyRepList] = useState<Representante[]>([]);
   const [copyRepLoading, setCopyRepLoading] = useState(false);
-  const [copyClients, setCopyClients] = useState<Client[]>([]);
-  const [copyClientsLoading, setCopyClientsLoading] = useState(false);
-  const [copySelectedIds, setCopySelectedIds] = useState<Set<number>>(new Set());
   const [copyLoading, setCopyLoading] = useState(false);
 
   // Load representatives
@@ -258,8 +255,6 @@ export function ClientesPorRepresentanteTab() {
     setCopyOpen(true);
     setCopyFromRep(null);
     setCopyRepSearch('');
-    setCopyClients([]);
-    setCopySelectedIds(new Set());
     setCopyRepLoading(true);
     try {
       const result = await representativesService.getAll('', 1, 200, false);
@@ -269,18 +264,8 @@ export function ClientesPorRepresentanteTab() {
     }
   };
 
-  const handleCopyRepSelect = async (rep: Representante) => {
+  const handleCopyRepSelect = (rep: Representante) => {
     setCopyFromRep(rep);
-    setCopyClientsLoading(true);
-    setCopySelectedIds(new Set());
-    try {
-      const result = await clientsService.search({ representanteId: String(rep.representante_id) } as any, undefined, 1, 200);
-      setCopyClients(result);
-    } catch {
-      toast.error('Erro ao carregar clientes do representante');
-    } finally {
-      setCopyClientsLoading(false);
-    }
   };
 
   const handleCopyConfirm = async () => {
@@ -315,20 +300,6 @@ export function ClientesPorRepresentanteTab() {
     }
   };
 
-  const toggleCopyClient = (id: number) => {
-    setCopySelectedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-  const toggleAllCopyClients = () => {
-    if (copySelectedIds.size === copyClients.length) {
-      setCopySelectedIds(new Set());
-    } else {
-      setCopySelectedIds(new Set(copyClients.map(c => c.id)));
-    }
-  };
 
   // Remove client from representative
   const handleRemoveClients = async () => {
@@ -674,54 +645,20 @@ export function ClientesPorRepresentanteTab() {
                 </div>
               </>
             ) : (
-              <>
-                <div className="flex items-center gap-3 p-2 bg-primary/10 rounded-lg">
-                  <UserCheck className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    {copyFromRep.codigo_representante} - {copyFromRep.nome_representante}
-                  </span>
-                  <Button variant="ghost" size="sm" onClick={() => { setCopyFromRep(null); setCopyClients([]); setCopySelectedIds(new Set()); }}>Trocar</Button>
-                </div>
-                <div className="max-h-[300px] overflow-auto border rounded">
-                  {copyClientsLoading ? (
-                    <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                  ) : copyClients.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum cliente encontrado</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10">
-                            <Checkbox checked={copySelectedIds.size === copyClients.length && copyClients.length > 0} onCheckedChange={toggleAllCopyClients} />
-                          </TableHead>
-                          <TableHead className="w-20">ID</TableHead>
-                          <TableHead>Nome</TableHead>
-                          <TableHead className="w-24">Cidade</TableHead>
-                          <TableHead className="w-12">UF</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {copyClients.map(c => (
-                          <TableRow key={c.id}>
-                            <TableCell><Checkbox checked={copySelectedIds.has(c.id)} onCheckedChange={() => toggleCopyClient(c.id)} /></TableCell>
-                            <TableCell className="text-xs">{c.codigoCliente || c.id}</TableCell>
-                            <TableCell className="text-xs">{c.nome}</TableCell>
-                            <TableCell className="text-xs">{c.cidade}</TableCell>
-                            <TableCell className="text-xs">{c.uf}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              </>
+              <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
+                <UserCheck className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">
+                  {copyFromRep.codigo_representante} - {copyFromRep.nome_representante}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => setCopyFromRep(null)}>Trocar</Button>
+              </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCopyOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCopyConfirm} disabled={copyLoading || copySelectedIds.size === 0}>
+            <Button onClick={handleCopyConfirm} disabled={copyLoading || !copyFromRep}>
               {copyLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              Copiar {copySelectedIds.size > 0 ? `(${copySelectedIds.size})` : ''}
+              Copiar todos os clientes
             </Button>
           </DialogFooter>
         </DialogContent>
