@@ -86,7 +86,7 @@ export const formasPagamentoService = {
       let message = 'Falha ao buscar formas de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -111,7 +111,7 @@ export const formasPagamentoService = {
       let message = 'Falha ao buscar forma de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -151,7 +151,7 @@ export const formasPagamentoService = {
       let message = 'Falha ao criar forma de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -174,7 +174,7 @@ export const formasPagamentoService = {
       let message = 'Falha ao atualizar forma de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -192,7 +192,7 @@ export const formasPagamentoService = {
       let message = 'Falha ao excluir forma de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }

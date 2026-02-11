@@ -64,7 +64,7 @@ export const redesService = {
       let message = 'Falha ao buscar redes';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -89,7 +89,7 @@ export const redesService = {
       let message = 'Falha ao buscar rede';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -122,7 +122,7 @@ export const redesService = {
       let message = 'Falha ao criar rede';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -145,7 +145,7 @@ export const redesService = {
       let message = 'Falha ao atualizar rede';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -163,7 +163,7 @@ export const redesService = {
       let message = 'Falha ao excluir rede';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }

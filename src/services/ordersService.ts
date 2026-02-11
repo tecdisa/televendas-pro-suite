@@ -368,7 +368,7 @@ export const ordersService = {
         let message = 'Falha ao buscar pedidos';
         try {
           const err = await res.json();
-          message = err?.message || err?.error || message;
+          message = err?.message || err?.error?.message || err?.error || message;
         } catch {}
         return Promise.reject(message);
       }
@@ -453,7 +453,7 @@ export const ordersService = {
       const res = await apiClient.fetch(url, { method: 'GET', headers });
       if (!res.ok) {
         let message = 'Falha ao buscar pedido';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const p: any = await res.json();
@@ -630,7 +630,7 @@ export const ordersService = {
       const res = await apiClient.fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
       if (!res.ok) {
         let message = 'Falha ao criar pedido';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const created = await res.json();
@@ -756,7 +756,7 @@ export const ordersService = {
       const res = await apiClient.fetch(url, { method: 'PUT', headers, body: JSON.stringify(payload) });
       if (!res.ok) {
         let message = 'Falha ao atualizar pedido';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       return res.json();
@@ -783,7 +783,7 @@ export const ordersService = {
       const res = await apiClient.fetch(url, { method: 'DELETE', headers });
       if (!res.ok) {
         let message = 'Falha ao excluir pedido';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       return true;

@@ -125,7 +125,7 @@ export const representativesService = {
       let message = 'Falha ao buscar representantes';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -150,7 +150,7 @@ export const representativesService = {
       let message = 'Falha ao buscar representante';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -203,7 +203,7 @@ export const representativesService = {
       let message = 'Falha ao criar representante';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -227,7 +227,7 @@ export const representativesService = {
       let message = 'Falha ao atualizar representante';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -246,7 +246,7 @@ export const representativesService = {
       let message = 'Falha ao excluir representante';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }

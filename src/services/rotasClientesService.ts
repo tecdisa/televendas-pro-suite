@@ -53,7 +53,7 @@ export const rotasClientesService = {
       let message = 'Falha ao buscar rotas';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -78,7 +78,7 @@ export const rotasClientesService = {
       let message = 'Falha ao buscar rota';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -108,7 +108,7 @@ export const rotasClientesService = {
       let message = 'Falha ao criar rota';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -131,7 +131,7 @@ export const rotasClientesService = {
       let message = 'Falha ao atualizar rota';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -149,7 +149,7 @@ export const rotasClientesService = {
       let message = 'Falha ao excluir rota';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }

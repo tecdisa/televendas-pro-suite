@@ -129,7 +129,7 @@ export const metadataService = {
         let message = 'Falha ao buscar operações';
         try {
           const err = await res.json();
-          message = err?.message || err?.error || message;
+          message = err?.message || err?.error?.message || err?.error || message;
         } catch {}
         return Promise.reject(message);
       }
@@ -198,7 +198,7 @@ export const metadataService = {
         let message = 'Falha ao buscar tabelas';
         try {
           const err = await res.json();
-          message = err?.message || err?.error || message;
+          message = err?.message || err?.error?.message || err?.error || message;
         } catch {}
         return Promise.reject(message);
       }
@@ -260,7 +260,7 @@ export const metadataService = {
         let message = 'Falha ao buscar tabelas do cliente';
         try {
           const err = await res.json();
-          message = err?.message || err?.error || message;
+          message = err?.message || err?.error?.message || err?.error || message;
         } catch {}
         return Promise.reject(message);
       }
@@ -314,7 +314,7 @@ export const metadataService = {
       const res = await apiClient.fetch(url, { method: 'GET', headers });
       if (!res.ok) {
         let message = 'Falha ao buscar segmentos de vendas';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const data = await res.json();
@@ -366,7 +366,7 @@ export const metadataService = {
       const res = await apiClient.fetch(url, { method: 'GET', headers });
       if (!res.ok) {
         let message = 'Falha ao buscar redes';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const data = await res.json();
@@ -401,7 +401,7 @@ export const metadataService = {
       const res = await apiClient.fetch(url, { method: 'GET', headers });
       if (!res.ok) {
         let message = 'Falha ao buscar formas de pagamento';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const data = await res.json();
@@ -459,7 +459,7 @@ export const metadataService = {
       const res = await apiClient.fetch(url, { method: 'GET', headers });
       if (!res.ok) {
         let message = 'Falha ao buscar prazos';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const data = await res.json();
@@ -540,7 +540,7 @@ export const metadataService = {
       const res = await apiClient.fetch(url, { method: 'GET', headers });
       if (!res.ok) {
         let message = 'Falha ao buscar tabelas do produto';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
       const data = await res.json();
@@ -576,7 +576,7 @@ export const metadataService = {
 
       if (!res.ok) {
         let message = 'Falha ao buscar UFs';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
 
@@ -617,7 +617,7 @@ export const metadataService = {
 
       if (!res.ok) {
         let message = 'Falha ao buscar cidades';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
 
@@ -659,7 +659,7 @@ export const metadataService = {
 
       if (!res.ok) {
         let message = 'Falha ao buscar rotas';
-        try { const err = await res.json(); message = err?.message || err?.error || message; } catch {}
+        try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
         return Promise.reject(message);
       }
 

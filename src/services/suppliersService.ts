@@ -141,7 +141,7 @@ export const suppliersService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao criar fornecedor');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao criar fornecedor');
     }
     return normalizeFornecedor(await response.json());
   },
@@ -158,7 +158,7 @@ export const suppliersService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao atualizar fornecedor');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar fornecedor');
     }
     return normalizeFornecedor(await response.json());
   },
@@ -173,7 +173,7 @@ export const suppliersService = {
     });
     if (!response.ok && response.status !== 204) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao excluir fornecedor');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir fornecedor');
     }
   },
 

@@ -90,7 +90,7 @@ export const divisionsService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao criar divisão');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao criar divisão');
     }
     return normalizeDivisao(await response.json());
   },
@@ -107,7 +107,7 @@ export const divisionsService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao atualizar divisão');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar divisão');
     }
     return normalizeDivisao(await response.json());
   },
@@ -122,7 +122,7 @@ export const divisionsService = {
     });
     if (!response.ok && response.status !== 204) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao excluir divisão');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir divisão');
     }
   },
 };

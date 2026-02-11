@@ -89,7 +89,7 @@ export const prazosPagamentosService = {
       let message = 'Falha ao buscar prazos de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -114,7 +114,7 @@ export const prazosPagamentosService = {
       let message = 'Falha ao buscar prazo de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -156,7 +156,7 @@ export const prazosPagamentosService = {
       let message = 'Falha ao criar prazo de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -179,7 +179,7 @@ export const prazosPagamentosService = {
       let message = 'Falha ao atualizar prazo de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }
@@ -197,7 +197,7 @@ export const prazosPagamentosService = {
       let message = 'Falha ao excluir prazo de pagamento';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       throw new Error(message);
     }

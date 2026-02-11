@@ -273,7 +273,7 @@ async function fetchFromApi({
       let message = 'Falha ao buscar produtos';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       return Promise.reject(message);
     }
@@ -315,7 +315,7 @@ async function fetchPrecoByTabela({
       let message = 'Erro ao buscar preço do produto';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       return Promise.reject(message);
     }
@@ -354,7 +354,7 @@ async function fetchLotes(produtoId: number): Promise<ProductBatch[]> {
       let message = 'Erro ao buscar lotes do produto';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       return Promise.reject(message);
     }
@@ -436,7 +436,7 @@ export const productsService = {
       let message = 'Falha ao reservar estoque';
       try {
         const err = await res.json();
-        message = err?.message || err?.error || message;
+        message = err?.message || err?.error?.message || err?.error || message;
       } catch {}
       return Promise.reject(message);
     }

@@ -87,7 +87,7 @@ export const groupsService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao criar grupo');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao criar grupo');
     }
     return normalizeGrupo(await response.json());
   },
@@ -104,7 +104,7 @@ export const groupsService = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao atualizar grupo');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar grupo');
     }
     return normalizeGrupo(await response.json());
   },
@@ -119,7 +119,7 @@ export const groupsService = {
     });
     if (!response.ok && response.status !== 204) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Erro ao excluir grupo');
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir grupo');
     }
   },
 };
