@@ -558,10 +558,13 @@ export const clientsService = {
     page?: number;
     limit?: number;
   }): Promise<Client[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
     const token = authService.getToken();
     if (!token) return Promise.reject('Token ausente');
 
     const qs = new URLSearchParams();
+    qs.set('empresaId', String(empresa.empresa_id));
     if (params.representante) qs.set('representante', params.representante);
     if (params.representanteId) qs.set('representanteId', String(params.representanteId));
     if (params.q) qs.set('q', params.q);
