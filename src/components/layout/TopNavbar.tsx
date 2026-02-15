@@ -87,8 +87,8 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
             onClick={() => setOpenGroup(openGroup === group.title ? null : group.title)}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              'hover:bg-accent hover:text-accent-foreground',
-              isGroupActive(group) && 'bg-primary text-primary-foreground',
+              'hover:bg-muted hover:text-foreground',
+              isGroupActive(group) && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
               openGroup === group.title && !isGroupActive(group) && 'bg-muted'
             )}
           >
@@ -102,7 +102,7 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
 
           {/* Dropdown */}
           {openGroup === group.title && (
-            <div className="absolute top-full left-0 mt-1 min-w-[220px] bg-popover border rounded-md shadow-lg py-1 z-50">
+            <div className="absolute top-full left-0 mt-1 min-w-[240px] bg-popover border rounded-md shadow-lg py-1 z-50">
               {group.children.map((child) => (
                 <button
                   key={child.tab}
@@ -111,7 +111,7 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
                     setOpenGroup(null);
                   }}
                   className={cn(
-                    'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
+                    'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
                     child.tab === activeTab && 'bg-primary/10 text-primary font-medium'
                   )}
                 >
