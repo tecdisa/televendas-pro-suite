@@ -29,7 +29,7 @@ interface NavGroup {
   children: NavChild[];
 }
 
-const navGroups: NavGroup[] = [
+export const navGroups: NavGroup[] = [
   {
     title: 'Vendas',
     icon: ShoppingCart,
