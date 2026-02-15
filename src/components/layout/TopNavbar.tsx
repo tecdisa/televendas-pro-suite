@@ -86,10 +86,10 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
           <button
             onClick={() => setOpenGroup(openGroup === group.title ? null : group.title)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              'hover:bg-muted hover:text-foreground',
-              isGroupActive(group) && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
-              openGroup === group.title && !isGroupActive(group) && 'bg-muted'
+              'flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors cursor-pointer',
+              'text-muted-foreground hover:text-foreground',
+              isGroupActive(group) && 'text-foreground',
+              openGroup === group.title && 'text-foreground'
             )}
           >
             <group.icon className="h-4 w-4" />
