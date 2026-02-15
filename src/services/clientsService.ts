@@ -547,27 +547,6 @@ export const clientsService = {
     }
   },
 
-  // DELETE /api/clientes/:id/representantes/:representanteId?empresaId=5
-  removeRepresentante: async (clienteId: number, representanteId: number | string): Promise<boolean> => {
-    const empresa = authService.getEmpresa();
-    if (!empresa) return Promise.reject('Empresa não selecionada');
-    const token = authService.getToken();
-    if (!token) return Promise.reject('Token ausente');
-    try {
-      const url = `${API_BASE}/api/clientes/${encodeURIComponent(clienteId)}/representantes/${encodeURIComponent(representanteId)}?empresaId=${encodeURIComponent(empresa.empresa_id)}`;
-      const res = await apiClient.fetch(url, { method: 'DELETE', headers: { accept: 'application/json' } });
-      if (res.status === 404) return Promise.reject('Cliente ou vínculo com representante não encontrado');
-      if (!res.ok) {
-        let message = 'Falha ao remover representante do cliente';
-        try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
-        return Promise.reject(message);
-      }
-      return true;
-    } catch {
-      return Promise.reject('Erro de conexão com o servidor');
-    }
-  },
-
   // GET /api/clientes/por-representante
   getByRepresentante: async (params: {
     representante?: string;
