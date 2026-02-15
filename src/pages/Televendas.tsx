@@ -22,10 +22,9 @@ import { ClientesPorRepresentanteTab } from '@/components/televendas/ClientesPor
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
-import { TopNavbar } from '@/components/layout/TopNavbar';
-import { AppSidebar } from '@/components/layout/AppSidebar';
+import { TopNavbar, navGroups } from '@/components/layout/TopNavbar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
   pesquisa: { title: 'Pesquisa de Pedidos', icon: Search },
@@ -116,9 +115,30 @@ const Televendas = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-72">
-                <SidebarProvider defaultOpen>
-                  <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-                </SidebarProvider>
+                <nav className="pt-12 px-2">
+                  {navGroups.map((group) => (
+                    <div key={group.title} className="mb-4">
+                      <p className="px-3 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {group.title}
+                      </p>
+                      {group.children.map((child) => (
+                        <button
+                          key={child.tab}
+                          onClick={() => handleTabChange(child.tab)}
+                          className={cn(
+                            'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
+                            child.tab === activeTab
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-foreground hover:bg-muted'
+                          )}
+                        >
+                          <child.icon className="h-4 w-4" />
+                          <span>{child.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </nav>
               </SheetContent>
             </Sheet>
 
