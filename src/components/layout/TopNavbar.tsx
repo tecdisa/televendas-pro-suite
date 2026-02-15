@@ -31,13 +31,6 @@ interface NavGroup {
 
 export const navGroups: NavGroup[] = [
   {
-    title: 'Vendas',
-    icon: ShoppingCart,
-    children: [
-      { title: 'Pedidos', tab: 'pesquisa', icon: Package },
-    ],
-  },
-  {
     title: 'Cadastro',
     icon: UserPlus,
     children: [
@@ -52,6 +45,13 @@ export const navGroups: NavGroup[] = [
       { title: 'Segmentos Venda', tab: 'segmentos', icon: Target },
       { title: 'Rotas Clientes', tab: 'rotas', icon: Route },
       { title: 'Clientes por Representante', tab: 'clientes-representante', icon: Users },
+    ],
+  },
+  {
+    title: 'Vendas',
+    icon: ShoppingCart,
+    children: [
+      { title: 'Pedidos', tab: 'pesquisa', icon: Package },
     ],
   },
 ];
