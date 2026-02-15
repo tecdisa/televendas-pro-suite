@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { DashboardTab } from '@/components/televendas/DashboardTab';
 import { PesquisaTab } from '@/components/televendas/PesquisaTab';
 import { DadosTab } from '@/components/televendas/DadosTab';
 import { ItinerariosTab } from '@/components/televendas/ItinerariosTab';
@@ -27,6 +28,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
+  dashboard: { title: 'Dashboard', icon: LayoutDashboard },
   pesquisa: { title: 'Pesquisa de Pedidos', icon: Search },
   dados: { title: 'Dados', icon: FileText },
   itinerarios: { title: 'Itinerários', icon: Route },
@@ -47,7 +49,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
 const Televendas = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'pesquisa';
+  const activeTab = searchParams.get('tab') || 'dashboard';
   const [digitacaoOpen, setDigitacaoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -66,6 +68,8 @@ const Televendas = () => {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
       case 'pesquisa':
         return <ErrorBoundary><PesquisaTab onNavigateToDigitacao={() => setDigitacaoOpen(true)} /></ErrorBoundary>;
       case 'dados':
@@ -97,7 +101,7 @@ const Televendas = () => {
       case 'clientes-representante':
         return <ErrorBoundary><ClientesPorRepresentanteTab /></ErrorBoundary>;
       default:
-        return <ErrorBoundary><PesquisaTab onNavigateToDigitacao={() => setDigitacaoOpen(true)} /></ErrorBoundary>;
+        return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }
   };
 
