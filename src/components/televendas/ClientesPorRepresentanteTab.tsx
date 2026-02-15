@@ -307,7 +307,7 @@ export function ClientesPorRepresentanteTab() {
     if (!confirm(`Deseja remover ${selectedClientIds.size} cliente(s) deste representante?`)) return;
     try {
       const promises = Array.from(selectedClientIds).map(clientId =>
-        clientsService.update(clientId, { representanteId: '' })
+        representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id)
       );
       await Promise.all(promises);
       toast.success(`${selectedClientIds.size} cliente(s) removido(s)`);
