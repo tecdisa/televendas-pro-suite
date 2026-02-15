@@ -252,6 +252,23 @@ export const representativesService = {
     }
   },
 
+  // DELETE /api/clientes/:id/representantes/:representanteId?empresaId=5
+  async removeClienteRepresentante(clienteId: number, representanteId: number | string): Promise<boolean> {
+    const empresaId = await getEmpresaId();
+    const url = `${API_BASE}/api/clientes/${encodeURIComponent(clienteId)}/representantes/${encodeURIComponent(representanteId)}?empresaId=${encodeURIComponent(empresaId)}`;
+    const res = await apiClient.fetch(url, { method: 'DELETE', headers: { accept: 'application/json' } });
+    if (res.status === 404) throw new Error('Cliente ou vínculo com representante não encontrado');
+    if (!res.ok && res.status !== 204) {
+      let message = 'Falha ao remover representante do cliente';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+    return true;
+  },
+
   // Legacy method for backward compatibility with existing components
   async find(query?: string, page = 1, limit = 100): Promise<Representative[]> {
     const result = await this.getAll(query, page, limit, false);
