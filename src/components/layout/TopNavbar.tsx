@@ -114,8 +114,15 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
                   onTabChange(group.children[0].tab!);
                   setOpenGroup(null);
                 } else {
-                  setOpenGroup(openGroup === group.title ? null : group.title);
-                  setExpandedChild(null);
+                  const next = openGroup === group.title ? null : group.title;
+                  setOpenGroup(next);
+                  // Auto-expand nested child if we're on one of its routes
+                  if (next) {
+                    const activeNested = group.children.find(c => c.children && isChildActive(c));
+                    setExpandedChild(activeNested?.title ?? null);
+                  } else {
+                    setExpandedChild(null);
+                  }
                 }
               }}
               className={cn(
