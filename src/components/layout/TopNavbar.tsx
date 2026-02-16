@@ -147,9 +147,10 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
               <div className="absolute top-full left-0 mt-1 min-w-[240px] bg-popover border rounded-md shadow-lg py-1 z-50">
                 {group.children.map((child) =>
                   child.children ? (
-                    <div key={child.title}>
+                    <div key={child.title} className="relative">
                       <button
                         onClick={() => setExpandedChild(expandedChild === child.title ? null : child.title)}
+                        onMouseEnter={() => setExpandedChild(child.title)}
                         className={cn(
                           'w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
                           isChildActive(child) && 'text-primary font-medium'
@@ -159,13 +160,10 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
                           <child.icon className="h-4 w-4" />
                           <span>{child.title}</span>
                         </span>
-                        <ChevronRight className={cn(
-                          'h-3.5 w-3.5 transition-transform',
-                          expandedChild === child.title && 'rotate-90'
-                        )} />
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                       {expandedChild === child.title && (
-                        <div className="bg-muted/30">
+                        <div className="absolute left-full top-0 ml-1 min-w-[200px] bg-popover border rounded-md shadow-lg py-1 z-50">
                           {child.children.map((sub) => (
                             <button
                               key={sub.tab}
@@ -175,7 +173,7 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
                                 setExpandedChild(null);
                               }}
                               className={cn(
-                                'w-full flex items-center gap-2 pl-8 pr-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                                'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
                                 sub.tab === activeTab && 'bg-primary/10 text-primary font-medium'
                               )}
                             >
