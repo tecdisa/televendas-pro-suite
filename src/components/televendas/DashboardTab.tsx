@@ -75,8 +75,12 @@ function KpiCard({
 export function DashboardTab() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
-  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d;
+  });
+  const [dataFim, setDataFim] = useState<Date | undefined>(() => new Date());
 
   useEffect(() => {
     async function fetchDashboard() {
