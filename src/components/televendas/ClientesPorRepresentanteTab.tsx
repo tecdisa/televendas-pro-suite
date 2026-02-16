@@ -325,68 +325,57 @@ export function ClientesPorRepresentanteTab() {
     )
     : copyRepList;
 
+  // Filtered reps for the main dropdown
+  const filteredReps = repSearch
+    ? representantes.filter(r =>
+        r.nome_representante.toUpperCase().includes(repSearch.toUpperCase()) ||
+        (r.codigo_representante || '').includes(repSearch)
+      )
+    : representantes;
+
   return (
     <div className="space-y-4">
-      {/* Representative Selection */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Selecionar Representante</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 mb-3">
-            <Input
-              placeholder="Buscar representante..."
-              value={repSearch}
-              onChange={e => setRepSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && loadRepresentantes(repSearch)}
-              className="h-8 text-sm max-w-md"
-            />
-            <Button size="sm" onClick={() => loadRepresentantes(repSearch)} disabled={repLoading}>
-              {repLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
-          {selectedRep ? (
-            <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
-              <UserCheck className="h-5 w-5 text-primary" />
-              <div className="flex-1">
-                <span className="font-medium text-sm">
-                  {selectedRep.codigo_representante} - {selectedRep.nome_representante}
-                </span>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setSelectedRep(null)}>Trocar</Button>
+      {/* Representative Selection - Dropdown */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Representante:</label>
+        <Select
+          value={selectedRep ? String(selectedRep.representante_id) : ''}
+          onValueChange={(val) => {
+            const rep = representantes.find(r => String(r.representante_id) === val);
+            if (rep) handleSelectRep(rep);
+          }}
+        >
+          <SelectTrigger className="h-9 text-sm w-[360px]">
+            <SelectValue placeholder={repLoading ? 'Carregando...' : 'Selecione um representante'} />
+          </SelectTrigger>
+          <SelectContent>
+            <div className="px-2 py-1.5">
+              <Input
+                placeholder="Buscar..."
+                value={repSearch}
+                onChange={e => setRepSearch(e.target.value)}
+                className="h-7 text-sm"
+                onClick={e => e.stopPropagation()}
+                onKeyDown={e => e.stopPropagation()}
+              />
             </div>
-          ) : (
-            <div className="max-h-48 overflow-auto border rounded">
-              {repLoading ? (
-                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-              ) : representantes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum representante encontrado</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-20">Código</TableHead>
-                      <TableHead>Nome</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {representantes.map(r => (
-                      <TableRow
-                        key={r.representante_id}
-                        className="cursor-pointer hover:bg-muted/70"
-                        onClick={() => handleSelectRep(r)}
-                      >
-                        <TableCell className="text-xs">{r.codigo_representante}</TableCell>
-                        <TableCell className="text-xs">{r.nome_representante}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {filteredReps.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-2">Nenhum encontrado</p>
+            ) : (
+              filteredReps.map(r => (
+                <SelectItem key={r.representante_id} value={String(r.representante_id)}>
+                  {r.codigo_representante} - {r.nome_representante}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        {selectedRep && (
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedRep(null); setRepSearch(''); }}>
+            Limpar
+          </Button>
+        )}
+      </div>
 
       {/* Client listing (only when rep is selected) */}
       {selectedRep && (
