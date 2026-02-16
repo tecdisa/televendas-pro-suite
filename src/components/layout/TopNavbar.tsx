@@ -14,17 +14,19 @@ import {
   Route,
   CreditCard,
   ChevronDown,
+  ChevronRight,
   LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface NavChild {
+export interface NavChild {
   title: string;
-  tab: string;
+  tab?: string;
   icon: React.ComponentType<{ className?: string }>;
+  children?: NavChild[];
 }
 
-interface NavGroup {
+export interface NavGroup {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   children: NavChild[];
@@ -42,7 +44,14 @@ export const navGroups: NavGroup[] = [
     title: 'Cadastro',
     icon: UserPlus,
     children: [
-      { title: 'Clientes', tab: 'clientes', icon: Users },
+      {
+        title: 'Clientes',
+        icon: Users,
+        children: [
+          { title: 'Cadastro de Clientes', tab: 'clientes', icon: Users },
+          { title: 'Clientes por Representante', tab: 'clientes-representante', icon: Users },
+        ],
+      },
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
       { title: 'Representantes', tab: 'representantes', icon: UserCheck },
       { title: 'Grupos', tab: 'grupos', icon: Layers },
@@ -52,7 +61,6 @@ export const navGroups: NavGroup[] = [
       { title: 'Formas Pagamento', tab: 'formas-pagamento', icon: CreditCard },
       { title: 'Segmentos Venda', tab: 'segmentos', icon: Target },
       { title: 'Rotas Clientes', tab: 'rotas', icon: Route },
-      { title: 'Clientes por Representante', tab: 'clientes-representante', icon: Users },
     ],
   },
   {
@@ -84,22 +92,30 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [expandedChild, setExpandedChild] = useState<string | null>(null);
+
+  const isChildActive = (child: NavChild): boolean => {
+    if (child.tab) return child.tab === activeTab;
+    return child.children?.some(c => isChildActive(c)) ?? false;
+  };
+
   const isGroupActive = (group: NavGroup) =>
-    group.children.some((c) => c.tab === activeTab);
+    group.children.some((c) => isChildActive(c));
 
   return (
     <nav ref={navRef} className="hidden md:flex items-center gap-1">
       {navGroups.map((group) => {
-        const isSingleChild = group.children.length === 1;
+        const isSingleChild = group.children.length === 1 && !group.children[0].children;
         return (
           <div key={group.title} className="relative">
             <button
               onClick={() => {
                 if (isSingleChild) {
-                  onTabChange(group.children[0].tab);
+                  onTabChange(group.children[0].tab!);
                   setOpenGroup(null);
                 } else {
                   setOpenGroup(openGroup === group.title ? null : group.title);
+                  setExpandedChild(null);
                 }
               }}
               className={cn(
@@ -122,22 +138,65 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
             {/* Dropdown */}
             {!isSingleChild && openGroup === group.title && (
               <div className="absolute top-full left-0 mt-1 min-w-[240px] bg-popover border rounded-md shadow-lg py-1 z-50">
-                {group.children.map((child) => (
-                  <button
-                    key={child.tab}
-                    onClick={() => {
-                      onTabChange(child.tab);
-                      setOpenGroup(null);
-                    }}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
-                      child.tab === activeTab && 'bg-primary/10 text-primary font-medium'
-                    )}
-                  >
-                    <child.icon className="h-4 w-4" />
-                    <span>{child.title}</span>
-                  </button>
-                ))}
+                {group.children.map((child) =>
+                  child.children ? (
+                    <div key={child.title}>
+                      <button
+                        onClick={() => setExpandedChild(expandedChild === child.title ? null : child.title)}
+                        className={cn(
+                          'w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                          isChildActive(child) && 'text-primary font-medium'
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <child.icon className="h-4 w-4" />
+                          <span>{child.title}</span>
+                        </span>
+                        <ChevronRight className={cn(
+                          'h-3.5 w-3.5 transition-transform',
+                          expandedChild === child.title && 'rotate-90'
+                        )} />
+                      </button>
+                      {expandedChild === child.title && (
+                        <div className="bg-muted/30">
+                          {child.children.map((sub) => (
+                            <button
+                              key={sub.tab}
+                              onClick={() => {
+                                onTabChange(sub.tab!);
+                                setOpenGroup(null);
+                                setExpandedChild(null);
+                              }}
+                              className={cn(
+                                'w-full flex items-center gap-2 pl-8 pr-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                                sub.tab === activeTab && 'bg-primary/10 text-primary font-medium'
+                              )}
+                            >
+                              <sub.icon className="h-4 w-4" />
+                              <span>{sub.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      key={child.tab}
+                      onClick={() => {
+                        onTabChange(child.tab!);
+                        setOpenGroup(null);
+                        setExpandedChild(null);
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                        child.tab === activeTab && 'bg-primary/10 text-primary font-medium'
+                      )}
+                    >
+                      <child.icon className="h-4 w-4" />
+                      <span>{child.title}</span>
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>

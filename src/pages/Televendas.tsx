@@ -23,9 +23,10 @@ import { ClientesPorRepresentanteTab } from '@/components/televendas/ClientesPor
 import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
-import { TopNavbar, navGroups } from '@/components/layout/TopNavbar';
+import { TopNavbar, navGroups, type NavChild } from '@/components/layout/TopNavbar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { ChevronRight } from 'lucide-react';
 
 const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
   dashboard: { title: 'Dashboard', icon: LayoutDashboard },
@@ -52,10 +53,12 @@ const Televendas = () => {
   const activeTab = searchParams.get('tab') || 'dashboard';
   const [digitacaoOpen, setDigitacaoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
     setMobileMenuOpen(false);
+    setMobileExpanded(null);
   };
 
   const handleLogout = () => {
@@ -125,21 +128,59 @@ const Televendas = () => {
                       <p className="px-3 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {group.title}
                       </p>
-                      {group.children.map((child) => (
-                        <button
-                          key={child.tab}
-                          onClick={() => handleTabChange(child.tab)}
-                          className={cn(
-                            'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
-                            child.tab === activeTab
-                              ? 'bg-primary/10 text-primary font-medium'
-                              : 'text-foreground hover:bg-muted'
-                          )}
-                        >
-                          <child.icon className="h-4 w-4" />
-                          <span>{child.title}</span>
-                        </button>
-                      ))}
+                      {group.children.map((child) =>
+                        child.children ? (
+                          <div key={child.title}>
+                            <button
+                              onClick={() => setMobileExpanded(mobileExpanded === child.title ? null : child.title)}
+                              className={cn(
+                                'w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-colors',
+                                child.children.some(c => c.tab === activeTab)
+                                  ? 'text-primary font-medium'
+                                  : 'text-foreground hover:bg-muted'
+                              )}
+                            >
+                              <span className="flex items-center gap-2">
+                                <child.icon className="h-4 w-4" />
+                                <span>{child.title}</span>
+                              </span>
+                              <ChevronRight className={cn(
+                                'h-3.5 w-3.5 transition-transform',
+                                mobileExpanded === child.title && 'rotate-90'
+                              )} />
+                            </button>
+                            {mobileExpanded === child.title && child.children.map((sub) => (
+                              <button
+                                key={sub.tab}
+                                onClick={() => handleTabChange(sub.tab!)}
+                                className={cn(
+                                  'w-full flex items-center gap-2 pl-8 pr-3 py-2 rounded-md text-sm transition-colors',
+                                  sub.tab === activeTab
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'text-foreground hover:bg-muted'
+                                )}
+                              >
+                                <sub.icon className="h-4 w-4" />
+                                <span>{sub.title}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <button
+                            key={child.tab}
+                            onClick={() => handleTabChange(child.tab!)}
+                            className={cn(
+                              'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
+                              child.tab === activeTab
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'text-foreground hover:bg-muted'
+                            )}
+                          >
+                            <child.icon className="h-4 w-4" />
+                            <span>{child.title}</span>
+                          </button>
+                        )
+                      )}
                     </div>
                   ))}
                 </nav>
