@@ -48,8 +48,8 @@ export const navGroups: NavGroup[] = [
         title: 'Clientes',
         icon: Users,
         children: [
-          { title: 'Cadastro de Clientes', tab: 'clientes', icon: Users },
-          { title: 'Clientes por Representante', tab: 'clientes-representante', icon: Users },
+          { title: 'Todos', tab: 'clientes', icon: Users },
+          { title: 'Representantes', tab: 'clientes-representante', icon: UserCheck },
         ],
       },
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
