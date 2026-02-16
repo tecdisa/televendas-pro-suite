@@ -92,6 +92,7 @@ export function FornecedoresTab() {
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
+  const [filtroRevenda, setFiltroRevenda] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -107,7 +108,7 @@ export function FornecedoresTab() {
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
 
-  const loadFornecedores = async (reset = false, inativosOverride?: boolean) => {
+  const loadFornecedores = async (reset = false, inativosOverride?: boolean, revendaOverride?: boolean) => {
     if (loading) return;
     setLoading(true);
     if (reset) {
@@ -118,7 +119,8 @@ export function FornecedoresTab() {
     try {
       const nextPage = reset ? 1 : page + 1;
       const incluirInativosValue = inativosOverride !== undefined ? inativosOverride : incluirInativos;
-      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, incluirInativosValue);
+      const revendaValue = revendaOverride !== undefined ? revendaOverride : filtroRevenda;
+      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, incluirInativosValue, revendaValue || undefined);
       setFornecedores((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(nextPage);
       const total = result.total ?? 0;
@@ -741,6 +743,18 @@ export function FornecedoresTab() {
                 }}
               />
               <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="filtroRevenda"
+                checked={filtroRevenda}
+                onCheckedChange={(c) => {
+                  const newValue = c as boolean;
+                  setFiltroRevenda(newValue);
+                  loadFornecedores(true, undefined, newValue);
+                }}
+              />
+              <label htmlFor="filtroRevenda" className="text-sm whitespace-nowrap">Somente revenda</label>
             </div>
             <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
