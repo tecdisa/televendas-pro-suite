@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Truck, ShoppingCart, Package, TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Users, Truck, ShoppingCart, Package, TrendingUp, DollarSign, Clock, CheckCircle, CalendarIcon } from 'lucide-react';
 import { ordersService, Order } from '@/services/ordersService';
 import { clientsService } from '@/services/clientsService';
 import { suppliersService } from '@/services/suppliersService';
@@ -8,6 +8,12 @@ import { representativesService } from '@/services/representativesService';
 import { formatCurrency } from '@/utils/format';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface DashboardData {
   totalPedidos: number;
@@ -69,14 +75,20 @@ function KpiCard({
 export function DashboardTab() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     async function fetchDashboard() {
       setLoading(true);
       try {
+        const filters: any = {};
+        if (dataInicio) filters.dataInicio = format(dataInicio, 'yyyy-MM-dd');
+        if (dataFim) filters.dataFim = format(dataFim, 'yyyy-MM-dd');
+
         // Fetch all data in parallel
         const [orders, clients, suppliers, reps] = await Promise.allSettled([
-          ordersService.list(undefined, 1, 500),
+          ordersService.list(Object.keys(filters).length ? filters : undefined, 1, 500),
           clientsService.find(undefined, 1, 1),
           suppliersService.getAll(undefined, 1, 1),
           representativesService.getAll(undefined, 1, 1),
@@ -151,7 +163,7 @@ export function DashboardTab() {
     }
 
     fetchDashboard();
-  }, []);
+  }, [dataInicio, dataFim]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -169,6 +181,43 @@ export function DashboardTab() {
 
   return (
     <div className="space-y-6">
+      {/* Date Filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Data Início</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataInicio ? format(dataInicio, 'dd/MM/yyyy') : 'Selecionar'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dataInicio} onSelect={setDataInicio} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Data Fim</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataFim ? format(dataFim, 'dd/MM/yyyy') : 'Selecionar'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dataFim} onSelect={setDataFim} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        {(dataInicio || dataFim) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDataInicio(undefined); setDataFim(undefined); }}>
+            Limpar
+          </Button>
+        )}
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
