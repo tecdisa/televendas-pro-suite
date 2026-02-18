@@ -1343,12 +1343,12 @@ const validateFormData = (data: ClientFormData): string[] => {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
+      {/* <div className="flex justify-end">
         <Button onClick={handleCadastrarPara} disabled={selectedClients.length === 0}>
           <ShoppingCart className="h-4 w-4 mr-2" />
           Cadastrar para ({selectedClients.length})
         </Button>
-      </div>
+      </div> */}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
