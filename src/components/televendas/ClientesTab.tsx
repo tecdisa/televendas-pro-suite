@@ -197,6 +197,7 @@ export const ClientesTab = () => {
   const [clientsPage, setClientsPage] = useState(1);
   const [clientsHasMore, setClientsHasMore] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const clientsRequestId = useRef(0);
   const [filters, setFilters] = useState({
     search: '',
     uf: 'all',
@@ -689,6 +690,7 @@ export const ClientesTab = () => {
       setClientsHasMore(true);
     }
     setClientsLoading(true);
+    const requestId = ++clientsRequestId.current;
     try {
       const data = await clientsService.search({
         query: ignoreFilters ? undefined : active.search,
@@ -696,12 +698,15 @@ export const ClientesTab = () => {
         cidade: !ignoreFilters && active.cidade !== 'all' ? active.cidade : undefined,
         bairro: !ignoreFilters && active.bairro ? active.bairro.trim() : undefined,
       }, undefined, nextPage, CLIENT_LIMIT);
+      if (requestId !== clientsRequestId.current) return;
       setClients((prev) => (reset ? data : [...prev, ...data]));
       setClientsPage(nextPage);
       setClientsHasMore(Array.isArray(data) && data.length === CLIENT_LIMIT);
     } catch (e: any) {
+      if (requestId !== clientsRequestId.current) return;
       toast.error(String(e?.message || e || 'Erro ao carregar clientes'));
     } finally {
+      if (requestId !== clientsRequestId.current) return;
       setClientsLoading(false);
     }
   };
