@@ -8,6 +8,11 @@ export const getApiBase = (): string => {
     return 'https://api.adsvendas.tecdisa.com.br';
   }
 
+  // Homologação (domínio atual do frontend)
+  if (host.endsWith('adsvendas-f.tecdisa.com.br')) {
+    return 'http://adsvendas-b.tecdisa.com.br:3001';
+  }
+
   // Prefer build-time Vite env when it is present and non-empty
   if (envBase) {
     return envBase;
