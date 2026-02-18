@@ -14,13 +14,10 @@ interface ClientReceivablesModalProps {
 }
 
 type Situacao = 'a_receber' | 'recebido' | 'todos';
-type Ordem = 'vencto' | 'valor';
-
 export const ClientReceivablesModal = ({ open, onOpenChange, clienteId }: ClientReceivablesModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Receivable[]>([]);
-  const [ordem, setOrdem] = useState<Ordem>('vencto');
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
 
   useEffect(() => {
@@ -70,24 +67,12 @@ export const ClientReceivablesModal = ({ open, onOpenChange, clienteId }: Client
     }
   };
 
-  // Sort data based on ordem
-  const sortedData = [...data].sort((a, b) => {
-    switch (ordem) {
-      case 'vencto':
-        return (a.vencto || '').localeCompare(b.vencto || '');
-      case 'valor':
-        return (b.valor || 0) - (a.valor || 0);
-      default:
-        return 0;
-    }
-  });
-
   // Calculate totals
-  const totalSelecionado = sortedData
+  const totalSelecionado = data
     .filter(r => selectedIds.has(r.id ?? r.areceber_id))
     .reduce((sum, r) => sum + (r.saldo || 0), 0);
 
-  const totalGeral = sortedData.reduce((sum, r) => sum + (r.saldo || 0), 0);
+  const totalGeral = data.reduce((sum, r) => sum + (r.saldo || 0), 0);
 
   const totalCorrigido = totalGeral;
 
@@ -127,8 +112,8 @@ export const ClientReceivablesModal = ({ open, onOpenChange, clienteId }: Client
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedData.length > 0 ? (
-                    sortedData.map((item) => (
+                  {data.length > 0 ? (
+                    data.map((item) => (
                       <TableRow 
                         key={item.id ?? item.areceber_id} 
                         className={selectedIds.has(item.id ?? item.areceber_id) ? 'bg-primary/10' : ''}

@@ -1574,19 +1574,11 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                   <SelectValue placeholder={loadingPrazos ? 'Carregando...' : prazosError ? 'Erro ao carregar' : 'Selecione'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {prazos?.slice()
-                    .sort((a, b) =>
-                      String(a.descricao || '').localeCompare(
-                        String(b.descricao || ''),
-                        'pt-BR',
-                        { numeric: true, sensitivity: 'base' } as any,
-                      ),
-                    )
-                    .map((p) => (
-                      <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.descricao)}>
-                        {p.descricao}
-                      </SelectItem>
-                    ))}
+                  {prazos?.map((p) => (
+                    <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.descricao)}>
+                      {p.descricao}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {typeof prazoMax === 'number' && (

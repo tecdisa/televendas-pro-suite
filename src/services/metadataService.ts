@@ -135,19 +135,7 @@ export const metadataService = {
       }
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      const mapped: Operacao[] = arr.map(normalizeOperacao);
-      // Sort by id ascending (numeric when possible, fallback to string compare)
-      mapped.sort((a, b) => {
-        const aNum = typeof a.id === 'number' ? a.id : Number(a.id);
-        const bNum = typeof b.id === 'number' ? b.id : Number(b.id);
-        const aIsNum = Number.isFinite(aNum);
-        const bIsNum = Number.isFinite(bNum);
-        if (aIsNum && bIsNum) return (aNum as number) - (bNum as number);
-        const as = String(a.id ?? '');
-        const bs = String(b.id ?? '');
-        return as.localeCompare(bs, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
-      return mapped;
+      return arr.map(normalizeOperacao);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -204,18 +192,7 @@ export const metadataService = {
       }
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      const mapped = arr.map(normalizeTabela).filter((t) => String(t.descricao || '').length > 0);
-      // Ordena por descricao asc, com código como desempate
-      mapped.sort((a, b) => {
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byDesc !== 0) return byDesc;
-        const ac = String(a.codigo || a.id || '');
-        const bc = String(b.codigo || b.id || '');
-        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
-      return mapped;
+      return arr.map(normalizeTabela).filter((t) => String(t.descricao || '').length > 0);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -266,21 +243,7 @@ export const metadataService = {
       }
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      const mapped = arr.map(normalizeTabelaCliente).filter((t) => String(t.descricao || '').trim().length > 0);
-      // Ordena por principal desc, depois descricao asc, depois codigo/id
-      mapped.sort((a, b) => {
-        const ap = a.principal ? 1 : 0;
-        const bp = b.principal ? 1 : 0;
-        if (bp !== ap) return bp - ap; // principal primeiro
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byDesc !== 0) return byDesc;
-        const ac = String(a.codigo || a.id || '');
-        const bc = String(b.codigo || b.id || '');
-        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
-      return mapped;
+      return arr.map(normalizeTabelaCliente).filter((t) => String(t.descricao || '').trim().length > 0);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -319,17 +282,7 @@ export const metadataService = {
       }
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      const mapped = arr.map(normalize).filter((s) => String(s.descricao || '').trim().length > 0 && !s.inativo);
-      mapped.sort((a, b) => {
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byDesc !== 0) return byDesc;
-        const ac = String(a.codigo || a.id || '');
-        const bc = String(b.codigo || b.id || '');
-        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
-      return mapped;
+      return arr.map(normalize).filter((s) => String(s.descricao || '').trim().length > 0 && !s.inativo);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -371,17 +324,7 @@ export const metadataService = {
       }
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      const mapped = arr.map(normalize).filter((r) => String(r.descricao || '').trim().length > 0 && !r.inativo);
-      mapped.sort((a, b) => {
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byDesc !== 0) return byDesc;
-        const ac = String(a.codigo || a.id || '');
-        const bc = String(b.codigo || b.id || '');
-        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
-      return mapped;
+      return arr.map(normalize).filter((r) => String(r.descricao || '').trim().length > 0 && !r.inativo);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -430,15 +373,6 @@ export const metadataService = {
         };
       };
       const mapped = arr.map(normalize).filter((f) => String(f.descricao || '').trim().length > 0 && !f.inativo);
-      mapped.sort((a, b) => {
-        const ac = String(a.codigo || '');
-        const bc = String(b.codigo || '');
-        const byCode = ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byCode !== 0) return byCode;
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        return ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
       return mapped;
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
@@ -489,15 +423,6 @@ export const metadataService = {
         };
       };
       const mapped = arr.map(normalize).filter((p) => String(p.descricao || '').trim().length > 0 && !p.inativo);
-      mapped.sort((a, b) => {
-        const ac = String(a.codigo || '');
-        const bc = String(b.codigo || '');
-        const byCode = ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byCode !== 0) return byCode;
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        return ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
       return mapped;
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
@@ -545,20 +470,7 @@ export const metadataService = {
       }
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      const mapped = arr.map(normalize).filter((t) => String(t.descricao || '').trim().length > 0);
-      mapped.sort((a, b) => {
-        const ap = a.principal ? 1 : 0;
-        const bp = b.principal ? 1 : 0;
-        if (bp !== ap) return bp - ap;
-        const ad = String(a.descricao || '');
-        const bd = String(b.descricao || '');
-        const byDesc = ad.localeCompare(bd, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-        if (byDesc !== 0) return byDesc;
-        const ac = String(a.codigo || a.id || '');
-        const bc = String(b.codigo || b.id || '');
-        return ac.localeCompare(bc, 'pt-BR', { numeric: true, sensitivity: 'base' } as any);
-      });
-      return mapped;
+      return arr.map(normalize).filter((t) => String(t.descricao || '').trim().length > 0);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -590,9 +502,7 @@ export const metadataService = {
         fuso: Number(raw?.fuso ?? -3),
       });
 
-      const mapped = arr.map(normalize).filter((u) => u.uf.length === 2);
-      mapped.sort((a, b) => a.uf.localeCompare(b.uf, 'pt-BR'));
-      return mapped;
+      return arr.map(normalize).filter((u) => u.uf.length === 2);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -632,9 +542,7 @@ export const metadataService = {
         uf: String(raw?.uf ?? '').trim(),
       });
 
-      const mapped = arr.map(normalize).filter((c) => c.nome_cidade.length > 0);
-      mapped.sort((a, b) => a.nome_cidade.localeCompare(b.nome_cidade, 'pt-BR', { numeric: true, sensitivity: 'base' }));
-      return mapped;
+      return arr.map(normalize).filter((c) => c.nome_cidade.length > 0);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
@@ -674,10 +582,7 @@ export const metadataService = {
         inativo: Boolean(raw?.inativo ?? false),
       });
 
-      const mapped = arr.map(normalize).filter((r) => r.label.length > 0);
-      // Ordena por label
-      mapped.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true, sensitivity: 'base' } as any));
-      return mapped;
+      return arr.map(normalize).filter((r) => r.label.length > 0);
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
