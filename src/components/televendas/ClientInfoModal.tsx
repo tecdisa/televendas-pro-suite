@@ -167,7 +167,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
         const prazoMatch = findByIdOrCodigo(prazos, prazoId);
         const prazoLabel =
           prazoDesc ||
-          (prazoMatch ? formatLabel(prazoMatch.codigo, prazoMatch.descricao) : '') ||
+          (prazoMatch ? String(prazoMatch.descricao ?? '').trim() : '') ||
           (prazoId ? `Prazo ${prazoId}` : '');
 
         const rotaDesc =

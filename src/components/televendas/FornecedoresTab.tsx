@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -101,6 +111,42 @@ export function FornecedoresTab() {
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState(initialFormData);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
+  const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
+  const setFormSnapshot = (data: typeof initialFormData) => {
+    formSnapshotRef.current = JSON.stringify(data);
+  };
+  const isFormDirty = () => JSON.stringify(formData) !== formSnapshotRef.current;
+  const closeDialog = (type: 'create' | 'edit') => {
+    if (type === 'create') setCreateOpen(false);
+    else setEditOpen(false);
+  };
+  const requestCloseDialog = (type: 'create' | 'edit') => {
+    if (isFormDirty()) {
+      setPendingClose(type);
+      setShowConfirmClose(true);
+      return;
+    }
+    closeDialog(type);
+  };
+  const handleDialogOpenChange = (type: 'create' | 'edit') => (nextOpen: boolean) => {
+    if (!nextOpen) {
+      requestCloseDialog(type);
+      return;
+    }
+    if (type === 'create') setCreateOpen(true);
+    else setEditOpen(true);
+  };
+  const handleConfirmClose = () => {
+    if (pendingClose) closeDialog(pendingClose);
+    setPendingClose(null);
+    setShowConfirmClose(false);
+  };
+  const handleCancelClose = () => {
+    setPendingClose(null);
+    setShowConfirmClose(false);
+  };
 
   // UFs e Cidades
   const [ufsApi, setUfsApi] = useState<Uf[]>([]);
@@ -300,24 +346,27 @@ export function FornecedoresTab() {
     if (e.key === 'Enter') handleSearch();
   };
 
-  const resetForm = () => {
-    setFormData(initialFormData);
+  const resetForm = (updateSnapshot = false) => {
+    const nextData = { ...initialFormData };
+    setFormData(nextData);
     setEditId(null);
+    if (updateSnapshot) setFormSnapshot(nextData);
   };
 
   const openCreate = () => {
-    resetForm();
+    resetForm(true);
     setCreateOpen(true);
   };
 
   const openEdit = async (f: Fornecedor) => {
     setEditId(f.fornecedor_id);
+    setFormSnapshot(formData);
     setFormLoading(true);
     setEditOpen(true);
     try {
       const detail = await suppliersService.getById(f.fornecedor_id);
       if (detail) {
-        setFormData({
+        const nextData = {
           codigo_fornecedor: detail.codigo_fornecedor || '',
           cnpj_cpf: detail.cnpj_cpf || '',
           nome_fornecedor: detail.nome_fornecedor || '',
@@ -338,7 +387,9 @@ export function FornecedoresTab() {
           obs: detail.obs || '',
           inativo: detail.inativo || false,
           revenda: detail.revenda || false,
-        });
+        };
+        setFormData(nextData);
+        setFormSnapshot(nextData);
       }
     } catch (e) {
       toast.error('Erro ao carregar dados do fornecedor');
@@ -606,10 +657,8 @@ export function FornecedoresTab() {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-2">
+          <div className="col-span-5">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-          </div>
-          <div className="col-span-3">
             <Input
               className="h-8 text-sm"
               value={formData.bairro}
@@ -834,7 +883,7 @@ export function FornecedoresTab() {
       </Card>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Novo Fornecedor</DialogTitle>
@@ -843,7 +892,7 @@ export function FornecedoresTab() {
             {formContent}
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => requestCloseDialog('create')}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
@@ -853,7 +902,7 @@ export function FornecedoresTab() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Editar Fornecedor</DialogTitle>
@@ -868,7 +917,7 @@ export function FornecedoresTab() {
             </ScrollArea>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => requestCloseDialog('edit')}>Cancelar</Button>
             <Button onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
@@ -876,6 +925,21 @@ export function FornecedoresTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as alterações não salvas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelClose}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, UserCheck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
@@ -89,6 +99,42 @@ export function RepresentantesTab() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RepresentanteFormData>(initialFormData);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
+  const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
+  const setFormSnapshot = (data: RepresentanteFormData) => {
+    formSnapshotRef.current = JSON.stringify(data);
+  };
+  const isFormDirty = () => JSON.stringify(formData) !== formSnapshotRef.current;
+  const closeDialog = (type: 'create' | 'edit') => {
+    if (type === 'create') setCreateOpen(false);
+    else setEditOpen(false);
+  };
+  const requestCloseDialog = (type: 'create' | 'edit') => {
+    if (isFormDirty()) {
+      setPendingClose(type);
+      setShowConfirmClose(true);
+      return;
+    }
+    closeDialog(type);
+  };
+  const handleDialogOpenChange = (type: 'create' | 'edit') => (nextOpen: boolean) => {
+    if (!nextOpen) {
+      requestCloseDialog(type);
+      return;
+    }
+    if (type === 'create') setCreateOpen(true);
+    else setEditOpen(true);
+  };
+  const handleConfirmClose = () => {
+    if (pendingClose) closeDialog(pendingClose);
+    setPendingClose(null);
+    setShowConfirmClose(false);
+  };
+  const handleCancelClose = () => {
+    setPendingClose(null);
+    setShowConfirmClose(false);
+  };
 
   // UFs e Cidades
   const [ufsApi, setUfsApi] = useState<Uf[]>([]);
@@ -320,26 +366,29 @@ export function RepresentantesTab() {
     if (e.key === 'Enter') handleSearch();
   };
 
-  const resetForm = () => {
-    setFormData(initialFormData);
+  const resetForm = (updateSnapshot = false) => {
+    const nextData = { ...initialFormData };
+    setFormData(nextData);
     setEditId(null);
     setPendingCidadeNome('');
+    if (updateSnapshot) setFormSnapshot(nextData);
   };
 
   const openCreate = () => {
-    resetForm();
+    resetForm(true);
     setCreateOpen(true);
   };
 
   const openEdit = async (r: Representante) => {
     setEditId(r.representante_id);
     setPendingCidadeNome('');
+    setFormSnapshot(formData);
     setFormLoading(true);
     setEditOpen(true);
     try {
       const detail = await representativesService.getById(r.representante_id);
       if (detail) {
-        setFormData({
+        const nextData: RepresentanteFormData = {
           codigo_representante: detail.codigo_representante || '',
           nome_representante: detail.nome_representante || '',
           cnpj_cpf: detail.cnpj_cpf || '',
@@ -365,7 +414,9 @@ export function RepresentantesTab() {
           quantidade_maxima_pedidos_retidos_para_sincronizar: detail.quantidade_maxima_pedidos_retidos_para_sincronizar ?? 0,
           observacao: detail.observacao || '',
           inativo: detail.inativo ?? false,
-        });
+        };
+        setFormData(nextData);
+        setFormSnapshot(nextData);
       }
     } catch (e: any) {
       toast.error('Erro ao carregar dados do representante');
@@ -852,14 +903,14 @@ export function RepresentantesTab() {
       </Card>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Representante</DialogTitle>
           </DialogHeader>
           {formContent}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => requestCloseDialog('create')}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
@@ -869,7 +920,7 @@ export function RepresentantesTab() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Representante</DialogTitle>
@@ -882,7 +933,7 @@ export function RepresentantesTab() {
             formContent
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => requestCloseDialog('edit')}>Cancelar</Button>
             <Button onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
@@ -890,6 +941,21 @@ export function RepresentantesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as alterações não salvas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelClose}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

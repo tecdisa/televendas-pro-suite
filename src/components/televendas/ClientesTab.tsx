@@ -6,6 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2 } from 'lucide-react';
@@ -83,6 +93,57 @@ const summarizeSelection = (items: string[], emptyLabel = 'Selecione...') => {
   if (filtered.length <= 2) return filtered.join(', ');
   return `${filtered.slice(0, 2).join(', ')} +${filtered.length - 2}`;
 };
+const createEmptyFormData = () => ({
+  codigoCliente: '',
+  inativo: false,
+  cnpjCpf: '',
+  inscEstadual: '',
+  inscMunicipal: '',
+  rg: '',
+  nome: '',
+  fantasia: '',
+  endereco: '',
+  numero: '',
+  bairro: '',
+  uf: '',
+  cidade: '',
+  cidadeId: 0,
+  cep: '',
+  complemento: '',
+  telefone: '',
+  fax: '',
+  whatsapp: '',
+  email: '',
+  emailDanfe: '',
+  site: '',
+  rota: '',
+  rotaId: 0,
+  b2bLiberado: false,
+  b2bSenha: '',
+  b2bTabelaId: 0,
+  contato1Nome: '',
+  contato1Celular: '',
+  contato1Aniversario: '',
+  contato2Nome: '',
+  contato2Celular: '',
+  contato2Aniversario: '',
+  segmentoId: 1,
+  checkouts: 0,
+  redeId: 0,
+  tabelaIds: [] as number[],
+  representantes: [] as Array<{ id: string; nome: string }>,
+  descontoFinanceiroBoleto: 0,
+  observacaoComercial: '',
+  credito: 0,
+  boleto: false,
+  prazo: '',
+  limite: 0,
+  aberto: 0,
+  disponivel: 0,
+  observacaoFinanceiro: '',
+  formaPagtoId: 1,
+  prazoPagtoId: 1,
+});
 const normalizeCityKey = (value: string | null | undefined) =>
   String(value ?? '')
     .trim()
@@ -271,60 +332,43 @@ export const ClientesTab = () => {
     if (!open) setTabelaSearch('');
   };
 
-  const [formData, setFormData] = useState({
-    // Identificação
-    codigoCliente: '',
-    inativo: false,
-    cnpjCpf: '',
-    inscEstadual: '',
-    inscMunicipal: '',
-    rg: '',
-    nome: '',
-    fantasia: '',
-    endereco: '',
-    numero: '',
-    bairro: '',
-    uf: '',
-    cidade: '',
-    cidadeId: 0,
-    cep: '',
-    complemento: '',
-    telefone: '',
-    fax: '',
-    whatsapp: '',
-    email: '',
-    emailDanfe: '',
-    site: '',
-    rota: '',
-    rotaId: 0,
-    b2bLiberado: false,
-    b2bSenha: '',
-    b2bTabelaId: 0,
-    // Comercial
-    contato1Nome: '',
-    contato1Celular: '',
-    contato1Aniversario: '',
-    contato2Nome: '',
-    contato2Celular: '',
-    contato2Aniversario: '',
-    segmentoId: 1,
-    checkouts: 0,
-    redeId: 0,
-    tabelaIds: [] as number[],
-    representantes: [] as Array<{ id: string; nome: string }>,
-    descontoFinanceiroBoleto: 0,
-    observacaoComercial: '',
-    // Financeiro
-    credito: 0,
-    boleto: false,
-    prazo: '',
-    limite: 0,
-    aberto: 0,
-    disponivel: 0,
-    observacaoFinanceiro: '',
-    formaPagtoId: 1,
-    prazoPagtoId: 1,
-  });
+  const [formData, setFormData] = useState<ClientFormData>(createEmptyFormData());
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
+  const formSnapshotRef = useRef<string>(JSON.stringify(createEmptyFormData()));
+  const setFormSnapshot = (data: ClientFormData) => {
+    formSnapshotRef.current = JSON.stringify(data);
+  };
+  const isFormDirty = () => JSON.stringify(formData) !== formSnapshotRef.current;
+  const closeDialog = (type: 'create' | 'edit') => {
+    if (type === 'create') setCreateOpen(false);
+    else setEditOpen(false);
+  };
+  const requestCloseDialog = (type: 'create' | 'edit') => {
+    if (isFormDirty()) {
+      setPendingClose(type);
+      setShowConfirmClose(true);
+      return;
+    }
+    closeDialog(type);
+  };
+  const handleDialogOpenChange = (type: 'create' | 'edit') => (nextOpen: boolean) => {
+    if (!nextOpen) {
+      requestCloseDialog(type);
+      return;
+    }
+    if (type === 'create') setCreateOpen(true);
+    else setEditOpen(true);
+  };
+  const handleConfirmClose = () => {
+    if (pendingClose) closeDialog(pendingClose);
+    setPendingClose(null);
+    setShowConfirmClose(false);
+  };
+  const handleCancelClose = () => {
+    setPendingClose(null);
+    setShowConfirmClose(false);
+  };
 
   const cnpjLookupRef = useRef<(v: string) => void>();
   if (!cnpjLookupRef.current) {
@@ -782,58 +826,6 @@ export const ClientesTab = () => {
     });
   };
 
-const createEmptyFormData = () => ({
-  codigoCliente: '',
-  inativo: false,
-  cnpjCpf: '',
-  inscEstadual: '',
-  inscMunicipal: '',
-  rg: '',
-  nome: '',
-  fantasia: '',
-  endereco: '',
-  numero: '',
-  bairro: '',
-  uf: '',
-  cidade: '',
-  cidadeId: 0,
-  cep: '',
-  complemento: '',
-  telefone: '',
-  fax: '',
-  whatsapp: '',
-  email: '',
-  emailDanfe: '',
-  site: '',
-  rota: '',
-  rotaId: 0,
-  b2bLiberado: false,
-  b2bSenha: '',
-  b2bTabelaId: 0,
-  contato1Nome: '',
-  contato1Celular: '',
-  contato1Aniversario: '',
-  contato2Nome: '',
-  contato2Celular: '',
-  contato2Aniversario: '',
-  segmentoId: 1,
-  checkouts: 0,
-  redeId: 0,
-  tabelaIds: [] as number[],
-  representantes: [] as Array<{ id: string; nome: string }>,
-  descontoFinanceiroBoleto: 0,
-  observacaoComercial: '',
-  credito: 0,
-  boleto: false,
-  prazo: '',
-  limite: 0,
-  aberto: 0,
-  disponivel: 0,
-  observacaoFinanceiro: '',
-  formaPagtoId: 1,
-  prazoPagtoId: 1,
-});
-
 const normalizeCep = (v: string) => v.replace(/\D+/g, '').slice(0, 8);
 
 const normalizeDateInput = (value: unknown) => {
@@ -894,7 +886,9 @@ const validateFormData = (data: ClientFormData): string[] => {
 };
   const openCreateDialog = () => {
     setFormErrors([]);
-    setFormData(createEmptyFormData());
+    const empty = createEmptyFormData();
+    setFormData(empty);
+    setFormSnapshot(empty);
     setComplementarUf('');
     setComplementarCidadeId(0);
     setComplementarCidade('');
@@ -969,6 +963,7 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
     const id = selectedClients[0];
     setEditId(id);
+    setFormSnapshot(formData);
     setFormErrors([]);
     setDetailLoading(true);
     setComplementarUf('');
@@ -995,7 +990,7 @@ const validateFormData = (data: ClientFormData): string[] => {
         d.representante_codigo ?? d.representanteCod ?? d.representante_cod ?? d.representante_id ?? d.representanteId ?? d.representante?.id,
         d.representante_nome ?? d.representanteNome ?? d.representante?.nome
       );
-      setFormData({
+      const nextFormData: ClientFormData = {
         codigoCliente: toUpperValue(d.codigo_cliente ?? d.codigoCliente ?? d.codigo ?? ''),
         inativo: Boolean(d.inativo),
         cnpjCpf: toUpperValue(d.cnpj_cpf ?? d.cnpjCpf ?? d.cnpj ?? d.cpf ?? ''),
@@ -1057,9 +1052,11 @@ const validateFormData = (data: ClientFormData): string[] => {
           aberto: Number(d.aberto ?? 0),
           disponivel: Number(d.disponivel ?? 0),
           observacaoFinanceiro: toUpperValue(d.observacao_financeiro ?? d.observacaoFinanceiro ?? ''),
-          formaPagtoId: ensurePositiveId(d.forma_pagto_id ?? d.formaPagtoId),
-          prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
-        });
+        formaPagtoId: ensurePositiveId(d.forma_pagto_id ?? d.formaPagtoId),
+        prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
+      };
+      setFormData(nextFormData);
+      setFormSnapshot(nextFormData);
     } catch (e: any) {
       setFormErrors(normalizeErrorMessages(e));
     } finally {
@@ -1385,7 +1382,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       </Dialog>
 
       {/* Create Client */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Cadastrar novo cliente</DialogTitle>
@@ -2253,14 +2250,14 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
           )}
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={formLoading}>Cancelar</Button>
+            <Button variant="outline" onClick={() => requestCloseDialog('create')} disabled={formLoading}>Cancelar</Button>
             <Button onClick={submitCreate} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Client - mesmo layout */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
@@ -2900,11 +2897,26 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
           )}
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={formLoading}>Cancelar</Button>
+            <Button variant="outline" onClick={() => requestCloseDialog('edit')} disabled={formLoading}>Cancelar</Button>
             <Button onClick={submitEdit} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as alterações não salvas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelClose}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ClientInfoModal
         open={clientInfoOpen}
