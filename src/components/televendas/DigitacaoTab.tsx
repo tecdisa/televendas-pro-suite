@@ -361,7 +361,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           descricao: it.descricao,
           un: it.un,
           quant: it.quant,
-          descontoPerc: it.descontoPerc,
+          descontoPerc: Number(it.descontoPerc ?? 0) || 0,
           preco: it.preco,
           estoque: typeof it.estoque === 'number' ? it.estoque : undefined,
           total: it.total,
@@ -417,7 +417,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           descricao: it.descricao,
           un: it.un,
           quant: it.quant,
-          descontoPerc: it.descontoPerc,
+          descontoPerc: Number(it.descontoPerc ?? 0) || 0,
           preco: it.preco,
           estoque: typeof (it as any)?.estoque === 'number' ? (it as any).estoque : undefined,
           total: it.total,
@@ -1696,7 +1696,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
               <Input 
                 type="number"
                 inputMode="decimal"
-                value={newItem.descontoPerc || ''}
+                value={Number.isFinite(newItem.descontoPerc) ? newItem.descontoPerc : 0}
                 onChange={(e) => {
                   const parsed = parseFloat(e.target.value);
                   const nextVal = Number.isFinite(parsed) ? parsed : 0;
