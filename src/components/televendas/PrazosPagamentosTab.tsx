@@ -38,6 +38,9 @@ export function PrazosPagamentosTab() {
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [incluirInativos, setIncluirInativos] = useState(false);
+  const [filterCartao, setFilterCartao] = useState(false);
+  const [filterMobile, setFilterMobile] = useState(false);
+  const [filterB2b, setFilterB2b] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -55,7 +58,11 @@ export function PrazosPagamentosTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const result = await prazosPagamentosService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      const result = await prazosPagamentosService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos, {
+        cartao: filterCartao,
+        mobile: filterMobile,
+        b2b: filterB2b,
+      });
       setPrazos((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(result.page ?? nextPage);
       const total = result.total ?? 0;
@@ -71,7 +78,7 @@ export function PrazosPagamentosTab() {
 
   useEffect(() => {
     loadPrazos(true);
-  }, [incluirInativos]);
+  }, [incluirInativos, filterCartao, filterMobile, filterB2b]);
 
   const handleSearch = () => loadPrazos(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -128,9 +135,12 @@ export function PrazosPagamentosTab() {
     }
     setFormLoading(true);
     try {
+      const prazosEmDias = formData.prazos_em_dias;
+      const prazosEmDiasValue =
+        prazosEmDias == null ? null : (String(prazosEmDias).trim() || null);
       const dataToSend = {
         ...formData,
-        prazos_em_dias: formData.prazos_em_dias?.trim() || null,
+        prazos_em_dias: prazosEmDiasValue,
       };
       await prazosPagamentosService.create(dataToSend);
       toast.success('Prazo de pagamento criado com sucesso');
@@ -152,9 +162,12 @@ export function PrazosPagamentosTab() {
     }
     setFormLoading(true);
     try {
+      const prazosEmDias = formData.prazos_em_dias;
+      const prazosEmDiasValue =
+        prazosEmDias == null ? null : (String(prazosEmDias).trim() || null);
       const dataToSend = {
         ...formData,
-        prazos_em_dias: formData.prazos_em_dias?.trim() || null,
+        prazos_em_dias: prazosEmDiasValue,
       };
       await prazosPagamentosService.update(editId, dataToSend);
       toast.success('Prazo de pagamento atualizado com sucesso');
@@ -364,13 +377,37 @@ export function PrazosPagamentosTab() {
               onKeyDown={handleKeyDown}
               className="flex-1"
             />
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <Checkbox
                 id="incluirInativos"
                 checked={incluirInativos}
                 onCheckedChange={(c) => setIncluirInativos(c as boolean)}
               />
               <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="filtroCartao"
+                  checked={filterCartao}
+                  onCheckedChange={(c) => setFilterCartao(c as boolean)}
+                />
+                <label htmlFor="filtroCartao" className="text-sm whitespace-nowrap">Cartao</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="filtroMobile"
+                  checked={filterMobile}
+                  onCheckedChange={(c) => setFilterMobile(c as boolean)}
+                />
+                <label htmlFor="filtroMobile" className="text-sm whitespace-nowrap">Mobile</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="filtroB2b"
+                  checked={filterB2b}
+                  onCheckedChange={(c) => setFilterB2b(c as boolean)}
+                />
+                <label htmlFor="filtroB2b" className="text-sm whitespace-nowrap">B2B</label>
+              </div>
             </div>
             <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />

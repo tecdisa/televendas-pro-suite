@@ -71,7 +71,12 @@ export const prazosPagamentosService = {
     query?: string,
     page = 1,
     limit = 100,
-    incluirInativos = false
+    incluirInativos = false,
+    filters?: {
+      cartao?: boolean;
+      mobile?: boolean;
+      b2b?: boolean;
+    }
   ): Promise<{ data: PrazoPagamento[]; page: number; limit: number; total: number }> {
     const empresaId = await getEmpresaId();
 
@@ -81,6 +86,9 @@ export const prazosPagamentosService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (incluirInativos) params.set('incluirInativos', 'true');
+    if (filters?.cartao !== undefined) params.set('cartao', String(filters.cartao));
+    if (filters?.mobile !== undefined) params.set('mobile', String(filters.mobile));
+    if (filters?.b2b !== undefined) params.set('b2b', String(filters.b2b));
 
     const url = `${API_BASE}/api/prazos-pagamentos?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
