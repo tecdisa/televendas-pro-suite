@@ -108,7 +108,8 @@ export const representativesService = {
     query?: string,
     page = 1,
     limit = 100,
-    incluirInativos = false
+    incluirInativos = false,
+    apenasInativos = false
   ): Promise<{ data: Representante[]; page: number; limit: number; total: number }> {
     const empresaId = await getEmpresaId();
 
@@ -117,6 +118,7 @@ export const representativesService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (incluirInativos) params.set('incluirInativos', 'true');
+    if (apenasInativos) params.set('apenasInativos', 'true');
 
     const url = `${API_BASE}/api/representantes/empresa/${empresaId}?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });

@@ -92,7 +92,7 @@ export function RepresentantesTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
-  const [incluirInativos, setIncluirInativos] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState<'ativo' | 'inativo' | 'todos'>('ativo');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -299,7 +299,7 @@ export function RepresentantesTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const result = await representativesService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos);
+      const result = await representativesService.getAll(search, nextPage, PAGE_LIMIT, filtroStatus !== 'ativo', filtroStatus === 'inativo');
       setRepresentantes((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(result.page ?? nextPage);
       const total = result.total ?? 0;
@@ -315,7 +315,7 @@ export function RepresentantesTab() {
 
   useEffect(() => {
     loadRepresentantes(true);
-  }, [incluirInativos]);
+  }, [filtroStatus]);
 
   // Carregar UFs quando abrir os dialogs de criação/edição
   useEffect(() => {
@@ -807,14 +807,16 @@ export function RepresentantesTab() {
               onKeyDown={handleKeyDown}
               className="flex-1"
             />
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="incluirInativos"
-                checked={incluirInativos}
-                onCheckedChange={(c) => setIncluirInativos(c as boolean)}
-              />
-              <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
-            </div>
+            <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativo' | 'inativo' | 'todos')}>
+              <SelectTrigger className="w-[140px] h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
             <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Buscar</span>

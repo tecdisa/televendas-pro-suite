@@ -28,7 +28,7 @@ function normalizeGrupo(raw: any): Grupo {
 }
 
 export const groupsService = {
-  async getAll(query?: string, page = 1, limit = 100, incluirInativos = false): Promise<{ data: Grupo[]; total: number }> {
+  async getAll(query?: string, page = 1, limit = 100, incluirInativos = false, apenasInativos = false): Promise<{ data: Grupo[]; total: number }> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
 
@@ -42,6 +42,7 @@ export const groupsService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (incluirInativos) params.set('incluirInativos', 'true');
+    if (apenasInativos) params.set('apenasInativos', 'true');
     if (query?.trim()) params.set('q', query.trim());
 
     try {

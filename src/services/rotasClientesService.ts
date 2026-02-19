@@ -35,7 +35,8 @@ export const rotasClientesService = {
     query?: string,
     page = 1,
     limit = 100,
-    incluirInativos = false
+    incluirInativos = false,
+    apenasInativos = false
   ): Promise<{ data: RotaCliente[]; page: number; limit: number; total: number }> {
     const empresaId = await getEmpresaId();
 
@@ -45,6 +46,7 @@ export const rotasClientesService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (incluirInativos) params.set('incluirInativos', 'true');
+    if (apenasInativos) params.set('apenasInativos', 'true');
 
     const url = `${API_BASE}/api/rotas-clientes?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
