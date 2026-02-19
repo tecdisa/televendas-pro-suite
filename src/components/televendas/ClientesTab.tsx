@@ -1166,7 +1166,10 @@ const validateFormData = (data: ClientFormData): string[] => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="p-0 h-auto hover:bg-transparent gap-2">
+              <Button
+                variant="ghost"
+                className="p-0 h-auto hover:bg-transparent text-foreground hover:text-foreground gap-2"
+              >
                 <CardTitle className="cursor-pointer">Filtros</CardTitle>
                 {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
