@@ -18,8 +18,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2 } from 'lucide-react';
+import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto } from '@/services/metadataService';
@@ -279,6 +280,7 @@ export const ClientesTab = () => {
     classe: 'all',
   });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [selectedOperacao, setSelectedOperacao] = useState('');
 
   // CRUD dialogs & state
@@ -1159,10 +1161,16 @@ const validateFormData = (data: ClientFormData): string[] => {
 
   return (
     <div className="space-y-4">
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle>Filtros</CardTitle>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="p-0 h-auto hover:bg-transparent gap-2">
+                <CardTitle className="cursor-pointer">Filtros</CardTitle>
+                {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
@@ -1188,7 +1196,8 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CollapsibleContent>
+        <CardContent className="space-y-3 pt-0">
           {/* Row 1: Tipo Pessoa, Status, Itinerário, Visita, Cliente (código) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div>
@@ -1383,7 +1392,9 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
           </div>
         </CardContent>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
 
       <Card>
         <CardHeader className="pb-3">
