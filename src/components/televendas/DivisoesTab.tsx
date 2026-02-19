@@ -30,7 +30,7 @@ export function DivisoesTab() {
   const [gruposLoading, setGruposLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterGrupoId, setFilterGrupoId] = useState<number | undefined>(undefined);
-  const [filtroStatus, setFiltroStatus] = useState<'ativo' | 'inativo' | 'todos'>('ativo');
+  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -48,7 +48,7 @@ export function DivisoesTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const result = await divisionsService.getAll(search, filterGrupoId, nextPage, PAGE_LIMIT, filtroStatus !== 'ativo', filtroStatus === 'inativo');
+      const result = await divisionsService.getAll(search, filterGrupoId, nextPage, PAGE_LIMIT, filtroStatus);
       setDivisoes((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(nextPage);
       const total = result.total ?? 0;
@@ -65,7 +65,7 @@ export function DivisoesTab() {
   const loadGrupos = async () => {
     setGruposLoading(true);
     try {
-      const result = await groupsService.getAll('', 1, 500, false);
+      const result = await groupsService.getAll('', 1, 500);
       setGrupos(result.data);
     } catch (error) {
       console.error('Erro ao carregar grupos:', error);
@@ -280,13 +280,13 @@ export function DivisoesTab() {
               </Select>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-              <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativo' | 'inativo' | 'todos')}>
+              <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativos' | 'inativos' | 'todos')}>
                 <SelectTrigger className="w-[140px] h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="ativos">Ativo</SelectItem>
+                  <SelectItem value="inativos">Inativo</SelectItem>
                   <SelectItem value="todos">Todos</SelectItem>
                 </SelectContent>
               </Select>

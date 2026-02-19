@@ -71,13 +71,12 @@ export const prazosPagamentosService = {
     query?: string,
     page = 1,
     limit = 100,
-    incluirInativos = false,
+    status: 'ativos' | 'inativos' | 'todos' = 'ativos',
     filters?: {
       cartao?: boolean;
       mobile?: boolean;
       b2b?: boolean;
-    },
-    apenasInativos = false
+    }
   ): Promise<{ data: PrazoPagamento[]; page: number; limit: number; total: number }> {
     const empresaId = await getEmpresaId();
 
@@ -86,8 +85,8 @@ export const prazosPagamentosService = {
     if (query) params.set('q', query);
     params.set('page', String(page));
     params.set('limit', String(limit));
-    if (incluirInativos) params.set('incluirInativos', 'true');
-    if (apenasInativos) params.set('apenasInativos', 'true');
+    params.set('status', status);
+    if (status === 'todos') params.set('incluirInativos', 'true');
     if (filters?.cartao !== undefined) params.set('cartao', String(filters.cartao));
     if (filters?.mobile !== undefined) params.set('mobile', String(filters.mobile));
     if (filters?.b2b !== undefined) params.set('b2b', String(filters.b2b));
