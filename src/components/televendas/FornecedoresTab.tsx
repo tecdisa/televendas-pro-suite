@@ -101,7 +101,7 @@ export function FornecedoresTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState<'ativo' | 'inativo' | 'todos'>('ativo');
+  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [filtroRevenda, setFiltroRevenda] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -165,7 +165,7 @@ export function FornecedoresTab() {
     try {
       const nextPage = reset ? 1 : page + 1;
       const revendaValue = revendaOverride !== undefined ? revendaOverride : filtroRevenda;
-      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, filtroStatus !== 'ativo', revendaValue || undefined, filtroStatus === 'inativo');
+      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, filtroStatus, revendaValue || undefined);
       setFornecedores((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(nextPage);
       const total = result.total ?? 0;
@@ -780,13 +780,13 @@ export function FornecedoresTab() {
               onKeyDown={handleKeyDown}
               className="flex-1"
             />
-            <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativo' | 'inativo' | 'todos')}>
+            <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativos' | 'inativos' | 'todos')}>
               <SelectTrigger className="w-[140px] h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="ativos">Ativo</SelectItem>
+                <SelectItem value="inativos">Inativo</SelectItem>
                 <SelectItem value="todos">Todos</SelectItem>
               </SelectContent>
             </Select>

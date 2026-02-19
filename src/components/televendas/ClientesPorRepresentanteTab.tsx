@@ -67,7 +67,7 @@ export function ClientesPorRepresentanteTab() {
   const loadRepresentantes = async (query?: string) => {
     setRepLoading(true);
     try {
-      const result = await representativesService.getAll(query, 1, 200, false);
+      const result = await representativesService.getAll(query, 1, 200);
       setRepresentantes(result.data);
     } catch (e: any) {
       toast.error('Erro ao carregar representantes');
@@ -257,7 +257,7 @@ export function ClientesPorRepresentanteTab() {
     setCopyRepSearch('');
     setCopyRepLoading(true);
     try {
-      const result = await representativesService.getAll('', 1, 200, false);
+      const result = await representativesService.getAll('', 1, 200);
       setCopyRepList(result.data.filter(r => r.representante_id !== selectedRep?.representante_id));
     } catch { } finally {
       setCopyRepLoading(false);

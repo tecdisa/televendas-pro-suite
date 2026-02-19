@@ -62,7 +62,7 @@ function normalizeFornecedor(raw: any): Fornecedor {
 }
 
 export const suppliersService = {
-  async getAll(query?: string, page = 1, limit = 100, incluirInativos = false, revenda?: boolean, apenasInativos = false): Promise<{ data: Fornecedor[]; total: number }> {
+  async getAll(query?: string, page = 1, limit = 100, status: 'ativos' | 'inativos' | 'todos' = 'ativos', revenda?: boolean): Promise<{ data: Fornecedor[]; total: number }> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
 
@@ -75,8 +75,8 @@ export const suppliersService = {
     params.set('empresaId', String(empresaId));
     params.set('page', String(page));
     params.set('limit', String(limit));
-    if (incluirInativos) params.set('incluirInativos', 'true');
-    if (apenasInativos) params.set('apenasInativos', 'true');
+    params.set('status', status);
+    if (status === 'todos') params.set('incluirInativos', 'true');
     if (revenda === true) params.set('revenda', 'true');
     if (query?.trim()) params.set('q', query.trim());
 
