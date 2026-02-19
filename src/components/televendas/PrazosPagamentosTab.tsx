@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Clock, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
@@ -37,7 +38,7 @@ export function PrazosPagamentosTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
-  const [incluirInativos, setIncluirInativos] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState<'ativo' | 'inativo' | 'todos'>('ativo');
   const [filterCartao, setFilterCartao] = useState(false);
   const [filterMobile, setFilterMobile] = useState(false);
   const [filterB2b, setFilterB2b] = useState(false);
@@ -58,11 +59,11 @@ export function PrazosPagamentosTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const result = await prazosPagamentosService.getAll(search, nextPage, PAGE_LIMIT, incluirInativos, {
+      const result = await prazosPagamentosService.getAll(search, nextPage, PAGE_LIMIT, filtroStatus !== 'ativo', {
         cartao: filterCartao,
         mobile: filterMobile,
         b2b: filterB2b,
-      });
+      }, filtroStatus === 'inativo');
       setPrazos((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(result.page ?? nextPage);
       const total = result.total ?? 0;
@@ -78,7 +79,7 @@ export function PrazosPagamentosTab() {
 
   useEffect(() => {
     loadPrazos(true);
-  }, [incluirInativos, filterCartao, filterMobile, filterB2b]);
+  }, [filtroStatus, filterCartao, filterMobile, filterB2b]);
 
   const handleSearch = () => loadPrazos(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -378,12 +379,16 @@ export function PrazosPagamentosTab() {
               className="flex-1"
             />
             <div className="flex flex-wrap items-center gap-3">
-              <Checkbox
-                id="incluirInativos"
-                checked={incluirInativos}
-                onCheckedChange={(c) => setIncluirInativos(c as boolean)}
-              />
-              <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
+              <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativo' | 'inativo' | 'todos')}>
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="filtroCartao"

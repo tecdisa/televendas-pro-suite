@@ -101,7 +101,7 @@ export function FornecedoresTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
-  const [incluirInativos, setIncluirInativos] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState<'ativo' | 'inativo' | 'todos'>('ativo');
   const [filtroRevenda, setFiltroRevenda] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -154,7 +154,7 @@ export function FornecedoresTab() {
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
 
-  const loadFornecedores = async (reset = false, inativosOverride?: boolean, revendaOverride?: boolean) => {
+  const loadFornecedores = async (reset = false, _inativosOverride?: boolean, revendaOverride?: boolean) => {
     if (loading) return;
     setLoading(true);
     if (reset) {
@@ -164,9 +164,8 @@ export function FornecedoresTab() {
     }
     try {
       const nextPage = reset ? 1 : page + 1;
-      const incluirInativosValue = inativosOverride !== undefined ? inativosOverride : incluirInativos;
       const revendaValue = revendaOverride !== undefined ? revendaOverride : filtroRevenda;
-      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, incluirInativosValue, revendaValue || undefined);
+      const result = await suppliersService.getAll(search, nextPage, PAGE_LIMIT, filtroStatus !== 'ativo', revendaValue || undefined, filtroStatus === 'inativo');
       setFornecedores((prev) => (reset ? result.data : [...prev, ...result.data]));
       setPage(nextPage);
       const total = result.total ?? 0;
@@ -325,7 +324,7 @@ export function FornecedoresTab() {
 
   useEffect(() => {
     loadFornecedores(true);
-  }, []);
+  }, [filtroStatus]);
 
   useEffect(() => {
     if (createOpen || editOpen) {
@@ -781,18 +780,16 @@ export function FornecedoresTab() {
               onKeyDown={handleKeyDown}
               className="flex-1"
             />
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="incluirInativos"
-                checked={incluirInativos}
-                onCheckedChange={(c) => {
-                  const newValue = c as boolean;
-                  setIncluirInativos(newValue);
-                  loadFornecedores(true, newValue);
-                }}
-              />
-              <label htmlFor="incluirInativos" className="text-sm whitespace-nowrap">Incluir inativos</label>
-            </div>
+            <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativo' | 'inativo' | 'todos')}>
+              <SelectTrigger className="w-[140px] h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="filtroRevenda"

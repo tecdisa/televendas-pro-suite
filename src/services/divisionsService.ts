@@ -30,7 +30,7 @@ function normalizeDivisao(raw: any): Divisao {
 }
 
 export const divisionsService = {
-  async getAll(query?: string, grupoId?: number, page = 1, limit = 100, incluirInativos = false): Promise<{ data: Divisao[]; total: number }> {
+  async getAll(query?: string, grupoId?: number, page = 1, limit = 100, incluirInativos = false, apenasInativos = false): Promise<{ data: Divisao[]; total: number }> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
 
@@ -44,6 +44,7 @@ export const divisionsService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (incluirInativos) params.set('incluirInativos', 'true');
+    if (apenasInativos) params.set('apenasInativos', 'true');
     if (query?.trim()) params.set('q', query.trim());
     if (grupoId) params.set('grupoId', String(grupoId));
 
