@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto } from '@/services/metadataService';
@@ -1294,19 +1295,20 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <TableHead className="w-12">UF</TableHead>
                   <TableHead className="hidden lg:table-cell">Bairro</TableHead>
                   <TableHead className="hidden sm:table-cell">Telefone</TableHead>
+                  <TableHead className="text-center w-28">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isClientsInitialLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : clients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Nenhum cliente encontrado
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                       Nenhum cliente encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1324,12 +1326,42 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <TableCell>{client.uf}</TableCell>
                       <TableCell className="hidden lg:table-cell">{client.bairro}</TableCell>
                       <TableCell className="hidden sm:table-cell">{client.fone}</TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setClientInfoId(client.id); setClientInfoOpen(true); }}>
+                                  <Info className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Visualizar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedClients([client.id]); setTimeout(() => openEditDialog(), 0); }}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => { setSelectedClients([client.id]); setTimeout(() => handleDelete(), 0); }}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
                 {isClientsLoadingMore && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
