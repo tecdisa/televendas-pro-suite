@@ -262,10 +262,21 @@ export const ClientesTab = () => {
   const clientsRequestId = useRef(0);
   const [filters, setFilters] = useState({
     search: '',
+    tipoPessoa: 'all' as 'all' | 'geral' | 'fisica' | 'juridica',
+    status: 'ativos' as 'ativos' | 'inativos' | 'todos',
+    itinerario: '',
+    visita: 'all' as 'all' | 'semanal' | 'quinzenal' | '28dias',
+    codigoCliente: '',
+    dtBase: '',
+    cadastroDe: '',
+    cadastroAte: '',
     uf: 'all',
     cidade: 'all',
     bairro: '',
-    todos: false
+    semAgendamento: false,
+    rota: 'all',
+    rede: 'all',
+    classe: 'all',
   });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOperacao, setSelectedOperacao] = useState('');
@@ -327,6 +338,8 @@ export const ClientesTab = () => {
   const [filterUfsLoading, setFilterUfsLoading] = useState(false);
   const [filterCidades, setFilterCidades] = useState<Cidade[]>([]);
   const [filterCidadesLoading, setFilterCidadesLoading] = useState(false);
+  const [filterRotas, setFilterRotas] = useState<Rota[]>([]);
+  const [filterRedes, setFilterRedes] = useState<Rede[]>([]);
 
   const onTabelaDialogChange = (open: boolean) => {
     setTabelaSearchOpen(open);
@@ -475,6 +488,9 @@ export const ClientesTab = () => {
   useEffect(() => {
     loadClients(undefined, true);
     loadFilterUfs();
+    // Load rotas and redes for filter dropdowns
+    metadataService.getRotas().then(setFilterRotas).catch(() => {});
+    metadataService.getRedes().then(setFilterRedes).catch(() => {});
   }, []);
 
   // Carregar rotas, tabelas e UFs quando abrir os dialogs de criação/edição
@@ -727,7 +743,7 @@ export const ClientesTab = () => {
   const loadClients = async (nextFilters?: typeof filters, reset = false) => {
     if (clientsLoading) return;
     const active = nextFilters ?? filters;
-    const ignoreFilters = active.todos;
+    
     const nextPage = reset ? 1 : clientsPage + 1;
     if (reset) {
       setClients([]);
@@ -738,10 +754,14 @@ export const ClientesTab = () => {
     const requestId = ++clientsRequestId.current;
     try {
       const data = await clientsService.search({
-        query: ignoreFilters ? undefined : active.search,
-        uf: !ignoreFilters && active.uf !== 'all' ? active.uf : undefined,
-        cidade: !ignoreFilters && active.cidade !== 'all' ? active.cidade : undefined,
-        bairro: !ignoreFilters && active.bairro ? active.bairro.trim() : undefined,
+        query: active.search || undefined,
+        uf: active.uf !== 'all' ? active.uf : undefined,
+        cidade: active.cidade !== 'all' ? active.cidade : undefined,
+        bairro: active.bairro ? active.bairro.trim() : undefined,
+        codigoCliente: active.codigoCliente || undefined,
+        rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
+        redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
+        inativo: active.status === 'inativos' ? true : (active.status === 'todos' ? undefined : false),
       }, undefined, nextPage, CLIENT_LIMIT);
       if (requestId !== clientsRequestId.current) return;
       setClients((prev) => (reset ? data : [...prev, ...data]));
@@ -1148,33 +1168,124 @@ const validateFormData = (data: ClientFormData): string[] => {
                 variant="outline" 
                 size="sm"
                 onClick={() => {
-                  const defaultFilters = { search: '', uf: 'all', cidade: 'all', bairro: '', todos: false };
+                  const defaultFilters = {
+                    search: '', tipoPessoa: 'all' as const, status: 'ativos' as const,
+                    itinerario: '', visita: 'all' as const, codigoCliente: '',
+                    dtBase: '', cadastroDe: '', cadastroAte: '',
+                    uf: 'all', cidade: 'all', bairro: '',
+                    semAgendamento: false, rota: 'all', rede: 'all', classe: 'all',
+                  };
                   setFilters(defaultFilters);
                   setFilterCidades([]);
                   loadClients(defaultFilters, true);
                 }}
               >
-                Limpar
+                Limpar filtros
               </Button>
               <Button onClick={() => loadClients(undefined, true)} size="sm">
-                <Search className="h-4 w-4 mr-2" /> Filtrar
+                <Search className="h-4 w-4 mr-2" /> Pesquisar
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <CardContent className="space-y-3">
+          {/* Row 1: Tipo Pessoa, Status, Itinerário, Visita, Cliente (código) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div>
-              <label className="text-sm font-medium mb-2 block">Pesquisa</label>
+              <label className="text-sm font-medium mb-1 block">Tipo Pessoa</label>
+              <Select value={filters.tipoPessoa} onValueChange={(v: any) => setFilters({...filters, tipoPessoa: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Geral</SelectItem>
+                  <SelectItem value="fisica">Física</SelectItem>
+                  <SelectItem value="juridica">Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Status</label>
+              <Select value={filters.status} onValueChange={(v: any) => setFilters({...filters, status: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativos">Ativo</SelectItem>
+                  <SelectItem value="inativos">Inativo</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Itinerário</label>
               <Input 
-                placeholder="Nome ou código"
+                placeholder="Itinerário"
+                value={filters.itinerario}
+                onChange={(e) => setFilters({...filters, itinerario: e.target.value})}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Visita</label>
+              <Select value={filters.visita} onValueChange={(v: any) => setFilters({...filters, visita: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="semanal">Semanal</SelectItem>
+                  <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                  <SelectItem value="28dias">28 dias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Cód. Cliente</label>
+              <Input 
+                placeholder="0"
+                value={filters.codigoCliente}
+                onChange={(e) => setFilters({...filters, codigoCliente: e.target.value})}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Dt. Base, Cadastro (de/até), Pesquisa */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Dt. Base</label>
+              <Input 
+                type="date"
+                value={filters.dtBase}
+                onChange={(e) => setFilters({...filters, dtBase: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Cadastro de</label>
+              <Input 
+                type="date"
+                value={filters.cadastroDe}
+                onChange={(e) => setFilters({...filters, cadastroDe: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Cadastro até</label>
+              <Input 
+                type="date"
+                value={filters.cadastroAte}
+                onChange={(e) => setFilters({...filters, cadastroAte: e.target.value})}
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <label className="text-sm font-medium mb-1 block">Pesquisa</label>
+              <Input 
+                placeholder="Nome, fantasia ou código"
                 value={filters.search}
                 onChange={(e) => setFilters({...filters, search: e.target.value})}
                 onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
               />
             </div>
+          </div>
+
+          {/* Row 3: UF, Cidade, Sem Agendamento */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div>
-              <label className="text-sm font-medium mb-2 block">UF</label>
+              <label className="text-sm font-medium mb-1 block">UF</label>
               <Select 
                 value={filters.uf} 
                 onValueChange={(v) => {
@@ -1195,7 +1306,7 @@ const validateFormData = (data: ClientFormData): string[] => {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Cidade</label>
+              <label className="text-sm font-medium mb-1 block">Cidade</label>
               <Select 
                 value={filters.cidade} 
                 onValueChange={(v) => setFilters({...filters, cidade: v})}
@@ -1212,8 +1323,24 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-end">
+              <div className="flex items-center space-x-2 pb-2">
+                <Checkbox 
+                  id="semAgendamento"
+                  checked={filters.semAgendamento}
+                  onCheckedChange={(checked) => setFilters({...filters, semAgendamento: checked as boolean})}
+                />
+                <label htmlFor="semAgendamento" className="text-sm font-medium">
+                  Sem Agendamento
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 4: Bairro, Rota, Rede */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div>
-              <label className="text-sm font-medium mb-2 block">Bairro</label>
+              <label className="text-sm font-medium mb-1 block">Bairro</label>
               <Input 
                 placeholder="Bairro"
                 value={filters.bairro}
@@ -1221,21 +1348,38 @@ const validateFormData = (data: ClientFormData): string[] => {
                 onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
               />
             </div>
-            <div className="flex items-end">
-              <div className="flex items-center space-x-2 pb-2">
-                <Checkbox 
-                  id="todos"
-                  checked={filters.todos}
-                  onCheckedChange={(checked) => {
-                    const next = { ...filters, todos: checked as boolean };
-                    setFilters(next);
-                    loadClients(next, true);
-                  }}
-                />
-                <label htmlFor="todos" className="text-sm font-medium">
-                  Mostrar todos
-                </label>
-              </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Rota</label>
+              <Select value={filters.rota} onValueChange={(v) => setFilters({...filters, rota: v})}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {filterRotas.map(r => (
+                    <SelectItem key={r.id} value={String(r.id)}>{r.label || r.descricao_rota || r.codigo_rota || String(r.id)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Rede</label>
+              <Select value={filters.rede} onValueChange={(v) => setFilters({...filters, rede: v})}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {filterRedes.map(r => (
+                    <SelectItem key={String(r.id)} value={String(r.id)}>{r.descricao}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Classe</label>
+              <Select value={filters.classe} onValueChange={(v) => setFilters({...filters, classe: v})}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
