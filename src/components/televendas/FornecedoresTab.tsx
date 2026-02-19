@@ -92,6 +92,7 @@ const initialFormData = {
   obs: '',
   inativo: false,
   revenda: false,
+  cadastra_produtos: false,
 };
 
 export function FornecedoresTab() {
@@ -386,6 +387,7 @@ export function FornecedoresTab() {
           obs: detail.obs || '',
           inativo: detail.inativo || false,
           revenda: detail.revenda || false,
+          cadastra_produtos: detail.cadastra_produtos ?? false,
         };
         setFormData(nextData);
         setFormSnapshot(nextData);
@@ -425,6 +427,7 @@ export function FornecedoresTab() {
         obs: formData.obs.trim() || undefined,
         inativo: formData.inativo,
         revenda: formData.revenda,
+        cadastra_produtos: Boolean(formData.cadastra_produtos),
       });
       toast.success('Fornecedor criado com sucesso');
       setCreateOpen(false);
@@ -463,6 +466,7 @@ export function FornecedoresTab() {
         obs: formData.obs.trim() || undefined,
         inativo: formData.inativo,
         revenda: formData.revenda,
+        cadastra_produtos: Boolean(formData.cadastra_produtos),
       });
       toast.success('Fornecedor atualizado com sucesso');
       setEditOpen(false);
@@ -730,6 +734,14 @@ export function FornecedoresTab() {
       </TabsContent>
 
       <TabsContent value="complementar" className="m-0 space-y-4 mt-4">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.cadastra_produtos}
+            onCheckedChange={(c) => setFormData({ ...formData, cadastra_produtos: c as boolean })}
+          />
+          <label className="text-sm">Permite cadastrar produtos</label>
+        </div>
+
         <div className="grid grid-cols-12 gap-3 items-end">
           <div className="col-span-12">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresas Autorizadas</label>

@@ -25,6 +25,7 @@ export interface Fornecedor {
   obs?: string;
   inativo?: boolean;
   revenda?: boolean;
+  cadastra_produtos?: boolean;
 }
 
 export interface FornecedorResponse {
@@ -58,6 +59,7 @@ function normalizeFornecedor(raw: any): Fornecedor {
     obs: raw?.obs?.trim() ?? undefined,
     inativo: Boolean(raw?.inativo ?? false),
     revenda: Boolean(raw?.revenda ?? false),
+    cadastra_produtos: Boolean(raw?.cadastra_produtos ?? raw?.cadastraProdutos ?? false),
   };
 }
 
@@ -131,6 +133,7 @@ export const suppliersService = {
     obs?: string;
     inativo?: boolean;
     revenda?: boolean;
+    cadastra_produtos?: boolean;
   }): Promise<Fornecedor> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
