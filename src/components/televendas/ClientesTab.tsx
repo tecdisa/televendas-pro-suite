@@ -1250,31 +1250,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo</span>
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {
-                  if (selectedClients.length !== 1) {
-                    toast.error('Selecione exatamente um cliente para visualizar');
-                    return;
-                  }
-                  setClientInfoId(selectedClients[0]);
-                  setClientInfoOpen(true);
-                }}
-                disabled={selectedClients.length !== 1}
-                className="flex-1 sm:flex-none"
-              >
-                <Info className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Visualizar</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={openEditDialog} disabled={selectedClients.length !== 1} className="flex-1 sm:flex-none">
-                <Pencil className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Editar</span>
-              </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={selectedClients.length === 0} className="flex-1 sm:flex-none">
-                <Trash2 className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Excluir</span>
-              </Button>
             </div>
           </div>
         </CardHeader>
