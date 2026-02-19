@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Grid3X3, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
@@ -307,7 +308,7 @@ export function DivisoesTab() {
                     <TableHead>Descrição</TableHead>
                     <TableHead className="hidden md:table-cell">Grupo</TableHead>
                     <TableHead className="w-20">Status</TableHead>
-                    <TableHead className="w-24 text-right">Ações</TableHead>
+                    <TableHead className="w-28 text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -336,25 +337,37 @@ export function DivisoesTab() {
                             {d.inativo ? 'Inativo' : 'Ativo'}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => handleDelete(d.divisao_id)}
-                              disabled={deleteLoading === d.divisao_id}
-                            >
-                              {deleteLoading === d.divisao_id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
-                          </div>
+                        <TableCell className="text-center">
+                          <TooltipProvider>
+                            <div className="flex items-center justify-center gap-0.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}>
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => handleDelete(d.divisao_id)}
+                                    disabled={deleteLoading === d.divisao_id}
+                                  >
+                                    {deleteLoading === d.divisao_id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Excluir</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))
