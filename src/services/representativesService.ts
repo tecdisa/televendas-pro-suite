@@ -66,6 +66,21 @@ export interface RepresentanteFormData {
   inativo?: boolean;
 }
 
+export interface RepresentanteFornecedor {
+  fornecedor_id: number;
+  codigo_fornecedor?: string;
+  nome_fornecedor: string;
+  cnpj_cpf?: string;
+  fone?: string;
+  inativo?: boolean;
+}
+
+export interface RepresentanteFornecedorItem {
+  empresa_id?: number;
+  representante: Representante;
+  fornecedor: RepresentanteFornecedor;
+}
+
 function normalizeRepresentante(raw: any): Representante {
   return {
     representante_id: raw.representante_id ?? raw.id ?? 0,
@@ -94,6 +109,25 @@ function normalizeRepresentante(raw: any): Representante {
     quantidade_maxima_pedidos_retidos_para_sincronizar: raw.quantidade_maxima_pedidos_retidos_para_sincronizar ?? raw.quantidadeMaximaPedidosRetidosParaSincronizar ?? 0,
     observacao: raw.observacao ?? raw.obs ?? '',
     inativo: raw.inativo ?? false,
+  };
+}
+
+function normalizeRepresentanteFornecedor(raw: any): RepresentanteFornecedor {
+  return {
+    fornecedor_id: raw?.fornecedor_id ?? raw?.id ?? 0,
+    codigo_fornecedor: raw?.codigo_fornecedor ?? raw?.codigoFornecedor ?? undefined,
+    nome_fornecedor: raw?.nome_fornecedor ?? raw?.nomeFornecedor ?? raw?.nome ?? '',
+    cnpj_cpf: raw?.cnpj_cpf ?? raw?.cnpjCpf ?? undefined,
+    fone: raw?.fone ?? raw?.telefone ?? undefined,
+    inativo: Boolean(raw?.inativo ?? false),
+  };
+}
+
+function normalizeRepresentanteFornecedorItem(raw: any): RepresentanteFornecedorItem {
+  return {
+    empresa_id: raw?.empresa_id ?? undefined,
+    representante: normalizeRepresentante(raw?.representante ?? {}),
+    fornecedor: normalizeRepresentanteFornecedor(raw?.fornecedor ?? {}),
   };
 }
 
@@ -270,9 +304,71 @@ export const representativesService = {
     return true;
   },
 
+  async getFornecedores(
+    representanteId: number | string,
+    options?: { q?: string; page?: number; limit?: number }
+  ): Promise<{ data: RepresentanteFornecedorItem[]; page: number; limit: number; total: number }> {
+    const empresaId = await getEmpresaId();
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 100;
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (options?.q?.trim()) params.set('q', options.q.trim());
+
+    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores?${params.toString()}`;
+    const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
+
+    if (!res.ok) {
+      let message = 'Falha ao buscar fornecedores do representante';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+    return {
+      data: arr.map(normalizeRepresentanteFornecedorItem),
+      page: json?.page ?? page,
+      limit: json?.limit ?? limit,
+      total: json?.total ?? arr.length,
+    };
+  },
+
+  async addFornecedor(
+    representanteId: number | string,
+    fornecedorId: number | string
+  ): Promise<boolean> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores?${params.toString()}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ fornecedorId: Number(fornecedorId) }),
+    });
+
+    if (!res.ok && res.status !== 201 && res.status !== 204) {
+      let message = 'Falha ao incluir fornecedor no representante';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    return true;
+  },
+
   // Legacy method for backward compatibility with existing components
   async find(query?: string, page = 1, limit = 100): Promise<Representative[]> {
-    const result = await this.getAll(query, page, limit, false);
+    const result = await this.getAll(query, page, limit, 'ativos');
     return result.data.map((r) => ({
       id: String(r.representante_id),
       codigoRepresentante: r.codigo_representante,

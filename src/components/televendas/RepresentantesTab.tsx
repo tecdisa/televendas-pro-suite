@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
 import { clientsService } from '@/services/clientsService';
+import { RepresentantesPastasTab } from '@/components/televendas/RepresentantesPastasTab';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -94,6 +95,7 @@ export function RepresentantesTab() {
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
+  const [sectionTab, setSectionTab] = useState<'pesquisa' | 'pastas'>('pesquisa');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -786,136 +788,156 @@ export function RepresentantesTab() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <UserCheck className="h-5 w-5" />
-              Representantes
-            </CardTitle>
-            <Button onClick={openCreate} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Representante
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
-            <Input
-              placeholder="Buscar por nome, CPF/CNPJ ou código..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1"
-            />
-            <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativos' | 'inativos' | 'todos')}>
-              <SelectTrigger className="w-[140px] h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ativos">Ativo</SelectItem>
-                <SelectItem value="inativos">Inativo</SelectItem>
-                <SelectItem value="todos">Todos</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
-              <Search className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Buscar</span>
-            </Button>
-          </div>
+      <Tabs value={sectionTab} onValueChange={(value) => setSectionTab(value as 'pesquisa' | 'pastas')} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="pesquisa">Pesquisa</TabsTrigger>
+          <TabsTrigger value="pastas">Pastas</TabsTrigger>
+        </TabsList>
 
-          <div className="border rounded-md overflow-hidden">
-            <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
-              <div className="overflow-x-auto">
-                <Table className="min-w-[700px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-20">Código</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
-                    <TableHead className="hidden lg:table-cell w-12">UF</TableHead>
-                    <TableHead className="hidden lg:table-cell">Telefone</TableHead>
-                    <TableHead className="hidden xl:table-cell">E-mail</TableHead>
-                    <TableHead className="w-20">Status</TableHead>
-                    <TableHead className="w-28 text-center">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isInitialLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : representantes.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        Nenhum representante encontrado
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    representantes.map((r) => (
-                      <TableRow key={r.representante_id} className={r.inativo ? 'opacity-50' : ''}>
-                        <TableCell className="font-mono text-xs">{r.codigo_representante || '-'}</TableCell>
-                        <TableCell className="font-medium">{r.nome_representante}</TableCell>
-                        <TableCell className="hidden md:table-cell text-xs">{r.cnpj_cpf || '-'}</TableCell>
-                        <TableCell className="hidden lg:table-cell">{r.uf || '-'}</TableCell>
-                        <TableCell className="hidden lg:table-cell text-xs">{r.fone || '-'}</TableCell>
-                        <TableCell className="hidden xl:table-cell text-xs">{r.email || '-'}</TableCell>
-                        <TableCell>
-                          <span className={`text-xs px-2 py-0.5 rounded ${r.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
-                            {r.inativo ? 'Inativo' : 'Ativo'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <TooltipProvider>
-                            <div className="flex items-center justify-center gap-0.5">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Editar</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => handleDelete(r.representante_id)}
-                                    disabled={deleteLoading === r.representante_id}
-                                  >
-                                    {deleteLoading === r.representante_id ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Excluir</TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </TooltipProvider>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                  {isLoadingMore && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+        <TabsContent value="pesquisa" className="mt-0">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <UserCheck className="h-5 w-5" />
+                  Representantes
+                </CardTitle>
+                <Button onClick={openCreate} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Representante
+                </Button>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <Input
+                  placeholder="Buscar por nome, CPF/CNPJ ou código..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1"
+                />
+                <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativos' | 'inativos' | 'todos')}>
+                  <SelectTrigger className="w-[140px] h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativos">Ativo</SelectItem>
+                    <SelectItem value="inativos">Inativo</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+                  <Search className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Buscar</span>
+                </Button>
+              </div>
+
+              <div className="border rounded-md overflow-hidden">
+                <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleListScroll}>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[700px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-20">Código</TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
+                          <TableHead className="hidden lg:table-cell w-12">UF</TableHead>
+                          <TableHead className="hidden lg:table-cell">Telefone</TableHead>
+                          <TableHead className="hidden xl:table-cell">E-mail</TableHead>
+                          <TableHead className="w-20">Status</TableHead>
+                          <TableHead className="w-28 text-center">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {isInitialLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                              <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                            </TableCell>
+                          </TableRow>
+                        ) : representantes.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                              Nenhum representante encontrado
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          representantes.map((r) => (
+                            <TableRow key={r.representante_id} className={r.inativo ? 'opacity-50' : ''}>
+                              <TableCell className="font-mono text-xs">{r.codigo_representante || '-'}</TableCell>
+                              <TableCell className="font-medium">{r.nome_representante}</TableCell>
+                              <TableCell className="hidden md:table-cell text-xs">{r.cnpj_cpf || '-'}</TableCell>
+                              <TableCell className="hidden lg:table-cell">{r.uf || '-'}</TableCell>
+                              <TableCell className="hidden lg:table-cell text-xs">{r.fone || '-'}</TableCell>
+                              <TableCell className="hidden xl:table-cell text-xs">{r.email || '-'}</TableCell>
+                              <TableCell>
+                                <span className={`text-xs px-2 py-0.5 rounded ${r.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
+                                  {r.inativo ? 'Inativo' : 'Ativo'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <TooltipProvider>
+                                  <div className="flex items-center justify-center gap-0.5">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Editar</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => handleDelete(r.representante_id)}
+                                          disabled={deleteLoading === r.representante_id}
+                                        >
+                                          {deleteLoading === r.representante_id ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Excluir</TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                </TooltipProvider>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                        {isLoadingMore && (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pastas" className="mt-0">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Pastas por Representante</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RepresentantesPastasTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
