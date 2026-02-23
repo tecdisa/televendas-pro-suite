@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -23,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { clientsService, Client } from '@/services/clientsService';
-import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto } from '@/services/metadataService';
+import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto, FormaPagamento } from '@/services/metadataService';
 import { representativesService, Representative } from '@/services/representativesService';
 import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from './ClientInfoModal';
@@ -95,6 +96,60 @@ const summarizeSelection = (items: string[], emptyLabel = 'Selecione...') => {
   if (filtered.length <= 2) return filtered.join(', ');
   return `${filtered.slice(0, 2).join(', ')} +${filtered.length - 2}`;
 };
+
+type ClientListFilters = {
+  status: 'ativos' | 'inativos' | 'todos';
+  searchMode: 'inicial' | 'contido';
+  search: string;
+  todos: boolean;
+  clientesB2b: boolean;
+  filtrarCidades: boolean;
+  tipoPessoa: 'all' | 'fisica' | 'juridica';
+  uf: string;
+  cidade: string;
+  bairro: string;
+  classe: string;
+  formaPagto: string;
+  prazoPagto: string;
+  boletoBancario: boolean;
+  rota: string;
+  rede: string;
+  tabelaPreco: string;
+  limiteCredito: string;
+  situacaoCredito: 'all' | 'ok' | 'bloqueado' | 'vencido';
+  dependencia: string;
+  naoPositivadoDesde: string;
+  cadastroDe: string;
+  cadastroAte: string;
+};
+
+const defaultClientFilters: ClientListFilters = {
+  status: 'ativos',
+  searchMode: 'contido',
+  search: '',
+  todos: false,
+  clientesB2b: false,
+  filtrarCidades: false,
+  tipoPessoa: 'all',
+  uf: 'all',
+  cidade: 'all',
+  bairro: '',
+  classe: 'all',
+  formaPagto: 'all',
+  prazoPagto: 'all',
+  boletoBancario: false,
+  rota: 'all',
+  rede: 'all',
+  tabelaPreco: 'all',
+  limiteCredito: '',
+  situacaoCredito: 'all',
+  dependencia: '',
+  naoPositivadoDesde: '',
+  cadastroDe: '',
+  cadastroAte: '',
+};
+const CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY = 'televendas:clientes:filtersOpen';
+
 const createEmptyFormData = () => ({
   codigoCliente: '',
   inativo: false,
@@ -261,26 +316,19 @@ export const ClientesTab = () => {
   const [clientsHasMore, setClientsHasMore] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
   const clientsRequestId = useRef(0);
-  const [filters, setFilters] = useState({
-    search: '',
-    tipoPessoa: 'all' as 'all' | 'geral' | 'fisica' | 'juridica',
-    status: 'ativos' as 'ativos' | 'inativos' | 'todos',
-    itinerario: '',
-    visita: 'all' as 'all' | 'semanal' | 'quinzenal' | '28dias',
-    codigoCliente: '',
-    dtBase: '',
-    cadastroDe: '',
-    cadastroAte: '',
-    uf: 'all',
-    cidade: 'all',
-    bairro: '',
-    semAgendamento: false,
-    rota: 'all',
-    rede: 'all',
-    classe: 'all',
-  });
+  const [filters, setFilters] = useState<ClientListFilters>(defaultClientFilters);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return true;
+      const saved = window.localStorage.getItem(CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY);
+      if (saved === 'true') return true;
+      if (saved === 'false') return false;
+      return true;
+    } catch {
+      return true;
+    }
+  });
   const [selectedOperacao, setSelectedOperacao] = useState('');
 
   // CRUD dialogs & state
@@ -342,6 +390,7 @@ export const ClientesTab = () => {
   const [filterCidadesLoading, setFilterCidadesLoading] = useState(false);
   const [filterRotas, setFilterRotas] = useState<Rota[]>([]);
   const [filterRedes, setFilterRedes] = useState<Rede[]>([]);
+  const [filterFormas, setFilterFormas] = useState<FormaPagamento[]>([]);
 
   const onTabelaDialogChange = (open: boolean) => {
     setTabelaSearchOpen(open);
@@ -493,7 +542,18 @@ export const ClientesTab = () => {
     // Load rotas and redes for filter dropdowns
     metadataService.getRotas().then(setFilterRotas).catch(() => {});
     metadataService.getRedes().then(setFilterRedes).catch(() => {});
+    metadataService.getFormasPagamento().then(setFilterFormas).catch(() => {});
+    loadSegmentos();
+    loadPrazos();
+    loadTabelas();
   }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY, String(filtersOpen));
+    } catch {}
+  }, [filtersOpen]);
 
   // Carregar rotas, tabelas e UFs quando abrir os dialogs de criação/edição
   useEffect(() => {
@@ -755,15 +815,32 @@ export const ClientesTab = () => {
     setClientsLoading(true);
     const requestId = ++clientsRequestId.current;
     try {
+      const trimmedSearch = active.search.trim();
+      const effectiveStatus = active.todos ? 'todos' : active.status;
+      const limiteCredito = active.limiteCredito ? Number(String(active.limiteCredito).replace(',', '.')) : undefined;
       const data = await clientsService.search({
-        query: active.search || undefined,
-        uf: active.uf !== 'all' ? active.uf : undefined,
-        cidade: active.cidade !== 'all' ? active.cidade : undefined,
+        query: trimmedSearch || undefined,
+        searchMode: active.searchMode,
+        tipoPessoa: active.tipoPessoa !== 'all' ? active.tipoPessoa : undefined,
+        uf: active.filtrarCidades && active.uf !== 'all' ? active.uf : undefined,
+        cidade: active.filtrarCidades && active.cidade !== 'all' ? active.cidade : undefined,
         bairro: active.bairro ? active.bairro.trim() : undefined,
-        codigoCliente: active.codigoCliente || undefined,
+        segmentoId: active.classe !== 'all' ? Number(active.classe) : undefined,
+        formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
+        prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
+        boleto: active.boletoBancario ? true : undefined,
+        tabelaId: active.tabelaPreco !== 'all' ? Number(active.tabelaPreco) : undefined,
         rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
         redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
-        inativo: active.status === 'inativos' ? true : (active.status === 'todos' ? undefined : false),
+        limiteCredito: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
+        situacaoCredito: active.situacaoCredito !== 'all' ? active.situacaoCredito : undefined,
+        dependencia: active.dependencia.trim() || undefined,
+        b2bLiberado: active.clientesB2b ? true : undefined,
+        naoPositivadoDesde: active.naoPositivadoDesde || undefined,
+        cadastroDe: active.cadastroDe || undefined,
+        cadastroAte: active.cadastroAte || undefined,
+        status: effectiveStatus,
+        inativo: effectiveStatus === 'inativos' ? true : (effectiveStatus === 'todos' ? undefined : false),
       }, undefined, nextPage, CLIENT_LIMIT);
       if (requestId !== clientsRequestId.current) return;
       setClients((prev) => (reset ? data : [...prev, ...data]));
@@ -1164,7 +1241,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
@@ -1174,224 +1251,304 @@ const validateFormData = (data: ClientFormData): string[] => {
                 {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 pb-3">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium mb-1 block">Status</label>
+              <Select
+                value={filters.status}
+                onValueChange={(v: 'ativos' | 'inativos' | 'todos') =>
+                  setFilters((prev) => ({ ...prev, status: v, todos: v === 'todos' }))
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativos">Ativos</SelectItem>
+                  <SelectItem value="inativos">Inativos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-6">
+              <label className="text-sm font-medium mb-1 block">Pesquisa</label>
+              <Input
+                placeholder="Digite para pesquisar..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Button onClick={() => loadClients(undefined, true)} className="w-full">
+                <Search className="h-4 w-4 mr-2" /> Pesquisar
+              </Button>
+            </div>
+            <div className="md:col-span-2">
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={() => {
-                  const defaultFilters = {
-                    search: '', tipoPessoa: 'all' as const, status: 'ativos' as const,
-                    itinerario: '', visita: 'all' as const, codigoCliente: '',
-                    dtBase: '', cadastroDe: '', cadastroAte: '',
-                    uf: 'all', cidade: 'all', bairro: '',
-                    semAgendamento: false, rota: 'all', rede: 'all', classe: 'all',
-                  };
-                  setFilters(defaultFilters);
+                  const next = { ...defaultClientFilters };
+                  setFilters(next);
                   setFilterCidades([]);
-                  loadClients(defaultFilters, true);
+                  loadClients(next, true);
                 }}
               >
                 Limpar filtros
               </Button>
-              <Button onClick={() => loadClients(undefined, true)} size="sm">
-                <Search className="h-4 w-4 mr-2" /> Pesquisar
-              </Button>
             </div>
           </div>
-        </CardHeader>
+        </CardContent>
         <CollapsibleContent>
         <CardContent className="space-y-3 pt-0">
-          {/* Row 1: Tipo Pessoa, Status, Itinerário, Visita, Cliente (código) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Tipo Pessoa</label>
-              <Select value={filters.tipoPessoa} onValueChange={(v: any) => setFilters({...filters, tipoPessoa: v})}>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Tipo de busca</label>
+              <RadioGroup
+                value={filters.searchMode}
+                onValueChange={(v: 'inicial' | 'contido') => setFilters({ ...filters, searchMode: v })}
+                className="flex flex-row gap-4"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="inicial" id="searchModeInicial" />
+                  <label htmlFor="searchModeInicial" className="text-sm">Inicial</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="contido" id="searchModeContido" />
+                  <label htmlFor="searchModeContido" className="text-sm">Contido</label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="md:col-span-2 flex items-center gap-2 pt-5">
+              <Checkbox
+                id="todosFilters"
+                checked={filters.todos}
+                onCheckedChange={(checked) => {
+                  const isChecked = checked === true;
+                  setFilters((prev) => ({
+                    ...prev,
+                    todos: isChecked,
+                    status: isChecked ? 'todos' : (prev.status === 'todos' ? 'ativos' : prev.status),
+                  }));
+                }}
+              />
+              <label htmlFor="todosFilters" className="text-sm">Todos</label>
+            </div>
+            <div className="md:col-span-2 flex items-center gap-2 pt-5">
+              <Checkbox
+                id="clientesB2b"
+                checked={filters.clientesB2b}
+                onCheckedChange={(checked) => setFilters({ ...filters, clientesB2b: checked === true })}
+              />
+              <label htmlFor="clientesB2b" className="text-sm">Clientes B2B</label>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Cidades</label>
+              <div className="grid grid-cols-12 gap-2">
+                <div className="col-span-2 flex items-center justify-center">
+                  <Checkbox
+                    id="filtrarCidades"
+                    checked={filters.filtrarCidades}
+                    onCheckedChange={(checked) => setFilters({ ...filters, filtrarCidades: checked === true })}
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Select
+                    value={filters.uf}
+                    onValueChange={(v) => setFilters({ ...filters, uf: v, cidade: 'all' })}
+                    disabled={filterUfsLoading || !filters.filtrarCidades}
+                  >
+                    <SelectTrigger><SelectValue placeholder={filterUfsLoading ? '...' : 'UF'} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {filterUfs.map((uf) => (
+                        <SelectItem key={uf.uf} value={uf.uf}>{uf.uf}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-7">
+                  <Select
+                    value={filters.cidade}
+                    onValueChange={(v) => setFilters({ ...filters, cidade: v })}
+                    disabled={filterCidadesLoading || filters.uf === 'all' || !filters.filtrarCidades}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={filterCidadesLoading ? 'Carregando...' : (!filters.filtrarCidades ? 'Desativado' : (filters.uf === 'all' ? 'Selecione UF' : 'Todas'))} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {filterCidades.map((cidade) => (
+                        <SelectItem key={cidade.cidade_id} value={cidade.nome_cidade}>{cidade.nome_cidade}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium mb-1 block">Classe</label>
+              <Select value={filters.classe} onValueChange={(v) => setFilters({ ...filters, classe: v })}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {segmentos.map((segmento) => (
+                    <SelectItem key={String(segmento.id)} value={String(segmento.id)}>
+                      {segmento.descricao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Forma de pagamento</label>
+              <Select value={filters.formaPagto} onValueChange={(v) => setFilters({ ...filters, formaPagto: v })}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {filterFormas.map((f) => (
+                    <SelectItem key={String(f.id)} value={String(f.id)}>{f.descricao}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Prazo de pagamento</label>
+              <Select value={filters.prazoPagto} onValueChange={(v) => setFilters({ ...filters, prazoPagto: v })}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {prazos.map((p) => (
+                    <SelectItem key={String(p.id)} value={String(p.id)}>{p.descricao}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2 flex items-center gap-2 pt-5">
+              <Checkbox
+                id="boletoBancario"
+                checked={filters.boletoBancario}
+                onCheckedChange={(checked) => setFilters({ ...filters, boletoBancario: checked === true })}
+              />
+              <label htmlFor="boletoBancario" className="text-sm">Boleto bancário</label>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium mb-1 block">Limite</label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={filters.limiteCredito}
+                onChange={(e) => setFilters({ ...filters, limiteCredito: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Situação do Crédito</label>
+              <Select value={filters.situacaoCredito} onValueChange={(v: ClientListFilters['situacaoCredito']) => setFilters({ ...filters, situacaoCredito: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Geral</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="ok">Em dia</SelectItem>
+                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                  <SelectItem value="vencido">Vencido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium mb-1 block">Pessoa F/J</label>
+              <Select value={filters.tipoPessoa} onValueChange={(v: ClientListFilters['tipoPessoa']) => setFilters({ ...filters, tipoPessoa: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="fisica">Física</SelectItem>
                   <SelectItem value="juridica">Jurídica</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Status</label>
-              <Select value={filters.status} onValueChange={(v: any) => setFilters({...filters, status: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativos">Ativo</SelectItem>
-                  <SelectItem value="inativos">Inativo</SelectItem>
-                  <SelectItem value="todos">Todos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Itinerário</label>
-              <Input 
-                placeholder="Itinerário"
-                value={filters.itinerario}
-                onChange={(e) => setFilters({...filters, itinerario: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Visita</label>
-              <Select value={filters.visita} onValueChange={(v: any) => setFilters({...filters, visita: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="semanal">Semanal</SelectItem>
-                  <SelectItem value="quinzenal">Quinzenal</SelectItem>
-                  <SelectItem value="28dias">28 dias</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Cód. Cliente</label>
-              <Input 
-                placeholder="0"
-                value={filters.codigoCliente}
-                onChange={(e) => setFilters({...filters, codigoCliente: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
-              />
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Dependência</label>
+              <Input value={filters.dependencia} onChange={(e) => setFilters({ ...filters, dependencia: e.target.value })} />
             </div>
           </div>
 
-          {/* Row 2: Dt. Base, Cadastro (de/até), Pesquisa */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Dt. Base</label>
-              <Input 
-                type="date"
-                value={filters.dtBase}
-                onChange={(e) => setFilters({...filters, dtBase: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Cadastro de</label>
-              <Input 
-                type="date"
-                value={filters.cadastroDe}
-                onChange={(e) => setFilters({...filters, cadastroDe: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Cadastro até</label>
-              <Input 
-                type="date"
-                value={filters.cadastroAte}
-                onChange={(e) => setFilters({...filters, cadastroAte: e.target.value})}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <label className="text-sm font-medium mb-1 block">Pesquisa</label>
-              <Input 
-                placeholder="Nome, fantasia ou código"
-                value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
-              />
-            </div>
-          </div>
-
-          {/* Row 3: UF, Cidade, Sem Agendamento */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">UF</label>
-              <Select 
-                value={filters.uf} 
-                onValueChange={(v) => {
-                  const newFilters = { ...filters, uf: v, cidade: 'all' };
-                  setFilters(newFilters);
-                }}
-                disabled={filterUfsLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={filterUfsLoading ? 'Carregando...' : 'Todos'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {filterUfs.map(uf => (
-                    <SelectItem key={uf.uf} value={uf.uf}>{uf.uf}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Cidade</label>
-              <Select 
-                value={filters.cidade} 
-                onValueChange={(v) => setFilters({...filters, cidade: v})}
-                disabled={filterCidadesLoading || filters.uf === 'all'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={filterCidadesLoading ? 'Carregando...' : (filters.uf === 'all' ? 'Selecione UF' : 'Todas')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {filterCidades.map(cidade => (
-                    <SelectItem key={cidade.cidade_id} value={cidade.nome_cidade}>{cidade.nome_cidade}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <div className="flex items-center space-x-2 pb-2">
-                <Checkbox 
-                  id="semAgendamento"
-                  checked={filters.semAgendamento}
-                  onCheckedChange={(checked) => setFilters({...filters, semAgendamento: checked as boolean})}
-                />
-                <label htmlFor="semAgendamento" className="text-sm font-medium">
-                  Sem Agendamento
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 4: Bairro, Rota, Rede */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Bairro</label>
-              <Input 
-                placeholder="Bairro"
-                value={filters.bairro}
-                onChange={(e) => setFilters({...filters, bairro: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Rota</label>
-              <Select value={filters.rota} onValueChange={(v) => setFilters({...filters, rota: v})}>
-                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {filterRotas.map(r => (
-                    <SelectItem key={r.id} value={String(r.id)}>{r.label || r.descricao_rota || r.codigo_rota || String(r.id)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-3">
               <label className="text-sm font-medium mb-1 block">Rede</label>
-              <Select value={filters.rede} onValueChange={(v) => setFilters({...filters, rede: v})}>
+              <Select value={filters.rede} onValueChange={(v) => setFilters({ ...filters, rede: v })}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {filterRedes.map(r => (
+                  {filterRedes.map((r) => (
                     <SelectItem key={String(r.id)} value={String(r.id)}>{r.descricao}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Classe</label>
-              <Select value={filters.classe} onValueChange={(v) => setFilters({...filters, classe: v})}>
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Rota</label>
+              <Select value={filters.rota} onValueChange={(v) => setFilters({ ...filters, rota: v })}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
+                  {filterRotas.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>{r.label || r.descricao_rota || r.codigo_rota || String(r.id)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Tabelas de Preços</label>
+              <Select value={filters.tabelaPreco} onValueChange={(v) => setFilters({ ...filters, tabelaPreco: v })}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {tabelas.map((t) => (
+                    <SelectItem key={String(t.id)} value={String(t.id)}>{getTabelaLabel(t)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-sm font-medium mb-1 block">Bairro</label>
+              <Input
+                value={filters.bairro}
+                onChange={(e) => setFilters({ ...filters, bairro: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Não positivado desde</label>
+              <Input
+                type="date"
+                value={filters.naoPositivadoDesde}
+                onChange={(e) => setFilters({ ...filters, naoPositivadoDesde: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Cadastrados em (de)</label>
+              <Input
+                type="date"
+                value={filters.cadastroDe}
+                onChange={(e) => setFilters({ ...filters, cadastroDe: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Cadastrados em (até)</label>
+              <Input
+                type="date"
+                value={filters.cadastroAte}
+                onChange={(e) => setFilters({ ...filters, cadastroAte: e.target.value })}
+              />
             </div>
           </div>
         </CardContent>

@@ -151,9 +151,16 @@ function normalizeClient(raw: any): Client {
 
 type ClientSearchFilters = {
   query?: string;         // q - busca geral
+  searchBy?: 'nome' | 'fantasia' | 'codigo' | 'cnpjCpf' | 'email';
+  searchMode?: 'inicial' | 'contido';
   nome?: string;
   codigoCliente?: string;
   fantasia?: string;
+  tipoPessoa?: 'fisica' | 'juridica';
+  formaPagtoId?: number;
+  prazoPagtoId?: number;
+  boleto?: boolean;
+  tabelaId?: number;
   email?: string;
   emailDanfe?: string;
   fone?: string;
@@ -169,6 +176,14 @@ type ClientSearchFilters = {
   segmentoId?: number;
   redeId?: number;
   rotaId?: number;
+  limiteCredito?: number;
+  situacaoCredito?: string;
+  dependencia?: string;
+  b2bLiberado?: boolean;
+  naoPositivadoDesde?: string;
+  cadastroDe?: string;
+  cadastroAte?: string;
+  status?: 'ativos' | 'inativos' | 'todos';
   inativo?: boolean;
 };
 
@@ -193,6 +208,10 @@ async function fetchFromApi({
     const qTrim = typeof clean.query === 'string' ? clean.query.trim() : '';
     const qUpper = qTrim ? qTrim.toUpperCase() : '';
     if (qUpper) params.set('q', qUpper);
+    if (clean.status) {
+      params.set('status', clean.status);
+      if (clean.status === 'todos') params.set('incluirInativos', 'true');
+    }
 
     const setParam = (key: keyof ClientSearchFilters, value: any) => {
       if (value === undefined || value === null) return;
@@ -204,6 +223,11 @@ async function fetchFromApi({
     setParam('nome', clean.nome);
     setParam('codigoCliente', clean.codigoCliente);
     setParam('fantasia', clean.fantasia);
+    setParam('tipoPessoa', clean.tipoPessoa);
+    if (clean.formaPagtoId !== undefined) params.set('formaPagtoId', String(clean.formaPagtoId));
+    if (clean.prazoPagtoId !== undefined) params.set('prazoPagtoId', String(clean.prazoPagtoId));
+    if (clean.boleto !== undefined) params.set('boleto', String(clean.boleto));
+    if (clean.tabelaId !== undefined) params.set('tabelaId', String(clean.tabelaId));
     setParam('email', clean.email);
     setParam('emailDanfe', clean.emailDanfe);
     setParam('fone', clean.fone);
@@ -212,6 +236,8 @@ async function fetchFromApi({
     setParam('compradorNome', clean.compradorNome);
     setParam('compradorFone', clean.compradorFone);
     setParam('clienteId', clean.clienteId);
+    setParam('searchBy', clean.searchBy);
+    setParam('searchMode', clean.searchMode);
     setParam('uf', clean.uf);
     setParam('cidade', clean.cidade);
     setParam('bairro', clean.bairro);
@@ -219,7 +245,17 @@ async function fetchFromApi({
     if (clean.segmentoId !== undefined) params.set('segmentoId', String(clean.segmentoId));
     if (clean.redeId !== undefined) params.set('redeId', String(clean.redeId));
     if (clean.rotaId !== undefined) params.set('rotaId', String(clean.rotaId));
-    if (clean.inativo !== undefined) params.set('inativo', String(clean.inativo));
+    if (clean.limiteCredito !== undefined) params.set('limiteCredito', String(clean.limiteCredito));
+    setParam('situacaoCredito', clean.situacaoCredito);
+    setParam('dependencia', clean.dependencia);
+    if (clean.b2bLiberado !== undefined) params.set('b2bLiberado', String(clean.b2bLiberado));
+    setParam('naoPositivadoDesde', clean.naoPositivadoDesde);
+    setParam('cadastroDe', clean.cadastroDe);
+    setParam('cadastroAte', clean.cadastroAte);
+    const inativoFromStatus =
+      clean.status === 'inativos' ? true : clean.status === 'ativos' ? false : undefined;
+    const effectiveInativo = clean.inativo !== undefined ? clean.inativo : inativoFromStatus;
+    if (effectiveInativo !== undefined) params.set('inativo', String(effectiveInativo));
 
     if (page) params.set('page', String(page));
     if (limit) params.set('limit', String(limit));

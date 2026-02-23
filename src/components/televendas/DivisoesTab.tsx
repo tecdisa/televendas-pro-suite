@@ -254,48 +254,44 @@ export function DivisoesTab() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-2 mb-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                placeholder="Buscar por código ou descrição..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1"
-              />
-              <Select
-                value={filterGrupoId ? String(filterGrupoId) : 'all'}
-                onValueChange={(v) => setFilterGrupoId(v === 'all' ? undefined : Number(v))}
-              >
-                <SelectTrigger className="w-full sm:w-48 h-9">
-                  <SelectValue placeholder="Filtrar por grupo" />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-50 max-h-60">
-                  <SelectItem value="all">Todos os grupos</SelectItem>
-                  {grupos.map((g) => (
-                    <SelectItem key={g.grupo_id} value={String(g.grupo_id)}>
-                      {g.descricao_grupo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-              <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativos' | 'inativos' | 'todos')}>
-                <SelectTrigger className="w-[140px] h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativos">Ativo</SelectItem>
-                  <SelectItem value="inativos">Inativo</SelectItem>
-                  <SelectItem value="todos">Todos</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto sm:ml-auto">
-                <Search className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Buscar</span>
-              </Button>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <Input
+              placeholder="Buscar por código ou descrição..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1"
+            />
+            <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as 'ativos' | 'inativos' | 'todos')}>
+              <SelectTrigger className="w-[140px] h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativos">Ativo</SelectItem>
+                <SelectItem value="inativos">Inativo</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filterGrupoId ? String(filterGrupoId) : 'all'}
+              onValueChange={(v) => setFilterGrupoId(v === 'all' ? undefined : Number(v))}
+            >
+              <SelectTrigger className="w-full sm:w-48 h-9">
+                <SelectValue placeholder="Filtrar por grupo" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50 max-h-60">
+                <SelectItem value="all">Todos os grupos</SelectItem>
+                {grupos.map((g) => (
+                  <SelectItem key={g.grupo_id} value={String(g.grupo_id)}>
+                    {g.descricao_grupo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+              <Search className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Buscar</span>
+            </Button>
           </div>
 
           <div className="border rounded-md overflow-hidden">
