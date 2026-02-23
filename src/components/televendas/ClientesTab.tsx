@@ -116,7 +116,7 @@ type ClientListFilters = {
   rede: string;
   tabelaPreco: string;
   limiteCredito: string;
-  situacaoCredito: 'all' | 'ok' | 'bloqueado' | 'vencido';
+  situacaoCredito: 'todos' | 'com_disponivel' | 'sem_disponivel' | 'com_aberto' | 'sem_aberto';
   dependencia: string;
   naoPositivadoDesde: string;
   cadastroDe: string;
@@ -142,7 +142,7 @@ const defaultClientFilters: ClientListFilters = {
   rede: 'all',
   tabelaPreco: 'all',
   limiteCredito: '',
-  situacaoCredito: 'all',
+  situacaoCredito: 'todos',
   dependencia: '',
   naoPositivadoDesde: '',
   cadastroDe: '',
@@ -818,29 +818,35 @@ export const ClientesTab = () => {
       const trimmedSearch = active.search.trim();
       const effectiveStatus = active.todos ? 'todos' : active.status;
       const limiteCredito = active.limiteCredito ? Number(String(active.limiteCredito).replace(',', '.')) : undefined;
+      const cidadeId =
+        active.filtrarCidades && active.cidade !== 'all'
+          ? filterCidades.find((c) => c.nome_cidade === active.cidade)?.cidade_id
+          : undefined;
       const data = await clientsService.search({
         query: trimmedSearch || undefined,
-        searchMode: active.searchMode,
-        tipoPessoa: active.tipoPessoa !== 'all' ? active.tipoPessoa : undefined,
+        tipoBusca: active.searchMode,
+        buscarEmTodos: true,
+        clientesB2b: active.clientesB2b ? true : undefined,
+        pessoa: active.tipoPessoa === 'fisica' ? 'F' : active.tipoPessoa === 'juridica' ? 'J' : 'todos',
         uf: active.filtrarCidades && active.uf !== 'all' ? active.uf : undefined,
         cidade: active.filtrarCidades && active.cidade !== 'all' ? active.cidade : undefined,
+        cidadeId,
         bairro: active.bairro ? active.bairro.trim() : undefined,
-        segmentoId: active.classe !== 'all' ? Number(active.classe) : undefined,
+        classeId: active.classe !== 'all' ? Number(active.classe) : undefined,
         formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
         prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
-        boleto: active.boletoBancario ? true : undefined,
-        tabelaId: active.tabelaPreco !== 'all' ? Number(active.tabelaPreco) : undefined,
+        boletoBancario: active.boletoBancario ? true : undefined,
+        tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
         rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
         redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
-        limiteCredito: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
-        situacaoCredito: active.situacaoCredito !== 'all' ? active.situacaoCredito : undefined,
+        limite: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
+        limiteMin: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
+        situacaoCredito: active.situacaoCredito,
         dependencia: active.dependencia.trim() || undefined,
-        b2bLiberado: active.clientesB2b ? true : undefined,
         naoPositivadoDesde: active.naoPositivadoDesde || undefined,
-        cadastroDe: active.cadastroDe || undefined,
-        cadastroAte: active.cadastroAte || undefined,
+        cadastradosDe: active.cadastroDe || undefined,
+        cadastradosAte: active.cadastroAte || undefined,
         status: effectiveStatus,
-        inativo: effectiveStatus === 'inativos' ? true : (effectiveStatus === 'todos' ? undefined : false),
       }, undefined, nextPage, CLIENT_LIMIT);
       if (requestId !== clientsRequestId.current) return;
       setClients((prev) => (reset ? data : [...prev, ...data]));
@@ -1259,9 +1265,11 @@ const validateFormData = (data: ClientFormData): string[] => {
               <label className="text-sm font-medium mb-1 block">Status</label>
               <Select
                 value={filters.status}
-                onValueChange={(v: 'ativos' | 'inativos' | 'todos') =>
-                  setFilters((prev) => ({ ...prev, status: v, todos: v === 'todos' }))
-                }
+                onValueChange={(v: 'ativos' | 'inativos' | 'todos') => {
+                  const nextFilters = { ...filters, status: v, todos: v === 'todos' };
+                  setFilters(nextFilters);
+                  loadClients(nextFilters, true);
+                }}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1454,10 +1462,11 @@ const validateFormData = (data: ClientFormData): string[] => {
               <Select value={filters.situacaoCredito} onValueChange={(v: ClientListFilters['situacaoCredito']) => setFilters({ ...filters, situacaoCredito: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="ok">Em dia</SelectItem>
-                  <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                  <SelectItem value="vencido">Vencido</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="com_disponivel">Com disponível</SelectItem>
+                  <SelectItem value="sem_disponivel">Sem disponível</SelectItem>
+                  <SelectItem value="com_aberto">Com aberto</SelectItem>
+                  <SelectItem value="sem_aberto">Sem aberto</SelectItem>
                 </SelectContent>
               </Select>
             </div>

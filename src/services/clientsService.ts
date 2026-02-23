@@ -151,16 +151,20 @@ function normalizeClient(raw: any): Client {
 
 type ClientSearchFilters = {
   query?: string;         // q - busca geral
-  searchBy?: 'nome' | 'fantasia' | 'codigo' | 'cnpjCpf' | 'email';
-  searchMode?: 'inicial' | 'contido';
+  tipoBusca?: 'inicial' | 'contido';
+  buscarEmTodos?: boolean;
+  clientesB2b?: boolean;
   nome?: string;
   codigoCliente?: string;
   fantasia?: string;
-  tipoPessoa?: 'fisica' | 'juridica';
+  pessoa?: 'F' | 'J' | 'todos';
+  tipoPessoa?: 'fisica' | 'juridica'; // compat legado
   formaPagtoId?: number;
   prazoPagtoId?: number;
-  boleto?: boolean;
-  tabelaId?: number;
+  boletoBancario?: boolean;
+  boleto?: boolean; // compat legado
+  tabelaPrecoId?: number | string | Array<number | string>;
+  tabelaId?: number; // compat legado
   email?: string;
   emailDanfe?: string;
   fone?: string;
@@ -171,20 +175,26 @@ type ClientSearchFilters = {
   clienteId?: string | number;
   uf?: string;
   cidade?: string;
+  cidadeId?: number;
   bairro?: string;
   consumidorFinal?: boolean;
+  classeId?: number;
   segmentoId?: number;
   redeId?: number;
   rotaId?: number;
-  limiteCredito?: number;
+  limite?: number;
+  limiteMin?: number;
+  limiteMax?: number;
+  limiteCredito?: number; // compat legado
   situacaoCredito?: string;
   dependencia?: string;
-  b2bLiberado?: boolean;
+  b2bLiberado?: boolean; // compat legado
   naoPositivadoDesde?: string;
-  cadastroDe?: string;
-  cadastroAte?: string;
+  cadastradosDe?: string;
+  cadastradosAte?: string;
+  cadastroDe?: string; // compat legado
+  cadastroAte?: string; // compat legado
   status?: 'ativos' | 'inativos' | 'todos';
-  inativo?: boolean;
 };
 
 async function fetchFromApi({
@@ -210,7 +220,19 @@ async function fetchFromApi({
     if (qUpper) params.set('q', qUpper);
     if (clean.status) {
       params.set('status', clean.status);
-      if (clean.status === 'todos') params.set('incluirInativos', 'true');
+    }
+
+    const tipoBusca = clean.tipoBusca ?? (clean as any).searchMode;
+    if (tipoBusca) {
+      params.set('tipoBusca', tipoBusca);
+    }
+
+    const buscarEmTodos = clean.buscarEmTodos ?? true;
+    params.set('buscarEmTodos', String(Boolean(buscarEmTodos)));
+
+    const clientesB2b = clean.clientesB2b ?? clean.b2bLiberado;
+    if (clientesB2b !== undefined) {
+      params.set('clientesB2b', String(Boolean(clientesB2b)));
     }
 
     const setParam = (key: keyof ClientSearchFilters, value: any) => {
@@ -223,11 +245,6 @@ async function fetchFromApi({
     setParam('nome', clean.nome);
     setParam('codigoCliente', clean.codigoCliente);
     setParam('fantasia', clean.fantasia);
-    setParam('tipoPessoa', clean.tipoPessoa);
-    if (clean.formaPagtoId !== undefined) params.set('formaPagtoId', String(clean.formaPagtoId));
-    if (clean.prazoPagtoId !== undefined) params.set('prazoPagtoId', String(clean.prazoPagtoId));
-    if (clean.boleto !== undefined) params.set('boleto', String(clean.boleto));
-    if (clean.tabelaId !== undefined) params.set('tabelaId', String(clean.tabelaId));
     setParam('email', clean.email);
     setParam('emailDanfe', clean.emailDanfe);
     setParam('fone', clean.fone);
@@ -236,26 +253,49 @@ async function fetchFromApi({
     setParam('compradorNome', clean.compradorNome);
     setParam('compradorFone', clean.compradorFone);
     setParam('clienteId', clean.clienteId);
-    setParam('searchBy', clean.searchBy);
-    setParam('searchMode', clean.searchMode);
+
     setParam('uf', clean.uf);
     setParam('cidade', clean.cidade);
+    if (clean.cidadeId !== undefined) params.set('cidadeId', String(clean.cidadeId));
     setParam('bairro', clean.bairro);
+
+    const classeId = clean.classeId ?? clean.segmentoId;
+    if (classeId !== undefined) params.set('classeId', String(classeId));
+
+    if (clean.formaPagtoId !== undefined) params.set('formaPagtoId', String(clean.formaPagtoId));
+    if (clean.prazoPagtoId !== undefined) params.set('prazoPagtoId', String(clean.prazoPagtoId));
+
+    const boletoBancario = clean.boletoBancario ?? clean.boleto;
+    if (boletoBancario !== undefined) params.set('boletoBancario', String(Boolean(boletoBancario)));
+
+    const tabelaPrecoId = clean.tabelaPrecoId ?? clean.tabelaId;
+    if (Array.isArray(tabelaPrecoId)) {
+      const values = tabelaPrecoId.map((v) => String(v).trim()).filter(Boolean);
+      if (values.length > 0) params.set('tabelaPrecoId', values.join(','));
+    } else if (tabelaPrecoId !== undefined && tabelaPrecoId !== null && String(tabelaPrecoId).trim() !== '') {
+      params.set('tabelaPrecoId', String(tabelaPrecoId).trim());
+    }
+
+    const limite = clean.limite ?? clean.limiteCredito;
+    if (limite !== undefined) params.set('limite', String(limite));
+    if (clean.limiteMin !== undefined) params.set('limiteMin', String(clean.limiteMin));
+    if (clean.limiteMax !== undefined) params.set('limiteMax', String(clean.limiteMax));
+
     if (clean.consumidorFinal !== undefined) params.set('consumidorFinal', String(clean.consumidorFinal));
-    if (clean.segmentoId !== undefined) params.set('segmentoId', String(clean.segmentoId));
     if (clean.redeId !== undefined) params.set('redeId', String(clean.redeId));
     if (clean.rotaId !== undefined) params.set('rotaId', String(clean.rotaId));
-    if (clean.limiteCredito !== undefined) params.set('limiteCredito', String(clean.limiteCredito));
     setParam('situacaoCredito', clean.situacaoCredito);
     setParam('dependencia', clean.dependencia);
-    if (clean.b2bLiberado !== undefined) params.set('b2bLiberado', String(clean.b2bLiberado));
+
+    const pessoa = clean.pessoa
+      ?? (clean.tipoPessoa === 'fisica' ? 'F' : clean.tipoPessoa === 'juridica' ? 'J' : clean.tipoPessoa === 'all' ? 'todos' : undefined);
+    if (pessoa) params.set('pessoa', pessoa);
+
     setParam('naoPositivadoDesde', clean.naoPositivadoDesde);
-    setParam('cadastroDe', clean.cadastroDe);
-    setParam('cadastroAte', clean.cadastroAte);
-    const inativoFromStatus =
-      clean.status === 'inativos' ? true : clean.status === 'ativos' ? false : undefined;
-    const effectiveInativo = clean.inativo !== undefined ? clean.inativo : inativoFromStatus;
-    if (effectiveInativo !== undefined) params.set('inativo', String(effectiveInativo));
+    const cadastradosDe = clean.cadastradosDe ?? clean.cadastroDe;
+    const cadastradosAte = clean.cadastradosAte ?? clean.cadastroAte;
+    if (cadastradosDe) params.set('cadastradosDe', cadastradosDe);
+    if (cadastradosAte) params.set('cadastradosAte', cadastradosAte);
 
     if (page) params.set('page', String(page));
     if (limit) params.set('limit', String(limit));
