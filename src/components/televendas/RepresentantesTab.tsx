@@ -78,6 +78,7 @@ const initialFormData: RepresentanteFormData = {
   supervisor: '',
   gerente: '',
   comissao: 0,
+  objetivo_de_venda: 0,
   setor_id: null,
   rotas_liberadas: '',
   liberado_debito_credito: false,
@@ -410,6 +411,7 @@ export function RepresentantesTab() {
           supervisor: detail.supervisor || '',
           gerente: detail.gerente || '',
           comissao: detail.comissao ?? 0,
+          objetivo_de_venda: detail.objetivo_de_venda ?? 0,
           setor_id: detail.setor_id ?? null,
           rotas_liberadas: detail.rotas_liberadas || '',
           liberado_debito_credito: detail.liberado_debito_credito ?? false,
@@ -712,7 +714,7 @@ export function RepresentantesTab() {
           </div>
         </div>
         <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-3">
+          <div className="col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
             <Input
               type="number"
@@ -721,7 +723,17 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, comissao: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-4">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo de Venda</label>
+            <Input
+              type="number"
+              step="0.01"
+              className="h-8 text-sm"
+              value={formData.objetivo_de_venda ?? ''}
+              onChange={(e) => setFormData({ ...formData, objetivo_de_venda: e.target.value ? Number(e.target.value) : 0 })}
+            />
+          </div>
+          <div className="col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Setor ID</label>
             <Input
               type="number"

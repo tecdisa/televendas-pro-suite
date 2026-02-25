@@ -22,6 +22,7 @@ export interface Representante {
   supervisor?: string;
   gerente?: string;
   comissao?: number;
+  objetivo_de_venda?: number;
   setor_id?: number | null;
   rotas_liberadas?: string;
   liberado_debito_credito?: boolean;
@@ -57,6 +58,7 @@ export interface RepresentanteFormData {
   supervisor?: string;
   gerente?: string;
   comissao?: number;
+  objetivo_de_venda?: number;
   setor_id?: number | null;
   rotas_liberadas?: string;
   liberado_debito_credito?: boolean;
@@ -108,6 +110,7 @@ function normalizeRepresentante(raw: any): Representante {
     supervisor: raw.supervisor ?? '',
     gerente: raw.gerente ?? '',
     comissao: raw.comissao ?? 0,
+    objetivo_de_venda: raw.objetivo_de_venda ?? raw.objetivoDeVenda ?? 0,
     setor_id: raw.setor_id ?? raw.setorId ?? null,
     rotas_liberadas: raw.rotas_liberadas ?? raw.rotasLiberadas ?? '',
     liberado_debito_credito: raw.liberado_debito_credito ?? raw.liberadoDebitoCredito ?? false,
@@ -224,6 +227,7 @@ export const representativesService = {
         supervisor: data.supervisor || undefined,
         gerente: data.gerente || undefined,
         comissao: data.comissao ?? undefined,
+        objetivo_de_venda: data.objetivo_de_venda ?? undefined,
         setor_id: data.setor_id ?? null,
         rotas_liberadas: data.rotas_liberadas || undefined,
         liberado_debito_credito: data.liberado_debito_credito ?? false,
