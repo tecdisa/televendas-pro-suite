@@ -31,7 +31,6 @@ export interface PrazoPagamentoFormData {
   numero_de_parcelas?: number;
   prazos_em_dias?: string | null;
   pedido_minimo?: number;
-  prazo_medio?: number;
   comissao?: number;
   liberado_app_mobile?: boolean;
   liberado_b2b?: boolean;
@@ -146,7 +145,6 @@ export const prazosPagamentosService = {
         numero_de_parcelas: data.numero_de_parcelas ?? undefined,
         prazos_em_dias: data.prazos_em_dias || null,
         pedido_minimo: data.pedido_minimo ?? undefined,
-        prazo_medio: data.prazo_medio ?? undefined,
         comissao: data.comissao ?? undefined,
         liberado_app_mobile: data.liberado_app_mobile ?? false,
         liberado_b2b: data.liberado_b2b ?? false,

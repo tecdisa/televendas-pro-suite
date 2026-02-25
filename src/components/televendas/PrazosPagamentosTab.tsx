@@ -24,7 +24,6 @@ const initialFormData: PrazoPagamentoFormData = {
   numero_de_parcelas: 0,
   prazos_em_dias: '',
   pedido_minimo: 0,
-  prazo_medio: 0,
   comissao: 0,
   liberado_app_mobile: false,
   liberado_b2b: false,
@@ -114,7 +113,6 @@ export function PrazosPagamentosTab() {
           numero_de_parcelas: detail.numero_de_parcelas ?? 0,
           prazos_em_dias: detail.prazos_em_dias || '',
           pedido_minimo: detail.pedido_minimo ?? 0,
-          prazo_medio: detail.prazo_medio ?? 0,
           comissao: detail.comissao ?? 0,
           liberado_app_mobile: detail.liberado_app_mobile ?? false,
           liberado_b2b: detail.liberado_b2b ?? false,
@@ -257,16 +255,7 @@ export function PrazosPagamentosTab() {
           </div>
         </div>
         <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo Médio</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.prazo_medio ?? ''}
-              onChange={(e) => setFormData({ ...formData, prazo_medio: e.target.value ? Number(e.target.value) : 0 })}
-            />
-          </div>
-          <div className="col-span-4">
+          <div className="col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Pedido Mínimo</label>
             <Input
               type="number"
@@ -275,7 +264,7 @@ export function PrazosPagamentosTab() {
               onChange={(e) => setFormData({ ...formData, pedido_minimo: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-4">
+          <div className="col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
             <Input
               type="number"
