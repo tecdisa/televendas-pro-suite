@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, UserCheck, Plus, Pencil, Trash2, Loader2, Save } from 'lucide-react';
+import { Search, UserCheck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
@@ -58,6 +58,12 @@ const maskCnpjCpf = (v: string) => {
   }
   return digits.slice(0, 14).replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5').replace(/-$/, '');
 };
+
+const formatObjetivo = (value: number | null | undefined) =>
+  Number(value ?? 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const initialFormData: RepresentanteFormData = {
   codigo_representante: '',
@@ -102,8 +108,6 @@ export function RepresentantesTab() {
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [saveObjetivoLoading, setSaveObjetivoLoading] = useState<number | null>(null);
-  const [objetivoDraftByRepresentante, setObjetivoDraftByRepresentante] = useState<Record<number, string>>({});
   const [formData, setFormData] = useState<RepresentanteFormData>(initialFormData);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
@@ -316,67 +320,6 @@ export function RepresentantesTab() {
       toast.error(error?.message || 'Erro ao carregar representantes');
     } finally {
       setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    setObjetivoDraftByRepresentante((prev) => {
-      const next: Record<number, string> = {};
-      representantes.forEach((representante) => {
-        const current = prev[representante.representante_id];
-        if (current !== undefined) {
-          next[representante.representante_id] = current;
-          return;
-        }
-        const objetivo = Number(representante.objetivo_de_venda ?? 0);
-        next[representante.representante_id] = Number.isFinite(objetivo)
-          ? objetivo.toFixed(2)
-          : '0.00';
-      });
-      return next;
-    });
-  }, [representantes]);
-
-  const parseObjetivoInput = (value: string): number | null => {
-    const raw = value.replace(/\s/g, '');
-    if (!raw) return 0;
-    const normalized = raw.includes(',')
-      ? raw.replace(/\./g, '').replace(',', '.')
-      : raw;
-    const parsed = Number(normalized);
-    if (!Number.isFinite(parsed) || parsed < 0) return null;
-    return parsed;
-  };
-
-  const handleSaveObjetivoNaLista = async (representante: Representante) => {
-    const rawValue = objetivoDraftByRepresentante[representante.representante_id] ?? '0';
-    const objetivo = parseObjetivoInput(rawValue);
-    if (objetivo === null) {
-      toast.error('Objetivo de venda inválido');
-      return;
-    }
-
-    setSaveObjetivoLoading(representante.representante_id);
-    try {
-      await representativesService.update(representante.representante_id, {
-        objetivo_de_venda: objetivo,
-      });
-      setRepresentantes((prev) =>
-        prev.map((item) =>
-          item.representante_id === representante.representante_id
-            ? { ...item, objetivo_de_venda: objetivo }
-            : item,
-        ),
-      );
-      setObjetivoDraftByRepresentante((prev) => ({
-        ...prev,
-        [representante.representante_id]: objetivo.toFixed(2),
-      }));
-      toast.success('Objetivo atualizado');
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao atualizar objetivo');
-    } finally {
-      setSaveObjetivoLoading(null);
     }
   };
 
@@ -920,7 +863,7 @@ export function RepresentantesTab() {
                           <TableHead className="hidden lg:table-cell w-12">UF</TableHead>
                           <TableHead className="hidden lg:table-cell">Telefone</TableHead>
                           <TableHead className="hidden xl:table-cell">E-mail</TableHead>
-                          <TableHead className="w-48">Objetivo venda</TableHead>
+                          <TableHead className="w-40">Objetivo venda</TableHead>
                           <TableHead className="w-20">Status</TableHead>
                           <TableHead className="w-28 text-center">Ações</TableHead>
                         </TableRow>
@@ -947,39 +890,8 @@ export function RepresentantesTab() {
                               <TableCell className="hidden lg:table-cell">{r.uf || '-'}</TableCell>
                               <TableCell className="hidden lg:table-cell text-xs">{r.fone || '-'}</TableCell>
                               <TableCell className="hidden xl:table-cell text-xs">{r.email || '-'}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    className="h-8 text-xs"
-                                    value={objetivoDraftByRepresentante[r.representante_id] ?? '0.00'}
-                                    onChange={(e) =>
-                                      setObjetivoDraftByRepresentante((prev) => ({
-                                        ...prev,
-                                        [r.representante_id]: e.target.value,
-                                      }))
-                                    }
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleSaveObjetivoNaLista(r);
-                                      }
-                                    }}
-                                    placeholder="0,00"
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => handleSaveObjetivoNaLista(r)}
-                                    disabled={saveObjetivoLoading === r.representante_id}
-                                  >
-                                    {saveObjetivoLoading === r.representante_id ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      <Save className="h-3.5 w-3.5" />
-                                    )}
-                                  </Button>
-                                </div>
+                              <TableCell className="font-mono text-sm">
+                                {formatObjetivo(r.objetivo_de_venda)}
                               </TableCell>
                               <TableCell>
                                 <span className={`text-xs px-2 py-0.5 rounded ${r.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>

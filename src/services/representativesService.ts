@@ -385,6 +385,36 @@ export const representativesService = {
     return true;
   },
 
+  async removeFornecedor(
+    representanteId: number | string,
+    fornecedorId: number | string
+  ): Promise<boolean> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}?${params.toString()}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'DELETE',
+      headers: { accept: 'application/json' },
+    });
+
+    if (res.status === 404) {
+      throw new Error('Fornecedor não vinculado ao representante');
+    }
+
+    if (!res.ok && res.status !== 204) {
+      let message = 'Falha ao excluir fornecedor da pasta';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    return true;
+  },
+
   async copyClientes(
     representanteDestinoId: number | string,
     representanteOrigemId: number | string

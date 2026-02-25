@@ -3,11 +3,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { representativesService, Representante, RepresentanteFornecedorItem } from '@/services/representativesService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plus, RotateCcw, Search } from 'lucide-react';
+import { Copy, Loader2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
 
 const FORNECEDORES_LIMIT = 200;
 
@@ -16,6 +17,17 @@ const formatObjetivo = (valor: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+
+const parseObjetivoInput = (value: string): number | null => {
+  const raw = value.replace(/\s/g, '');
+  if (!raw) return 0;
+  const normalized = raw.includes(',')
+    ? raw.replace(/\./g, '').replace(',', '.')
+    : raw;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+};
 
 export function RepresentantesPastasTab() {
   const [representantes, setRepresentantes] = useState<Representante[]>([]);
@@ -26,8 +38,11 @@ export function RepresentantesPastasTab() {
   const [searchFornecedor, setSearchFornecedor] = useState('');
   const [fornecedores, setFornecedores] = useState<RepresentanteFornecedorItem[]>([]);
   const [fornecedoresLoading, setFornecedoresLoading] = useState(false);
-  const [selectedFornecedorId, setSelectedFornecedorId] = useState<number | null>(null);
-  const [objetivosByFornecedor, setObjetivosByFornecedor] = useState<Record<number, number>>({});
+  const [objetivoDraftByFornecedor, setObjetivoDraftByFornecedor] = useState<Record<number, string>>({});
+  const [selectedFornecedorById, setSelectedFornecedorById] = useState<Record<number, boolean>>({});
+  const [saveObjetivoLoading, setSaveObjetivoLoading] = useState<number | null>(null);
+  const [removeFornecedorLoadingId, setRemoveFornecedorLoadingId] = useState<number | null>(null);
+  const [removeSelecionadosLoading, setRemoveSelecionadosLoading] = useState(false);
   const [includeDialogOpen, setIncludeDialogOpen] = useState(false);
   const [includeSearch, setIncludeSearch] = useState('');
   const [includeLoading, setIncludeLoading] = useState(false);
@@ -58,7 +73,6 @@ export function RepresentantesPastasTab() {
     const reqId = ++fornecedorReqRef.current;
     if (!representanteId) {
       setFornecedores([]);
-      setSelectedFornecedorId(null);
       setFornecedoresLoading(false);
       return;
     }
@@ -72,7 +86,6 @@ export function RepresentantesPastasTab() {
       });
       if (reqId !== fornecedorReqRef.current) return;
       setFornecedores(result.data);
-      setSelectedFornecedorId(null);
     } catch (error: any) {
       if (reqId !== fornecedorReqRef.current) return;
       setFornecedores([]);
@@ -109,14 +122,27 @@ export function RepresentantesPastasTab() {
   const fornecedoresLista = useMemo(() => fornecedores.map((item) => item.fornecedor), [fornecedores]);
 
   useEffect(() => {
-    setObjetivosByFornecedor((prev) => {
-      const next: Record<number, number> = {};
+    const objetivoAtual = Number(fornecedores[0]?.representante?.objetivo_de_venda ?? 0);
+    const objetivoFormatado = Number.isFinite(objetivoAtual)
+      ? objetivoAtual.toFixed(2)
+      : '0.00';
+    setObjetivoDraftByFornecedor((prev) => {
+      const next: Record<number, string> = {};
       fornecedoresLista.forEach((fornecedor) => {
-        next[fornecedor.fornecedor_id] = prev[fornecedor.fornecedor_id] ?? 0;
+        next[fornecedor.fornecedor_id] = prev[fornecedor.fornecedor_id] ?? objetivoFormatado;
       });
       return next;
     });
-  }, [fornecedoresLista]);
+    setSelectedFornecedorById((prev) => {
+      const next: Record<number, boolean> = {};
+      fornecedoresLista.forEach((fornecedor) => {
+        if (prev[fornecedor.fornecedor_id]) {
+          next[fornecedor.fornecedor_id] = true;
+        }
+      });
+      return next;
+    });
+  }, [fornecedores, fornecedoresLista]);
 
   const handleRepSearch = () => {
     loadRepresentantes(repSearch.trim());
@@ -129,6 +155,11 @@ export function RepresentantesPastasTab() {
   };
 
   const linkedFornecedorIds = useMemo(() => new Set(fornecedoresLista.map((f) => f.fornecedor_id)), [fornecedoresLista]);
+  const totalSelecionados = useMemo(
+    () => fornecedoresLista.filter((fornecedor) => selectedFornecedorById[fornecedor.fornecedor_id]).length,
+    [fornecedoresLista, selectedFornecedorById],
+  );
+  const allSelecionados = fornecedoresLista.length > 0 && totalSelecionados === fornecedoresLista.length;
 
   const availableIncludeResults = useMemo(
     () => includeResults.filter((fornecedor) => !linkedFornecedorIds.has(fornecedor.fornecedor_id)),
@@ -207,14 +238,126 @@ export function RepresentantesPastasTab() {
       toast.error('Nenhum fornecedor para zerar objetivo');
       return;
     }
-    setObjetivosByFornecedor((prev) => {
+    setObjetivoDraftByFornecedor((prev) => {
       const next = { ...prev };
       fornecedoresLista.forEach((fornecedor) => {
-        next[fornecedor.fornecedor_id] = 0;
+        next[fornecedor.fornecedor_id] = '0.00';
       });
       return next;
     });
-    toast.success('Objetivos zerados');
+    toast.success('Objetivos zerados no formulário');
+  };
+
+  const handleSaveObjetivo = async (fornecedorId: number) => {
+    if (!selectedRepresentanteId) {
+      toast.error('Selecione um representante');
+      return;
+    }
+
+    const rawValue = objetivoDraftByFornecedor[fornecedorId] ?? '0';
+    const objetivo = parseObjetivoInput(rawValue);
+    if (objetivo === null) {
+      toast.error('Objetivo inválido');
+      return;
+    }
+
+    setSaveObjetivoLoading(fornecedorId);
+    try {
+      await representativesService.update(Number(selectedRepresentanteId), {
+        objetivo_de_venda: objetivo,
+      });
+      setObjetivoDraftByFornecedor((prev) => {
+        const next = { ...prev };
+        fornecedoresLista.forEach((fornecedor) => {
+          next[fornecedor.fornecedor_id] = objetivo.toFixed(2);
+        });
+        return next;
+      });
+      toast.success('Objetivo atualizado');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao salvar objetivo');
+    } finally {
+      setSaveObjetivoLoading(null);
+    }
+  };
+
+  const handleToggleFornecedor = (fornecedorId: number, checked: boolean) => {
+    setSelectedFornecedorById((prev) => {
+      const next = { ...prev };
+      if (checked) next[fornecedorId] = true;
+      else delete next[fornecedorId];
+      return next;
+    });
+  };
+
+  const handleToggleAllFornecedores = (checked: boolean) => {
+    if (!checked) {
+      setSelectedFornecedorById({});
+      return;
+    }
+    const next: Record<number, boolean> = {};
+    fornecedoresLista.forEach((fornecedor) => {
+      next[fornecedor.fornecedor_id] = true;
+    });
+    setSelectedFornecedorById(next);
+  };
+
+  const handleExcluirFornecedor = async (fornecedorId: number) => {
+    if (!selectedRepresentanteId) {
+      toast.error('Selecione um representante');
+      return;
+    }
+    if (!confirm('Deseja excluir este fornecedor da pasta do representante?')) return;
+
+    setRemoveFornecedorLoadingId(fornecedorId);
+    try {
+      await representativesService.removeFornecedor(selectedRepresentanteId, fornecedorId);
+      setSelectedFornecedorById((prev) => {
+        const next = { ...prev };
+        delete next[fornecedorId];
+        return next;
+      });
+      toast.success('Fornecedor excluído da pasta');
+      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao excluir fornecedor da pasta');
+    } finally {
+      setRemoveFornecedorLoadingId(null);
+    }
+  };
+
+  const handleExcluirSelecionados = async () => {
+    if (!selectedRepresentanteId) {
+      toast.error('Selecione um representante');
+      return;
+    }
+    const ids = fornecedoresLista
+      .map((fornecedor) => fornecedor.fornecedor_id)
+      .filter((id) => selectedFornecedorById[id]);
+    if (ids.length === 0) {
+      toast.error('Selecione ao menos um fornecedor');
+      return;
+    }
+    if (!confirm(`Deseja excluir ${ids.length} fornecedor(es) da pasta?`)) return;
+
+    setRemoveSelecionadosLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => representativesService.removeFornecedor(selectedRepresentanteId, id)),
+      );
+      const removidos = results.filter((result) => result.status === 'fulfilled').length;
+      const falhas = results.length - removidos;
+      if (removidos > 0) {
+        toast.success(`${removidos} fornecedor(es) excluído(s) da pasta`);
+      }
+      if (falhas > 0) {
+        toast.error(`Falha ao excluir ${falhas} fornecedor(es)`);
+      }
+      setSelectedFornecedorById({});
+      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+    } finally {
+      setRemoveSelecionadosLoading(false);
+    }
   };
 
   const openCopyDialog = async () => {
@@ -313,18 +456,31 @@ export function RepresentantesPastasTab() {
           />
         </div>
         <div className="md:col-span-3 md:self-end">
-          <div className="flex gap-2">
-            <Button className="h-9 flex-1" onClick={openIncludeDialog} disabled={!selectedRepresentanteId}>
+          <div className="grid grid-cols-2 gap-2">
+            <Button className="h-9" onClick={openIncludeDialog} disabled={!selectedRepresentanteId}>
               <Plus className="mr-2 h-4 w-4" />
               Incluir
             </Button>
-            <Button variant="outline" className="h-9 flex-1" onClick={openCopyDialog} disabled={!selectedRepresentanteId}>
+            <Button variant="outline" className="h-9" onClick={openCopyDialog} disabled={!selectedRepresentanteId}>
               <Copy className="mr-2 h-4 w-4" />
               Copiar
             </Button>
-            <Button variant="outline" className="h-9 flex-1" onClick={handleZerarObjetivos} disabled={fornecedoresLista.length === 0}>
+            <Button variant="outline" className="h-9" onClick={handleZerarObjetivos} disabled={fornecedoresLista.length === 0}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Zerar
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-9"
+              onClick={handleExcluirSelecionados}
+              disabled={removeSelecionadosLoading || totalSelecionados === 0}
+            >
+              {removeSelecionadosLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Excluir ({totalSelecionados})
             </Button>
           </div>
         </div>
@@ -335,35 +491,100 @@ export function RepresentantesPastasTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      allSelecionados
+                        ? true
+                        : totalSelecionados > 0
+                        ? 'indeterminate'
+                        : false
+                    }
+                    onCheckedChange={(checked) => handleToggleAllFornecedores(checked === true)}
+                    aria-label="Selecionar todos os fornecedores"
+                  />
+                </TableHead>
                 <TableHead className="w-28">Código</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="w-32 text-right">Objetivo</TableHead>
+                <TableHead className="w-56">Objetivo</TableHead>
+                <TableHead className="w-24 text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {fornecedoresLoading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                     <Loader2 className="mx-auto h-4 w-4 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : fornecedoresLista.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                     Nenhum fornecedor encontrado para este representante
                   </TableCell>
                 </TableRow>
               ) : (
                 fornecedoresLista.map((fornecedor) => (
-                  <TableRow
-                    key={fornecedor.fornecedor_id}
-                    className={selectedFornecedorId === fornecedor.fornecedor_id ? 'bg-primary/10' : ''}
-                    onClick={() => setSelectedFornecedorId(fornecedor.fornecedor_id)}
-                  >
+                  <TableRow key={fornecedor.fornecedor_id}>
+                    <TableCell onClick={(event) => event.stopPropagation()}>
+                      <Checkbox
+                        checked={Boolean(selectedFornecedorById[fornecedor.fornecedor_id])}
+                        onCheckedChange={(checked) =>
+                          handleToggleFornecedor(fornecedor.fornecedor_id, checked === true)
+                        }
+                        aria-label={`Selecionar fornecedor ${fornecedor.nome_fornecedor}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{fornecedor.codigo_fornecedor || '-'}</TableCell>
                     <TableCell className="text-sm">{fornecedor.nome_fornecedor}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {formatObjetivo(objetivosByFornecedor[fornecedor.fornecedor_id] ?? 0)}
+                    <TableCell onClick={(event) => event.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          className="h-8 text-xs"
+                          value={objetivoDraftByFornecedor[fornecedor.fornecedor_id] ?? '0.00'}
+                          onChange={(event) =>
+                            setObjetivoDraftByFornecedor((prev) => ({
+                              ...prev,
+                              [fornecedor.fornecedor_id]: event.target.value,
+                            }))
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              handleSaveObjetivo(fornecedor.fornecedor_id);
+                            }
+                          }}
+                          placeholder={formatObjetivo(0)}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleSaveObjetivo(fornecedor.fornecedor_id)}
+                          disabled={saveObjetivoLoading === fornecedor.fornecedor_id}
+                        >
+                          {saveObjetivoLoading === fornecedor.fornecedor_id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Save className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleExcluirFornecedor(fornecedor.fornecedor_id)}
+                        disabled={removeFornecedorLoadingId === fornecedor.fornecedor_id}
+                      >
+                        {removeFornecedorLoadingId === fornecedor.fornecedor_id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
