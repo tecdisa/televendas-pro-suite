@@ -197,6 +197,30 @@ type ClientSearchFilters = {
   status?: 'ativos' | 'inativos' | 'todos';
 };
 
+type BulkAdjustPayload = {
+  clienteIds: number[];
+  data: Partial<{
+    consumidorFinal: boolean;
+    segmentoId: number;
+    rotaId: number;
+    redeId: number | null;
+    cep: string;
+    limiteCredito: number;
+    formaPagtoId: number;
+    prazoPagtoId: number;
+    b2bLiberado: boolean;
+    b2bTabelaId: number | null;
+    inativo: boolean;
+    boleto: boolean;
+    prazo: string;
+    descontoFinanceiroBoleto: number;
+    checkouts: number;
+    credito: number;
+    aberto: number;
+    disponivel: number;
+  }>;
+};
+
 async function fetchFromApi({
   filters,
   page = 1,
@@ -566,6 +590,48 @@ export const clientsService = {
       if (!res.ok) {
         let message = 'Falha ao atualizar cliente';
         try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
+        return Promise.reject(message);
+      }
+      return res.json();
+    } catch (e) {
+      return Promise.reject('Erro de conexão com o servidor');
+    }
+  },
+
+  // Bulk update clients - POST /api/clientes/ajuste-geral
+  bulkAdjust: async (payload: BulkAdjustPayload): Promise<any> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+
+    try {
+      const url = `${API_BASE}/api/clientes/ajuste-geral`;
+      const headers: Record<string, string> = {
+        accept: 'application/json',
+        'Content-Type': 'application/json',
+      };
+      const res = await apiClient.fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          empresaId: empresa.empresa_id,
+          clienteIds: Array.from(
+            new Set(
+              (payload?.clienteIds ?? [])
+                .map((id) => Number(id))
+                .filter((id) => Number.isFinite(id) && id > 0),
+            ),
+          ),
+          data: payload?.data ?? {},
+        }),
+      });
+      if (!res.ok) {
+        let message = 'Falha ao aplicar ajuste geral';
+        try {
+          const err = await res.json();
+          message = extractErrorMessage(err, message);
+        } catch {}
         return Promise.reject(message);
       }
       return res.json();
