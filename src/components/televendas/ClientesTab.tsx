@@ -904,11 +904,12 @@ export const ClientesTab = () => {
   };
 
   const handleSelectClient = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedClients([...selectedClients, id]);
-    } else {
-      setSelectedClients(selectedClients.filter(cId => cId !== id));
-    }
+    setSelectedClients((prev) => {
+      if (checked) {
+        return prev.includes(id) ? prev : [...prev, id];
+      }
+      return prev.filter((clientId) => clientId !== id);
+    });
   };
 
   const handleCadastrarPara = () => {
@@ -1201,7 +1202,6 @@ const validateFormData = (data: ClientFormData): string[] => {
       });
       toast.success('Cliente criado com sucesso');
       setCreateOpen(false);
-      setSelectedClients([]);
       loadClients(undefined, true);
     } catch (e: any) {
       setFormErrors(normalizeErrorMessages(e));
@@ -1210,12 +1210,17 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
   };
 
-  const openEditDialog = async () => {
-    if (selectedClients.length !== 1) {
+  const openEditDialog = async (clientId?: number) => {
+    const id =
+      clientId && Number.isFinite(clientId) && clientId > 0
+        ? clientId
+        : selectedClients.length === 1
+        ? selectedClients[0]
+        : null;
+    if (!id) {
       toast.error('Selecione exatamente um cliente para editar');
       return;
     }
-    const id = selectedClients[0];
     setEditId(id);
     setFormSnapshot(formData);
     setFormErrors([]);
@@ -1364,7 +1369,6 @@ const validateFormData = (data: ClientFormData): string[] => {
       });
       toast.success('Cliente atualizado com sucesso');
       setEditOpen(false);
-      setSelectedClients([]);
       loadClients(undefined, true);
     } catch (e: any) {
       setFormErrors(normalizeErrorMessages(e));
@@ -1373,17 +1377,22 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
   };
 
-  const handleDelete = async () => {
-    if (selectedClients.length === 0) {
+  const handleDelete = async (clientId?: number) => {
+    const targetIds =
+      clientId && Number.isFinite(clientId) && clientId > 0
+        ? [clientId]
+        : selectedClients;
+    if (targetIds.length === 0) {
       toast.error('Selecione pelo menos um cliente');
       return;
     }
     try {
-      for (const id of selectedClients) {
+      for (const id of targetIds) {
         await clientsService.remove(id);
       }
-      toast.success(`${selectedClients.length} cliente(s) excluído(s)`);
-      setSelectedClients([]);
+      if (targetIds.length === 1) toast.success('Cliente excluído com sucesso');
+      else toast.success(`${targetIds.length} cliente(s) excluído(s)`);
+      if (!clientId) setSelectedClients([]);
       loadClients(undefined, true);
     } catch (e: any) {
       toast.error(String(e));
@@ -1796,7 +1805,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedClients([client.id]); setTimeout(() => openEditDialog(), 0); }}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => openEditDialog(client.id)}
+                                >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </Button>
                               </TooltipTrigger>
@@ -1804,7 +1818,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => { setSelectedClients([client.id]); setTimeout(() => handleDelete(), 0); }}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => handleDelete(client.id)}
+                                >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </TooltipTrigger>

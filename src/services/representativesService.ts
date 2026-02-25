@@ -90,6 +90,12 @@ export interface CopyRepresentanteResult {
 }
 
 function normalizeRepresentante(raw: any): Representante {
+  const parseNumber = (value: any, fallback = 0) => {
+    if (value === undefined || value === null || value === '') return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
   return {
     representante_id: raw.representante_id ?? raw.id ?? 0,
     codigo_representante: raw.codigo_representante ?? raw.codigoRepresentante ?? '',
@@ -109,8 +115,11 @@ function normalizeRepresentante(raw: any): Representante {
     data_nascimento: raw.data_nascimento ?? raw.dataNascimento ?? null,
     supervisor: raw.supervisor ?? '',
     gerente: raw.gerente ?? '',
-    comissao: raw.comissao ?? 0,
-    objetivo_de_venda: raw.objetivo_de_venda ?? raw.objetivoDeVenda ?? 0,
+    comissao: parseNumber(raw.comissao, 0),
+    objetivo_de_venda: parseNumber(
+      raw.objetivo_de_venda ?? raw.objetivoDeVenda,
+      0,
+    ),
     setor_id: raw.setor_id ?? raw.setorId ?? null,
     rotas_liberadas: raw.rotas_liberadas ?? raw.rotasLiberadas ?? '',
     liberado_debito_credito: raw.liberado_debito_credito ?? raw.liberadoDebitoCredito ?? false,
