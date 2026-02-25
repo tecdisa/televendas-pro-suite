@@ -7,7 +7,7 @@ import { representativesService, Representante, RepresentanteFornecedorItem } fr
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Loader2, Plus, RotateCcw, Search } from 'lucide-react';
+import { Copy, Loader2, Plus, RotateCcw, Search } from 'lucide-react';
 
 const FORNECEDORES_LIMIT = 200;
 
@@ -33,6 +33,12 @@ export function RepresentantesPastasTab() {
   const [includeLoading, setIncludeLoading] = useState(false);
   const [includeResults, setIncludeResults] = useState<Fornecedor[]>([]);
   const [includeSubmittingId, setIncludeSubmittingId] = useState<number | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyRepSearch, setCopyRepSearch] = useState('');
+  const [copyRepLoading, setCopyRepLoading] = useState(false);
+  const [copyRepList, setCopyRepList] = useState<Representante[]>([]);
+  const [copyFromRepId, setCopyFromRepId] = useState<string>('');
+  const [copySubmitting, setCopySubmitting] = useState(false);
 
   const fornecedorReqRef = useRef(0);
 
@@ -128,6 +134,23 @@ export function RepresentantesPastasTab() {
     () => includeResults.filter((fornecedor) => !linkedFornecedorIds.has(fornecedor.fornecedor_id)),
     [includeResults, linkedFornecedorIds]
   );
+  const filteredCopyReps = useMemo(() => {
+    const term = copyRepSearch.trim().toUpperCase();
+    if (!term) return copyRepList;
+    return copyRepList.filter(
+      (representante) =>
+        representante.nome_representante.toUpperCase().includes(term) ||
+        (representante.codigo_representante || '').toUpperCase().includes(term) ||
+        (representante.cnpj_cpf || '').includes(copyRepSearch.trim()),
+    );
+  }, [copyRepList, copyRepSearch]);
+  const copyFromRep = useMemo(
+    () =>
+      copyRepList.find(
+        (representante) => String(representante.representante_id) === copyFromRepId,
+      ) ?? null,
+    [copyRepList, copyFromRepId]
+  );
 
   const loadFornecedoresParaInclusao = async (query = '') => {
     setIncludeLoading(true);
@@ -194,6 +217,55 @@ export function RepresentantesPastasTab() {
     toast.success('Objetivos zerados');
   };
 
+  const openCopyDialog = async () => {
+    if (!selectedRepresentanteId) {
+      toast.error('Selecione um representante');
+      return;
+    }
+    setCopyDialogOpen(true);
+    setCopyRepSearch('');
+    setCopyFromRepId('');
+    setCopyRepLoading(true);
+    try {
+      const result = await representativesService.getAll('', 1, 200, 'ativos');
+      setCopyRepList(
+        result.data.filter(
+          (representante) =>
+            String(representante.representante_id) !== selectedRepresentanteId,
+        ),
+      );
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao carregar representantes');
+      setCopyRepList([]);
+    } finally {
+      setCopyRepLoading(false);
+    }
+  };
+
+  const handleCopyFornecedores = async () => {
+    if (!selectedRepresentanteId || !copyFromRep) {
+      toast.error('Selecione um representante de origem');
+      return;
+    }
+
+    setCopySubmitting(true);
+    try {
+      const result = await representativesService.copyFornecedores(
+        selectedRepresentanteId,
+        copyFromRep.representante_id,
+      );
+      toast.success(
+        `Copiados: ${result.totalCriados} | Ignorados (duplicados): ${result.totalIgnorados}`,
+      );
+      setCopyDialogOpen(false);
+      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao copiar fornecedores');
+    } finally {
+      setCopySubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
@@ -245,6 +317,10 @@ export function RepresentantesPastasTab() {
             <Button className="h-9 flex-1" onClick={openIncludeDialog} disabled={!selectedRepresentanteId}>
               <Plus className="mr-2 h-4 w-4" />
               Incluir
+            </Button>
+            <Button variant="outline" className="h-9 flex-1" onClick={openCopyDialog} disabled={!selectedRepresentanteId}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copiar
             </Button>
             <Button variant="outline" className="h-9 flex-1" onClick={handleZerarObjetivos} disabled={fornecedoresLista.length === 0}>
               <RotateCcw className="mr-2 h-4 w-4" />
@@ -367,6 +443,83 @@ export function RepresentantesPastasTab() {
                   </TableBody>
                 </Table>
               </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Copiar fornecedores de outro representante</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Input
+              className="h-9 text-sm"
+              placeholder="Buscar representante por nome, código ou CPF/CNPJ..."
+              value={copyRepSearch}
+              onChange={(event) => setCopyRepSearch(event.target.value)}
+            />
+
+            <div className="overflow-hidden rounded-md border">
+              <div className="max-h-[50vh] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-32">Código</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead className="w-40">CNPJ/CPF</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {copyRepLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                          <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredCopyReps.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                          Nenhum representante disponível para cópia
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredCopyReps.map((representante) => {
+                        const isSelected =
+                          String(representante.representante_id) === copyFromRepId;
+                        return (
+                          <TableRow
+                            key={representante.representante_id}
+                            className={`cursor-pointer ${isSelected ? 'bg-primary/10' : 'hover:bg-muted/70'}`}
+                            onClick={() =>
+                              setCopyFromRepId(String(representante.representante_id))
+                            }
+                          >
+                            <TableCell className="font-mono text-xs">
+                              {representante.codigo_representante || '-'}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {representante.nome_representante}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {representante.cnpj_cpf || '-'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleCopyFornecedores} disabled={copySubmitting || !copyFromRep}>
+                {copySubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirmar cópia
+              </Button>
             </div>
           </div>
         </DialogContent>

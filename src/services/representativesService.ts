@@ -81,6 +81,12 @@ export interface RepresentanteFornecedorItem {
   fornecedor: RepresentanteFornecedor;
 }
 
+export interface CopyRepresentanteResult {
+  totalOrigem: number;
+  totalCriados: number;
+  totalIgnorados: number;
+}
+
 function normalizeRepresentante(raw: any): Representante {
   return {
     representante_id: raw.representante_id ?? raw.id ?? 0,
@@ -364,6 +370,70 @@ export const representativesService = {
     }
 
     return true;
+  },
+
+  async copyClientes(
+    representanteDestinoId: number | string,
+    representanteOrigemId: number | string
+  ): Promise<CopyRepresentanteResult> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteDestinoId)}/copiar-clientes?${params.toString()}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ representanteOrigemId: Number(representanteOrigemId) }),
+    });
+
+    if (!res.ok) {
+      let message = 'Falha ao copiar clientes';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    return {
+      totalOrigem: Number(json?.totalOrigem ?? 0),
+      totalCriados: Number(json?.totalCriados ?? 0),
+      totalIgnorados: Number(json?.totalIgnorados ?? 0),
+    };
+  },
+
+  async copyFornecedores(
+    representanteDestinoId: number | string,
+    representanteOrigemId: number | string
+  ): Promise<CopyRepresentanteResult> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteDestinoId)}/copiar-fornecedores?${params.toString()}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ representanteOrigemId: Number(representanteOrigemId) }),
+    });
+
+    if (!res.ok) {
+      let message = 'Falha ao copiar fornecedores';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    return {
+      totalOrigem: Number(json?.totalOrigem ?? 0),
+      totalCriados: Number(json?.totalCriados ?? 0),
+      totalIgnorados: Number(json?.totalIgnorados ?? 0),
+    };
   },
 
   // Legacy method for backward compatibility with existing components

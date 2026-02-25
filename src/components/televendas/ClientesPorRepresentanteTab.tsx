@@ -11,8 +11,6 @@ import { toast } from 'sonner';
 import { representativesService, Representante } from '@/services/representativesService';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Uf, Cidade, Rota, Rede, SegmentoVenda } from '@/services/metadataService';
-import { apiClient } from '@/utils/apiClient';
-import { API_BASE } from '@/utils/env';
 
 export function ClientesPorRepresentanteTab() {
   const PAGE_LIMIT = 100;
@@ -275,19 +273,10 @@ export function ClientesPorRepresentanteTab() {
     }
     setCopyLoading(true);
     try {
-      const res = await apiClient.fetch(
-        `${API_BASE}/api/representantes/${selectedRep.representante_id}/copiar-clientes`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', accept: 'application/json' },
-          body: JSON.stringify({ representanteOrigemId: copyFromRep.representante_id }),
-        }
+      const result = await representativesService.copyClientes(
+        selectedRep.representante_id,
+        copyFromRep.representante_id,
       );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.message || err?.error || 'Falha ao copiar clientes');
-      }
-      const result = await res.json();
       toast.success(
         `Copiados: ${result.totalCriados ?? 0} | Ignorados (duplicados): ${result.totalIgnorados ?? 0}`
       );
