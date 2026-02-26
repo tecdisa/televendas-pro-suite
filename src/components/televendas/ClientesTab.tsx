@@ -1436,14 +1436,14 @@ const validateFormData = (data: ClientFormData): string[] => {
               />
             </div>
             <div className="md:col-span-2">
-              <Button onClick={() => loadClients(undefined, true)} className="w-full">
+              <Button onClick={() => loadClients(undefined, true)} className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md">
                 <Search className="h-4 w-4 mr-2" /> Pesquisar
               </Button>
             </div>
             <div className="md:col-span-2">
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md"
                 onClick={() => {
                   const next = { ...defaultClientFilters };
                   setFilters(next);
@@ -1460,7 +1460,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className="h-10 w-full justify-between rounded-md border bg-muted/40 px-4 text-sm font-semibold text-foreground hover:bg-muted/40 hover:text-foreground"
+              className="w-full min-h-11 justify-between rounded-lg border bg-muted/40 px-4 text-sm font-semibold text-foreground hover:bg-muted/40 hover:text-foreground md:min-h-10 md:rounded-md"
             >
               <span>Mais filtros</span>
               {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

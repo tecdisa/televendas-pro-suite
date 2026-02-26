@@ -141,11 +141,12 @@ All colors MUST be HSL.
 
 /* Touch-friendly tap targets for mobile */
 @media (max-width: 640px) {
-  button:not([role="checkbox"]), a, [role="button"] {
+  button:not([role="checkbox"]):not([role="radio"]), a, [role="button"] {
     min-height: 40px;
   }
   
-  button[role="checkbox"] {
+  button[role="checkbox"],
+  button[role="radio"] {
     min-height: unset;
   }
   
