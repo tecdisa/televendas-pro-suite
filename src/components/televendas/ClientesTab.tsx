@@ -1404,19 +1404,9 @@ const validateFormData = (data: ClientFormData): string[] => {
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center">
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                className="p-0 h-auto hover:bg-transparent text-foreground hover:text-foreground gap-2"
-              >
-                <CardTitle className="cursor-pointer">Filtros</CardTitle>
-                {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-          </div>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0 pb-3">
+        <CardContent className="pb-3">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
             <div className="md:col-span-2">
               <label className="text-sm font-medium mb-1 block">Status</label>
@@ -1466,6 +1456,17 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
           </div>
         </CardContent>
+        <div className="px-6 pb-3">
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-10 w-full justify-between rounded-md border bg-muted/40 px-4 text-sm font-semibold text-foreground hover:bg-muted/40 hover:text-foreground"
+            >
+              <span>Mais filtros</span>
+              {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
         <CollapsibleContent>
         <CardContent className="space-y-3 pt-0">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
