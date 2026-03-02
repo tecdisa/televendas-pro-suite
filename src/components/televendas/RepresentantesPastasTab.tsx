@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { representativesService, Representante, RepresentanteFornecedorItem } from '@/services/representativesService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Copy, Loader2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
 
@@ -32,10 +33,10 @@ const parseObjetivoInput = (value: string): number | null => {
 export function RepresentantesPastasTab() {
   const [representantes, setRepresentantes] = useState<Representante[]>([]);
   const [repLoading, setRepLoading] = useState(false);
-  const [repSearch, setRepSearch] = useState('');
   const [selectedRepresentanteId, setSelectedRepresentanteId] = useState<string>('');
+  const [repSearchOpen, setRepSearchOpen] = useState(false);
+  const [repSearch, setRepSearch] = useState('');
 
-  const [searchFornecedor, setSearchFornecedor] = useState('');
   const [fornecedores, setFornecedores] = useState<RepresentanteFornecedorItem[]>([]);
   const [fornecedoresLoading, setFornecedoresLoading] = useState(false);
   const [objetivoDraftByFornecedor, setObjetivoDraftByFornecedor] = useState<Record<number, string>>({});
@@ -113,11 +114,8 @@ export function RepresentantesPastasTab() {
   }, [representantes, selectedRepresentanteId]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [selectedRepresentanteId, searchFornecedor]);
+    loadFornecedores(selectedRepresentanteId, '');
+  }, [selectedRepresentanteId]);
 
   const fornecedoresLista = useMemo(() => fornecedores.map((item) => item.fornecedor), [fornecedores]);
 
@@ -144,22 +142,29 @@ export function RepresentantesPastasTab() {
     });
   }, [fornecedores, fornecedoresLista]);
 
-  const handleRepSearch = () => {
-    loadRepresentantes(repSearch.trim());
-  };
-
-  const handleRepSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      handleRepSearch();
-    }
-  };
-
   const linkedFornecedorIds = useMemo(() => new Set(fornecedoresLista.map((f) => f.fornecedor_id)), [fornecedoresLista]);
   const totalSelecionados = useMemo(
     () => fornecedoresLista.filter((fornecedor) => selectedFornecedorById[fornecedor.fornecedor_id]).length,
     [fornecedoresLista, selectedFornecedorById],
   );
   const allSelecionados = fornecedoresLista.length > 0 && totalSelecionados === fornecedoresLista.length;
+  const selectedRepresentante = useMemo(
+    () =>
+      representantes.find(
+        (representante) => String(representante.representante_id) === selectedRepresentanteId,
+      ) ?? null,
+    [representantes, selectedRepresentanteId],
+  );
+  const filteredRepresentantes = useMemo(() => {
+    const term = repSearch.trim().toUpperCase();
+    if (!term) return representantes;
+    return representantes.filter(
+      (representante) =>
+        representante.nome_representante.toUpperCase().includes(term) ||
+        (representante.codigo_representante || '').toUpperCase().includes(term) ||
+        (representante.cnpj_cpf || '').includes(repSearch.trim()),
+    );
+  }, [representantes, repSearch]);
 
   const availableIncludeResults = useMemo(
     () => includeResults.filter((fornecedor) => !linkedFornecedorIds.has(fornecedor.fornecedor_id)),
@@ -224,7 +229,7 @@ export function RepresentantesPastasTab() {
     try {
       await representativesService.addFornecedor(selectedRepresentanteId, fornecedorId);
       toast.success('Fornecedor incluído com sucesso');
-      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+      await loadFornecedores(selectedRepresentanteId, '');
       setIncludeResults((prev) => prev.filter((item) => item.fornecedor_id !== fornecedorId));
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao incluir fornecedor');
@@ -318,7 +323,7 @@ export function RepresentantesPastasTab() {
         return next;
       });
       toast.success('Fornecedor excluído da pasta');
-      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+      await loadFornecedores(selectedRepresentanteId, '');
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao excluir fornecedor da pasta');
     } finally {
@@ -354,7 +359,7 @@ export function RepresentantesPastasTab() {
         toast.error(`Falha ao excluir ${falhas} fornecedor(es)`);
       }
       setSelectedFornecedorById({});
-      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+      await loadFornecedores(selectedRepresentanteId, '');
     } finally {
       setRemoveSelecionadosLoading(false);
     }
@@ -401,7 +406,7 @@ export function RepresentantesPastasTab() {
         `Copiados: ${result.totalCriados} | Ignorados (duplicados): ${result.totalIgnorados}`,
       );
       setCopyDialogOpen(false);
-      await loadFornecedores(selectedRepresentanteId, searchFornecedor.trim());
+      await loadFornecedores(selectedRepresentanteId, '');
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao copiar fornecedores');
     } finally {
@@ -411,188 +416,251 @@ export function RepresentantesPastasTab() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-        <div className="md:col-span-8">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Buscar representante</label>
-          <div className="flex gap-2">
-            <Input
-              className="h-9 text-sm"
-              placeholder="Buscar por nome, CPF/CNPJ ou código..."
-              value={repSearch}
-              onChange={(event) => setRepSearch(event.target.value)}
-              onKeyDown={handleRepSearchKeyDown}
-            />
-            <Button onClick={handleRepSearch} disabled={repLoading} className="shrink-0">
-              <Search className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Buscar</span>
-            </Button>
-          </div>
-        </div>
-        <div className="md:col-span-4">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Representante</label>
-          <Select value={selectedRepresentanteId} onValueChange={setSelectedRepresentanteId} disabled={repLoading || representantes.length === 0}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={repLoading ? 'Carregando representantes...' : 'Selecione um representante'} />
-            </SelectTrigger>
-            <SelectContent>
-              {representantes.map((representante) => (
-                <SelectItem key={representante.representante_id} value={String(representante.representante_id)}>
-                  {(representante.codigo_representante || '-')} - {representante.nome_representante}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
-        <div className="md:col-span-9">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Buscar fornecedor</label>
-          <Input
-            className="h-9 text-sm"
-            placeholder="Nome, código, CPF/CNPJ..."
-            value={searchFornecedor}
-            onChange={(event) => setSearchFornecedor(event.target.value)}
-          />
-        </div>
-        <div className="md:col-span-3 md:self-end">
-          <div className="grid grid-cols-2 gap-2">
-            <Button className="h-9" onClick={openIncludeDialog} disabled={!selectedRepresentanteId}>
-              <Plus className="mr-2 h-4 w-4" />
-              Incluir
-            </Button>
-            <Button variant="outline" className="h-9" onClick={openCopyDialog} disabled={!selectedRepresentanteId}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copiar
-            </Button>
-            <Button variant="outline" className="h-9" onClick={handleZerarObjetivos} disabled={fornecedoresLista.length === 0}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Zerar
-            </Button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Representante:</label>
+        <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
+          <DialogTrigger asChild>
             <Button
-              variant="destructive"
-              className="h-9"
-              onClick={handleExcluirSelecionados}
-              disabled={removeSelecionadosLoading || totalSelecionados === 0}
+              variant="outline"
+              className="w-[360px] justify-start h-9 text-sm"
+              disabled={repLoading || representantes.length === 0}
             >
-              {removeSelecionadosLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              Excluir ({totalSelecionados})
+              <Search className="h-4 w-4 mr-2" />
+              <span className="truncate">
+                {selectedRepresentante
+                  ? `${selectedRepresentante.codigo_representante || '-'} - ${selectedRepresentante.nome_representante}`
+                  : repLoading
+                  ? 'Carregando representantes...'
+                  : 'Buscar representante'}
+              </span>
             </Button>
-          </div>
-        </div>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Buscar Representante</DialogTitle>
+            </DialogHeader>
+            <Input
+              placeholder="Digite nome, código ou CPF/CNPJ..."
+              value={repSearch}
+              onChange={(e) => setRepSearch(e.target.value)}
+              autoFocus
+            />
+            <ScrollArea className="h-64 mt-2">
+              {repLoading ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Carregando representantes...
+                </div>
+              ) : filteredRepresentantes.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Nenhum representante encontrado
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredRepresentantes.map((representante) => {
+                    const isSelected =
+                      String(representante.representante_id) === selectedRepresentanteId;
+                    return (
+                      <button
+                        key={representante.representante_id}
+                        type="button"
+                        className={`w-full rounded px-2 py-2 text-left text-sm ${
+                          isSelected ? 'bg-muted' : 'hover:bg-muted/70'
+                        }`}
+                        onClick={() => {
+                          setSelectedRepresentanteId(String(representante.representante_id));
+                          setRepSearchOpen(false);
+                          setRepSearch('');
+                        }}
+                      >
+                        <div className="font-medium">
+                          {(representante.codigo_representante || '-')} - {representante.nome_representante}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {representante.cnpj_cpf || '-'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="overflow-hidden rounded-md border">
-        <div className="max-h-[60vh] overflow-auto scrollbar-thin">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={
-                      allSelecionados
-                        ? true
-                        : totalSelecionados > 0
-                        ? 'indeterminate'
-                        : false
-                    }
-                    onCheckedChange={(checked) => handleToggleAllFornecedores(checked === true)}
-                    aria-label="Selecionar todos os fornecedores"
-                  />
-                </TableHead>
-                <TableHead className="w-28">Código</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead className="w-56">Objetivo</TableHead>
-                <TableHead className="w-24 text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      {selectedRepresentante && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-base">
+                Fornecedores de {selectedRepresentante.codigo_representante} - {selectedRepresentante.nome_representante}
+              </CardTitle>
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" onClick={openIncludeDialog}>
+                  <Plus className="h-4 w-4 mr-1" /> Incluir
+                </Button>
+                <Button size="sm" variant="outline" onClick={openCopyDialog}>
+                  <Copy className="h-4 w-4 mr-1" /> Copiar de outro
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleZerarObjetivos}
+                  disabled={fornecedoresLista.length === 0}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" /> Zerar
+                </Button>
+                {totalSelecionados > 0 && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleExcluirSelecionados}
+                    disabled={removeSelecionadosLoading}
+                  >
+                    {removeSelecionadosLoading ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-1" />
+                    )}
+                    Remover ({totalSelecionados})
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-[500px] overflow-auto border rounded">
               {fornecedoresLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                  </TableCell>
-                </TableRow>
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
               ) : fornecedoresLista.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    Nenhum fornecedor encontrado para este representante
-                  </TableCell>
-                </TableRow>
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum fornecedor encontrado para este representante
+                </p>
               ) : (
-                fornecedoresLista.map((fornecedor) => (
-                  <TableRow key={fornecedor.fornecedor_id}>
-                    <TableCell onClick={(event) => event.stopPropagation()}>
-                      <Checkbox
-                        checked={Boolean(selectedFornecedorById[fornecedor.fornecedor_id])}
-                        onCheckedChange={(checked) =>
-                          handleToggleFornecedor(fornecedor.fornecedor_id, checked === true)
-                        }
-                        aria-label={`Selecionar fornecedor ${fornecedor.nome_fornecedor}`}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{fornecedor.codigo_fornecedor || '-'}</TableCell>
-                    <TableCell className="text-sm">{fornecedor.nome_fornecedor}</TableCell>
-                    <TableCell onClick={(event) => event.stopPropagation()}>
-                      <div className="flex items-center gap-1">
-                        <Input
-                          className="h-8 text-xs"
-                          value={objetivoDraftByFornecedor[fornecedor.fornecedor_id] ?? '0.00'}
-                          onChange={(event) =>
-                            setObjetivoDraftByFornecedor((prev) => ({
-                              ...prev,
-                              [fornecedor.fornecedor_id]: event.target.value,
-                            }))
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={
+                            allSelecionados
+                              ? true
+                              : totalSelecionados > 0
+                              ? 'indeterminate'
+                              : false
                           }
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault();
-                              handleSaveObjetivo(fornecedor.fornecedor_id);
-                            }
-                          }}
-                          placeholder={formatObjetivo(0)}
+                          onCheckedChange={(checked) =>
+                            handleToggleAllFornecedores(checked === true)
+                          }
+                          aria-label="Selecionar todos os fornecedores"
                         />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleSaveObjetivo(fornecedor.fornecedor_id)}
-                          disabled={saveObjetivoLoading === fornecedor.fornecedor_id}
+                      </TableHead>
+                      <TableHead className="w-20">Código</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead className="w-56">Objetivo</TableHead>
+                      <TableHead className="w-24 text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fornecedoresLista.map((fornecedor) => (
+                      <TableRow key={fornecedor.fornecedor_id}>
+                        <TableCell onClick={(event) => event.stopPropagation()}>
+                          <Checkbox
+                            checked={Boolean(
+                              selectedFornecedorById[fornecedor.fornecedor_id],
+                            )}
+                            onCheckedChange={(checked) =>
+                              handleToggleFornecedor(
+                                fornecedor.fornecedor_id,
+                                checked === true,
+                              )
+                            }
+                            aria-label={`Selecionar fornecedor ${fornecedor.nome_fornecedor}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {fornecedor.codigo_fornecedor || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {fornecedor.nome_fornecedor}
+                        </TableCell>
+                        <TableCell onClick={(event) => event.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              className="h-8 text-xs"
+                              value={
+                                objetivoDraftByFornecedor[fornecedor.fornecedor_id] ??
+                                '0.00'
+                              }
+                              onChange={(event) =>
+                                setObjetivoDraftByFornecedor((prev) => ({
+                                  ...prev,
+                                  [fornecedor.fornecedor_id]: event.target.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  handleSaveObjetivo(fornecedor.fornecedor_id);
+                                }
+                              }}
+                              placeholder={formatObjetivo(0)}
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                handleSaveObjetivo(fornecedor.fornecedor_id)
+                              }
+                              disabled={
+                                saveObjetivoLoading === fornecedor.fornecedor_id
+                              }
+                            >
+                              {saveObjetivoLoading === fornecedor.fornecedor_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Save className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell
+                          className="text-right"
+                          onClick={(event) => event.stopPropagation()}
                         >
-                          {saveObjetivoLoading === fornecedor.fornecedor_id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Save className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleExcluirFornecedor(fornecedor.fornecedor_id)}
-                        disabled={removeFornecedorLoadingId === fornecedor.fornecedor_id}
-                      >
-                        {removeFornecedorLoadingId === fornecedor.fornecedor_id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              handleExcluirFornecedor(fornecedor.fornecedor_id)
+                            }
+                            disabled={
+                              removeFornecedorLoadingId === fornecedor.fornecedor_id
+                            }
+                          >
+                            {removeFornecedorLoadingId === fornecedor.fornecedor_id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Registro: {fornecedoresLista.length}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={includeDialogOpen} onOpenChange={setIncludeDialogOpen}>
         <DialogContent className="max-w-3xl">

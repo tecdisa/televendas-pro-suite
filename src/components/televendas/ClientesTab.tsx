@@ -153,6 +153,8 @@ const CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY = 'televendas:clientes:filtersOpen';
 const createEmptyFormData = () => ({
   codigoCliente: '',
   inativo: false,
+  simplesNacional: false,
+  consumidorFinal: false,
   cnpjCpf: '',
   inscEstadual: '',
   inscMunicipal: '',
@@ -1252,6 +1254,8 @@ const validateFormData = (data: ClientFormData): string[] => {
       const nextFormData: ClientFormData = {
         codigoCliente: toUpperValue(d.codigo_cliente ?? d.codigoCliente ?? d.codigo ?? ''),
         inativo: Boolean(d.inativo),
+        simplesNacional: Boolean(d.simples_nacional ?? d.simplesNacional ?? false),
+        consumidorFinal: Boolean(d.consumidor_final ?? d.consumidorFinal ?? false),
         cnpjCpf: toUpperValue(d.cnpj_cpf ?? d.cnpjCpf ?? d.cnpj ?? d.cpf ?? ''),
         inscEstadual: toUpperValue(d.inscricao_estadual ?? d.inscEstadual ?? d.insc_estadual ?? ''),
           inscMunicipal: toUpperValue(d.inscricao_municipal ?? d.inscMunicipal ?? d.insc_municipal ?? ''),
@@ -2389,7 +2393,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3 flex items-center gap-2">
-                    <Checkbox />
+                    <Checkbox
+                      checked={formData.simplesNacional}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, simplesNacional: checked === true })
+                      }
+                    />
                     <label className="text-sm">Simples nacional</label>
                   </div>
                 </div>
@@ -2401,7 +2410,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
                   </div>
                   <div className="col-span-3 flex items-center gap-2">
-                    <Checkbox />
+                    <Checkbox
+                      checked={formData.consumidorFinal}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, consumidorFinal: checked === true })
+                      }
+                    />
                     <label className="text-sm">Consumidor final</label>
                   </div>
                 </div>
@@ -3258,7 +3272,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
-                      <Checkbox />
+                      <Checkbox
+                        checked={formData.simplesNacional}
+                        onCheckedChange={(checked) =>
+                          setFormData({ ...formData, simplesNacional: checked === true })
+                        }
+                      />
                       <label className="text-sm">Simples nacional</label>
                     </div>
                   </div>
@@ -3269,7 +3288,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
-                      <Checkbox />
+                      <Checkbox
+                        checked={formData.consumidorFinal}
+                        onCheckedChange={(checked) =>
+                          setFormData({ ...formData, consumidorFinal: checked === true })
+                        }
+                      />
                       <label className="text-sm">Consumidor final</label>
                     </div>
                   </div>

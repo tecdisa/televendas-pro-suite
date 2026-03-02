@@ -19,6 +19,7 @@ export interface Client {
   contato?: string;
   formaPagtoId?: number | string | null;
   prazoPagtoId?: number | string | null;
+  simplesNacional?: boolean;
   rotaId?: number | null;
   rota?: ClientRota | null;
   representanteId?: string;
@@ -140,6 +141,7 @@ function normalizeClient(raw: any): Client {
     contato: contato ? String(contato) : undefined,
     formaPagtoId: typeof formaPagtoId === 'number' ? formaPagtoId : (formaPagtoId != null ? String(formaPagtoId) : null),
     prazoPagtoId: typeof prazoPagtoId === 'number' ? prazoPagtoId : (prazoPagtoId != null ? String(prazoPagtoId) : null),
+    simplesNacional: Boolean(raw?.simples_nacional ?? raw?.simplesNacional ?? false),
     rotaId: rotaId != null ? Number(rotaId) : null,
     rota: rotaObj,
     representanteId: representanteId != null ? String(representanteId).trim() : undefined,
@@ -439,6 +441,7 @@ export const clientsService = {
     cnpjCpf: string;
     tipoPessoa?: string;
     consumidorFinal?: boolean;
+    simplesNacional?: boolean;
     inscricaoEstadual?: string;
     nome: string;
     fantasia?: string;
@@ -522,6 +525,7 @@ export const clientsService = {
       cnpjCpf: string;
       tipoPessoa: string;
       consumidorFinal: boolean;
+      simplesNacional: boolean;
       inscricaoEstadual: string;
       nome: string;
       fantasia: string;

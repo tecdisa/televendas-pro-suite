@@ -902,7 +902,7 @@ export function RepresentantesTab() {
                               <TableCell className="hidden lg:table-cell">{r.uf || '-'}</TableCell>
                               <TableCell className="hidden lg:table-cell text-xs">{r.fone || '-'}</TableCell>
                               <TableCell className="hidden xl:table-cell text-xs">{r.email || '-'}</TableCell>
-                              <TableCell className="font-mono text-sm">
+                              <TableCell className="font-mono text-sm text-right">
                                 {formatObjetivo(r.objetivo_de_venda)}
                               </TableCell>
                               <TableCell>
