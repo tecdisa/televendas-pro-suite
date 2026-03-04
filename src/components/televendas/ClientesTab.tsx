@@ -58,6 +58,8 @@ const parseDecimalInput = (value: string | number | null | undefined) => {
   if (!raw) return NaN;
   const normalized = raw.includes(',')
     ? raw.replace(/\./g, '').replace(',', '.')
+    : /^\d{1,3}(\.\d{3})+$/.test(raw)
+    ? raw.replace(/\./g, '')
     : raw.replace(/,/g, '');
   return Number(normalized);
 };
@@ -1000,7 +1002,10 @@ export const ClientesTab = () => {
     if (ajusteGeralForm.limiteCreditoChecked) {
       const limite = parseDecimalInput(ajusteGeralForm.limiteCredito);
       if (!Number.isFinite(limite)) errors.push('Informe um limite de crédito válido.');
-      else data.limiteCredito = limite;
+      else {
+        data.limiteCredito = limite;
+        data.limite_credito = limite;
+      }
     }
     if (ajusteGeralForm.boletoChecked) {
       data.boleto = ajusteGeralForm.boleto === 'true';
