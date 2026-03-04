@@ -106,6 +106,11 @@ const summarizeSelection = (items: string[], emptyLabel = 'Selecione...') => {
   if (filtered.length <= 2) return filtered.join(', ');
   return `${filtered.slice(0, 2).join(', ')} +${filtered.length - 2}`;
 };
+const generateB2bSenha = (length = 12) => {
+  const size = Math.min(Math.max(length, 1), 20);
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  return Array.from({ length: size }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+};
 
 type ClientListFilters = {
   status: 'ativos' | 'inativos' | 'todos';
@@ -3322,6 +3327,14 @@ const validateFormData = (data: ClientFormData): string[] => {
                         value={formData.b2bSenha}
                         onChange={(e) => setFormData({ ...formData, b2bSenha: e.target.value })}
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 px-3"
+                        onClick={() => setFormData((prev) => ({ ...prev, b2bSenha: generateB2bSenha() }))}
+                      >
+                        Gerar senha
+                      </Button>
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
@@ -4168,6 +4181,14 @@ const validateFormData = (data: ClientFormData): string[] => {
                           value={formData.b2bSenha}
                           onChange={(e) => setFormData({ ...formData, b2bSenha: e.target.value })}
                         />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-8 px-3"
+                          onClick={() => setFormData((prev) => ({ ...prev, b2bSenha: generateB2bSenha() }))}
+                        >
+                          Gerar senha
+                        </Button>
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-muted-foreground">Tabela B2B</label>
