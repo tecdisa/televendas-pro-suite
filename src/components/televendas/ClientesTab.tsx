@@ -177,6 +177,13 @@ const createEmptyFormData = () => ({
   cidadeId: 0,
   cep: '',
   complemento: '',
+  cobrancaEndereco: '',
+  cobrancaEnderecoNumero: '',
+  cobrancaEnderecoBairro: '',
+  cobrancaEnderecoCidadeId: 0,
+  cobrancaEnderecoCep: '',
+  cobrancaEnderecoUf: '',
+  cobrancaEnderecoComplemento: '',
   telefone: '',
   fax: '',
   whatsapp: '',
@@ -421,9 +428,6 @@ export const ClientesTab = () => {
   const [, setComplementarCidade] = useState('');
   const [cidadesComplementares, setCidadesComplementares] = useState<Cidade[]>([]);
   const [cidadesComplementaresLoading, setCidadesComplementaresLoading] = useState(false);
-  const [cobrancaUf, setCobrancaUf] = useState('');
-  const [cobrancaCidadeId, setCobrancaCidadeId] = useState(0);
-  const [, setCobrancaCidade] = useState('');
   const [cidadesCobranca, setCidadesCobranca] = useState<Cidade[]>([]);
   const [cidadesCobrancaLoading, setCidadesCobrancaLoading] = useState(false);
 
@@ -649,12 +653,12 @@ export const ClientesTab = () => {
   }, [complementarUf, createOpen, editOpen]);
 
   useEffect(() => {
-    if (cobrancaUf && (createOpen || editOpen)) {
-      loadCidadesCobranca(cobrancaUf);
+    if (formData.cobrancaEnderecoUf && (createOpen || editOpen)) {
+      loadCidadesCobranca(formData.cobrancaEnderecoUf);
     } else {
       setCidadesCobranca([]);
     }
-  }, [cobrancaUf, createOpen, editOpen]);
+  }, [formData.cobrancaEnderecoUf, createOpen, editOpen]);
 
   // Carregar cidades quando UF do filtro mudar
   useEffect(() => {
@@ -1160,9 +1164,6 @@ const validateFormData = (data: ClientFormData): string[] => {
     setComplementarCidadeId(0);
     setComplementarCidade('');
     setCidadesComplementares([]);
-    setCobrancaUf('');
-    setCobrancaCidadeId(0);
-    setCobrancaCidade('');
     setCidadesCobranca([]);
     setTabelaSearchOpen(false);
     setTabelaSearch('');
@@ -1193,6 +1194,9 @@ const validateFormData = (data: ClientFormData): string[] => {
         whatsapp: normalizePhoneDigits(payloadBase.whatsapp),
         contato1Celular: normalizePhoneDigits(payloadBase.contato1Celular),
         contato2Celular: normalizePhoneDigits(payloadBase.contato2Celular),
+        cobrancaEnderecoCep: normalizeCep(payloadBase.cobrancaEnderecoCep || ''),
+        cobrancaEnderecoUf: toUpperTrimValue(payloadBase.cobrancaEnderecoUf || ''),
+        cobrancaEnderecoCidadeId: Number(payloadBase.cobrancaEnderecoCidadeId) || 0,
       };
       await clientsService.create({
         ...payloadNormalized,
@@ -1243,9 +1247,6 @@ const validateFormData = (data: ClientFormData): string[] => {
     setComplementarCidadeId(0);
     setComplementarCidade('');
     setCidadesComplementares([]);
-    setCobrancaUf('');
-    setCobrancaCidadeId(0);
-    setCobrancaCidade('');
     setCidadesCobranca([]);
     setTabelaSearchOpen(false);
     setTabelaSearch('');
@@ -1282,6 +1283,29 @@ const validateFormData = (data: ClientFormData): string[] => {
           cidadeId: Number(d.cidade_id ?? d.cidadeId ?? 0),
           cep: formatCep(d.cep ?? ''),
           complemento: toUpperTrimValue(d.complemento ?? ''),
+          cobrancaEndereco: toUpperValue(
+            d.cobranca_endereco ?? d.cobrancaEndereco ?? '',
+          ),
+          cobrancaEnderecoNumero: toUpperValue(
+            d.cobranca_endereco_numero ?? d.cobrancaEnderecoNumero ?? '',
+          ),
+          cobrancaEnderecoBairro: toUpperTrimValue(
+            d.cobranca_endereco_bairro ?? d.cobrancaEnderecoBairro ?? '',
+          ),
+          cobrancaEnderecoCidadeId: Number(
+            d.cobranca_endereco_cidade_id ?? d.cobrancaEnderecoCidadeId ?? 0,
+          ),
+          cobrancaEnderecoCep: formatCep(
+            d.cobranca_endereco_cep ?? d.cobrancaEnderecoCep ?? '',
+          ),
+          cobrancaEnderecoUf: toUpperValue(
+            d.cobranca_endereco_uf ?? d.cobrancaEnderecoUf ?? '',
+          ),
+          cobrancaEnderecoComplemento: toUpperTrimValue(
+            d.cobranca_endereco_complemento ??
+              d.cobrancaEnderecoComplemento ??
+              '',
+          ),
           telefone: formatPhone(d.fone ?? d.telefone ?? ''),
           fax: formatPhone(d.fax ?? ''),
           whatsapp: formatPhone(d.whatsapp ?? ''),
@@ -1364,6 +1388,9 @@ const validateFormData = (data: ClientFormData): string[] => {
         whatsapp: normalizePhoneDigits(payloadBase.whatsapp),
         contato1Celular: normalizePhoneDigits(payloadBase.contato1Celular),
         contato2Celular: normalizePhoneDigits(payloadBase.contato2Celular),
+        cobrancaEnderecoCep: normalizeCep(payloadBase.cobrancaEnderecoCep || ''),
+        cobrancaEnderecoUf: toUpperTrimValue(payloadBase.cobrancaEnderecoUf || ''),
+        cobrancaEnderecoCidadeId: Number(payloadBase.cobrancaEnderecoCidadeId) || 0,
       };
       await clientsService.update(editId, {
         ...payloadNormalized,
@@ -2782,25 +2809,74 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-8">
+                  <div className="col-span-12">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                    <Input
+                      className="h-8 text-sm"
+                      value={formData.cobrancaEndereco}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cobrancaEndereco: toUpperValue(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
+                    <Input
+                      className="h-8 text-sm"
+                      value={formData.cobrancaEnderecoNumero}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cobrancaEnderecoNumero: toUpperValue(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-5">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+                    <Input
+                      className="h-8 text-sm"
+                      value={formData.cobrancaEnderecoBairro}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cobrancaEnderecoBairro: toUpperValue(e.target.value),
+                        })
+                      }
+                    />
                   </div>
                   <div className="col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
+                    <Input
+                      className="h-8 text-sm"
+                      value={formData.cobrancaEnderecoComplemento}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cobrancaEnderecoComplemento: toUpperValue(e.target.value),
+                        })
+                      }
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
                     <Select
-                      value={cobrancaUf}
+                      value={formData.cobrancaEnderecoUf}
                       onValueChange={(v) => {
-                        const nextUf = toUpperValue(v);
-                        setCobrancaUf(nextUf);
-                        setCobrancaCidadeId(0);
-                        setCobrancaCidade('');
+                        setFormData({
+                          ...formData,
+                          cobrancaEnderecoUf: toUpperValue(v),
+                          cobrancaEnderecoCidadeId: 0,
+                        });
                       }}
                       disabled={ufsLoading}
                     >
@@ -2815,21 +2891,31 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </Select>
                   </div>
                   <div className="col-span-5">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
                     <Select
-                      value={cobrancaCidadeId ? String(cobrancaCidadeId) : ''}
+                      value={
+                        formData.cobrancaEnderecoCidadeId
+                          ? String(formData.cobrancaEnderecoCidadeId)
+                          : ''
+                      }
                       onValueChange={(v) => {
-                        const cid = cidadesCobranca.find(c => String(c.cidade_id) === v);
-                        setCobrancaCidadeId(parseInt(v) || 0);
-                        setCobrancaCidade(toUpperValue(cid?.nome_cidade || ''));
+                        setFormData({
+                          ...formData,
+                          cobrancaEnderecoCidadeId: parseInt(v) || 0,
+                        });
                       }}
-                      disabled={cidadesCobrancaLoading || !cobrancaUf}
+                      disabled={
+                        cidadesCobrancaLoading || !formData.cobrancaEnderecoUf
+                      }
                     >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue
                           placeholder={
                             cidadesCobrancaLoading
                               ? 'Carregando...'
-                              : (cobrancaUf ? 'Selecione' : 'Selecione UF')
+                              : formData.cobrancaEnderecoUf
+                              ? 'Selecione'
+                              : 'Selecione UF'
                           }
                         />
                       </SelectTrigger>
@@ -2840,14 +2926,19 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-                    <Input className="h-8 text-sm" placeholder="-" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8">
-                      <Search className="h-4 w-4" />
-                    </Button>
+                    <Input
+                      className="h-8 text-sm"
+                      placeholder="-"
+                      value={formData.cobrancaEnderecoCep}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cobrancaEnderecoCep: formatCep(e.target.value),
+                        })
+                      }
+                    />
                   </div>
                 </div>
               </TabsContent>
@@ -3582,13 +3673,143 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
 
                   <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-8">
+                    <div className="col-span-12">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                      <Input
+                        className="h-8 text-sm"
+                        value={formData.cobrancaEndereco}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEndereco: toUpperValue(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
+                      <Input
+                        className="h-8 text-sm"
+                        value={formData.cobrancaEnderecoNumero}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEnderecoNumero: toUpperValue(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+                      <Input
+                        className="h-8 text-sm"
+                        value={formData.cobrancaEnderecoBairro}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEnderecoBairro: toUpperValue(e.target.value),
+                          })
+                        }
+                      />
                     </div>
                     <div className="col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
+                      <Input
+                        className="h-8 text-sm"
+                        value={formData.cobrancaEnderecoComplemento}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEnderecoComplemento: toUpperValue(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
+                      <Select
+                        value={formData.cobrancaEnderecoUf}
+                        onValueChange={(v) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEnderecoUf: toUpperValue(v),
+                            cobrancaEnderecoCidadeId: 0,
+                          })
+                        }
+                        disabled={ufsLoading}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {ufsApi.map((u) => (
+                            <SelectItem key={u.uf} value={u.uf}>
+                              {u.uf}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-5">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
+                      <Select
+                        value={
+                          formData.cobrancaEnderecoCidadeId
+                            ? String(formData.cobrancaEnderecoCidadeId)
+                            : ''
+                        }
+                        onValueChange={(v) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEnderecoCidadeId: parseInt(v) || 0,
+                          })
+                        }
+                        disabled={
+                          cidadesCobrancaLoading || !formData.cobrancaEnderecoUf
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue
+                            placeholder={
+                              cidadesCobrancaLoading
+                                ? 'Carregando...'
+                                : formData.cobrancaEnderecoUf
+                                ? 'Selecione'
+                                : 'Selecione UF'
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50 max-h-60">
+                          {cidadesCobranca.map((c) => (
+                            <SelectItem
+                              key={c.cidade_id}
+                              value={String(c.cidade_id)}
+                            >
+                              {c.nome_cidade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-5">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+                      <Input
+                        className="h-8 text-sm"
+                        placeholder="-"
+                        value={formData.cobrancaEnderecoCep}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cobrancaEnderecoCep: formatCep(e.target.value),
+                          })
+                        }
+                      />
                     </div>
                   </div>
                 </TabsContent>

@@ -20,6 +20,13 @@ export interface Client {
   formaPagtoId?: number | string | null;
   prazoPagtoId?: number | string | null;
   simplesNacional?: boolean;
+  cobrancaEndereco?: string | null;
+  cobrancaEnderecoNumero?: string | null;
+  cobrancaEnderecoBairro?: string | null;
+  cobrancaEnderecoCidadeId?: number | null;
+  cobrancaEnderecoCep?: string | null;
+  cobrancaEnderecoUf?: string | null;
+  cobrancaEnderecoComplemento?: string | null;
   rotaId?: number | null;
   rota?: ClientRota | null;
   representanteId?: string;
@@ -86,6 +93,22 @@ function normalizeClient(raw: any): Client {
   const formaPagtoId = raw?.forma_pagto_id ?? raw?.formaPagtoId ?? raw?.forma_pagto ?? null;
   const prazoPagtoId = raw?.prazo_pagto_id ?? raw?.prazoPagtoId ?? null;
   const rotaId = raw?.rota_id ?? raw?.rotaId ?? null;
+  const cobrancaEndereco =
+    raw?.cobranca_endereco ?? raw?.cobrancaEndereco ?? null;
+  const cobrancaEnderecoNumero =
+    raw?.cobranca_endereco_numero ?? raw?.cobrancaEnderecoNumero ?? null;
+  const cobrancaEnderecoBairro =
+    raw?.cobranca_endereco_bairro ?? raw?.cobrancaEnderecoBairro ?? null;
+  const cobrancaEnderecoCidadeId =
+    raw?.cobranca_endereco_cidade_id ?? raw?.cobrancaEnderecoCidadeId ?? null;
+  const cobrancaEnderecoCep =
+    raw?.cobranca_endereco_cep ?? raw?.cobrancaEnderecoCep ?? null;
+  const cobrancaEnderecoUf =
+    raw?.cobranca_endereco_uf ?? raw?.cobrancaEnderecoUf ?? null;
+  const cobrancaEnderecoComplemento =
+    raw?.cobranca_endereco_complemento ??
+    raw?.cobrancaEnderecoComplemento ??
+    null;
   // Objeto rota vindo do join com rotas_clientes
   const rotaObj = raw?.rota && typeof raw.rota === 'object' ? {
     id: raw.rota.id,
@@ -142,6 +165,22 @@ function normalizeClient(raw: any): Client {
     formaPagtoId: typeof formaPagtoId === 'number' ? formaPagtoId : (formaPagtoId != null ? String(formaPagtoId) : null),
     prazoPagtoId: typeof prazoPagtoId === 'number' ? prazoPagtoId : (prazoPagtoId != null ? String(prazoPagtoId) : null),
     simplesNacional: Boolean(raw?.simples_nacional ?? raw?.simplesNacional ?? false),
+    cobrancaEndereco:
+      cobrancaEndereco != null ? String(cobrancaEndereco).trim() : null,
+    cobrancaEnderecoNumero:
+      cobrancaEnderecoNumero != null ? String(cobrancaEnderecoNumero).trim() : null,
+    cobrancaEnderecoBairro:
+      cobrancaEnderecoBairro != null ? String(cobrancaEnderecoBairro).trim() : null,
+    cobrancaEnderecoCidadeId:
+      cobrancaEnderecoCidadeId != null ? Number(cobrancaEnderecoCidadeId) : null,
+    cobrancaEnderecoCep:
+      cobrancaEnderecoCep != null ? String(cobrancaEnderecoCep).trim() : null,
+    cobrancaEnderecoUf:
+      cobrancaEnderecoUf != null ? String(cobrancaEnderecoUf).trim() : null,
+    cobrancaEnderecoComplemento:
+      cobrancaEnderecoComplemento != null
+        ? String(cobrancaEnderecoComplemento).trim()
+        : null,
     rotaId: rotaId != null ? Number(rotaId) : null,
     rota: rotaObj,
     representanteId: representanteId != null ? String(representanteId).trim() : undefined,
@@ -453,6 +492,13 @@ export const clientsService = {
     numero?: string;
     complemento?: string;
     bairro?: string;
+    cobrancaEndereco?: string;
+    cobrancaEnderecoNumero?: string;
+    cobrancaEnderecoBairro?: string;
+    cobrancaEnderecoCidadeId?: number;
+    cobrancaEnderecoCep?: string;
+    cobrancaEnderecoUf?: string;
+    cobrancaEnderecoComplemento?: string;
     telefone?: string;
     fone?: string;
     whatsapp?: string;
@@ -537,6 +583,13 @@ export const clientsService = {
       numero: string;
       complemento: string;
       bairro: string;
+      cobrancaEndereco: string;
+      cobrancaEnderecoNumero: string;
+      cobrancaEnderecoBairro: string;
+      cobrancaEnderecoCidadeId: number;
+      cobrancaEnderecoCep: string;
+      cobrancaEnderecoUf: string;
+      cobrancaEnderecoComplemento: string;
       telefone: string;
       fone: string;
       whatsapp: string;
