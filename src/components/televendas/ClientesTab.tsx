@@ -53,6 +53,14 @@ const formatPhone = (value: string | number | null | undefined) => {
 };
 const normalizePhoneDigits = (value: string | number | null | undefined) =>
   String(value ?? '').replace(/\D+/g, '').slice(0, 11);
+const parseDecimalInput = (value: string | number | null | undefined) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return NaN;
+  const normalized = raw.includes(',')
+    ? raw.replace(/\./g, '').replace(',', '.')
+    : raw.replace(/,/g, '');
+  return Number(normalized);
+};
 const formatCpf = (value: string | number | null | undefined) => {
   const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 11);
   if (!digits) return '';
@@ -853,7 +861,9 @@ export const ClientesTab = () => {
     try {
       const trimmedSearch = active.search.trim();
       const effectiveStatus = active.todos ? 'todos' : active.status;
-      const limiteCredito = active.limiteCredito ? Number(String(active.limiteCredito).replace(',', '.')) : undefined;
+      const limiteCredito = active.limiteCredito
+        ? parseDecimalInput(active.limiteCredito)
+        : undefined;
       const cidadeId =
         active.filtrarCidades && active.cidade !== 'all'
           ? filterCidades.find((c) => c.nome_cidade === active.cidade)?.cidade_id
@@ -984,7 +994,7 @@ export const ClientesTab = () => {
       else data.cep = cep;
     }
     if (ajusteGeralForm.limiteCreditoChecked) {
-      const limite = Number(String(ajusteGeralForm.limiteCredito).replace(',', '.'));
+      const limite = parseDecimalInput(ajusteGeralForm.limiteCredito);
       if (!Number.isFinite(limite)) errors.push('Informe um limite de crédito válido.');
       else data.limiteCredito = limite;
     }

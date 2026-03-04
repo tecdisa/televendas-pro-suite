@@ -120,14 +120,14 @@ export function RepresentantesPastasTab() {
   const fornecedoresLista = useMemo(() => fornecedores.map((item) => item.fornecedor), [fornecedores]);
 
   useEffect(() => {
-    const objetivoAtual = Number(fornecedores[0]?.representante?.objetivo_de_venda ?? 0);
-    const objetivoFormatado = Number.isFinite(objetivoAtual)
-      ? objetivoAtual.toFixed(2)
-      : '0.00';
     setObjetivoDraftByFornecedor((prev) => {
       const next: Record<number, string> = {};
-      fornecedoresLista.forEach((fornecedor) => {
-        next[fornecedor.fornecedor_id] = prev[fornecedor.fornecedor_id] ?? objetivoFormatado;
+      fornecedores.forEach((item) => {
+        const fornecedorId = item.fornecedor.fornecedor_id;
+        const objetivoAtual = Number(item.objetivo_de_venda ?? 0);
+        next[fornecedorId] =
+          prev[fornecedorId] ??
+          (Number.isFinite(objetivoAtual) ? objetivoAtual.toFixed(2) : '0.00');
       });
       return next;
     });
@@ -268,15 +268,23 @@ export function RepresentantesPastasTab() {
 
     setSaveObjetivoLoading(fornecedorId);
     try {
-      await representativesService.update(Number(selectedRepresentanteId), {
-        objetivo_de_venda: objetivo,
-      });
+      await representativesService.updateFornecedorObjetivo(
+        Number(selectedRepresentanteId),
+        fornecedorId,
+        objetivo,
+      );
+      setFornecedores((prev) =>
+        prev.map((item) =>
+          item.fornecedor.fornecedor_id === fornecedorId
+            ? { ...item, objetivo_de_venda: objetivo }
+            : item,
+        ),
+      );
       setObjetivoDraftByFornecedor((prev) => {
-        const next = { ...prev };
-        fornecedoresLista.forEach((fornecedor) => {
-          next[fornecedor.fornecedor_id] = objetivo.toFixed(2);
-        });
-        return next;
+        return {
+          ...prev,
+          [fornecedorId]: objetivo.toFixed(2),
+        };
       });
       toast.success('Objetivo atualizado');
     } catch (error: any) {
@@ -564,7 +572,9 @@ export function RepresentantesPastasTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fornecedoresLista.map((fornecedor) => (
+                    {fornecedores.map((item) => {
+                      const fornecedor = item.fornecedor;
+                      return (
                       <TableRow key={fornecedor.fornecedor_id}>
                         <TableCell onClick={(event) => event.stopPropagation()}>
                           <Checkbox
@@ -650,7 +660,7 @@ export function RepresentantesPastasTab() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )})}
                   </TableBody>
                 </Table>
               )}

@@ -83,6 +83,7 @@ export interface RepresentanteFornecedorItem {
   empresa_id?: number;
   representante: Representante;
   fornecedor: RepresentanteFornecedor;
+  objetivo_de_venda?: number;
 }
 
 export interface CopyRepresentanteResult {
@@ -148,10 +149,16 @@ function normalizeRepresentanteFornecedor(raw: any): RepresentanteFornecedor {
 }
 
 function normalizeRepresentanteFornecedorItem(raw: any): RepresentanteFornecedorItem {
+  const objetivoRaw = raw?.objetivo_de_venda ?? raw?.objetivoDeVenda;
+  const objetivo =
+    objetivoRaw === undefined || objetivoRaw === null || objetivoRaw === ''
+      ? undefined
+      : Number(objetivoRaw);
   return {
     empresa_id: raw?.empresa_id ?? undefined,
     representante: normalizeRepresentante(raw?.representante ?? {}),
     fornecedor: normalizeRepresentanteFornecedor(raw?.fornecedor ?? {}),
+    objetivo_de_venda: Number.isFinite(objetivo) ? objetivo : undefined,
   };
 }
 
@@ -412,6 +419,38 @@ export const representativesService = {
 
     if (!res.ok && res.status !== 204) {
       let message = 'Falha ao excluir fornecedor da pasta';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    return true;
+  },
+
+  async updateFornecedorObjetivo(
+    representanteId: number | string,
+    fornecedorId: number | string,
+    objetivoDeVenda: number | null,
+  ): Promise<boolean> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}?${params.toString()}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        data: {
+          objetivo_de_venda: objetivoDeVenda,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      let message = 'Falha ao atualizar objetivo do fornecedor';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
