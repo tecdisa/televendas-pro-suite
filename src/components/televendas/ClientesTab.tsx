@@ -1196,6 +1196,8 @@ const validateFormData = (data: ClientFormData): string[] => {
       };
       await clientsService.create({
         ...payloadNormalized,
+        simplesNacional: Boolean(formData.simplesNacional),
+        consumidorFinal: Boolean(formData.consumidorFinal),
         tabelaIds,
         tabelaId: tabelaId || undefined,
         representanteIds,
@@ -1365,6 +1367,8 @@ const validateFormData = (data: ClientFormData): string[] => {
       };
       await clientsService.update(editId, {
         ...payloadNormalized,
+        simplesNacional: Boolean(formData.simplesNacional),
+        consumidorFinal: Boolean(formData.consumidorFinal),
         tabelaIds,
         tabelaId: tabelaId || undefined,
         representanteIds,

@@ -584,12 +584,23 @@ export const clientsService = {
       const { ...cleanData } = data as any;
       delete cleanData.codigoCliente;
       delete cleanData.codigo_cliente;
+      const payload = {
+        ...cleanData,
+        consumidor_final:
+          cleanData.consumidorFinal !== undefined
+            ? Boolean(cleanData.consumidorFinal)
+            : undefined,
+        simples_nacional:
+          cleanData.simplesNacional !== undefined
+            ? Boolean(cleanData.simplesNacional)
+            : undefined,
+      };
       
-      // Payload plano
+      // Payload no formato documentado pelo backend
       const res = await apiClient.fetch(url, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(cleanData),
+        body: JSON.stringify({ data: payload }),
       });
       if (!res.ok) {
         let message = 'Falha ao atualizar cliente';
