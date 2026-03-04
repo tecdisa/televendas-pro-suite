@@ -3171,34 +3171,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma de pagamento *</label>
-                    <Select
-                      value={String(ensurePositiveId(formData.formaPagtoId))}
-                      onValueChange={(v) =>
-                        setFormData({
-                          ...formData,
-                          formaPagtoId: ensurePositiveId(v, 0),
-                        })
-                      }
-                      disabled={filterFormas.length === 0}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        {filterFormas.map((forma) => (
-                          <SelectItem key={String(forma.id)} value={String(forma.id)}>
-                            {forma.codigo ? `${forma.codigo} - ${forma.descricao}` : forma.descricao}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-6" />
-                </div>
-
                 {/* Prazo máximo + Descontos */}
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-6">
@@ -4037,34 +4009,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </DialogContent>
                       </Dialog>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma de pagamento *</label>
-                      <Select
-                        value={String(ensurePositiveId(formData.formaPagtoId))}
-                        onValueChange={(v) =>
-                          setFormData({
-                            ...formData,
-                            formaPagtoId: ensurePositiveId(v, 0),
-                          })
-                        }
-                        disabled={filterFormas.length === 0}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          {filterFormas.map((forma) => (
-                            <SelectItem key={String(forma.id)} value={String(forma.id)}>
-                              {forma.codigo ? `${forma.codigo} - ${forma.descricao}` : forma.descricao}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-6" />
                   </div>
 
                   <div className="grid grid-cols-12 gap-3 items-end">
