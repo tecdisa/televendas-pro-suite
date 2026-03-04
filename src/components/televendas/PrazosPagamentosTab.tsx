@@ -11,6 +11,7 @@ import { Search, Clock, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { prazosPagamentosService, PrazoPagamento, PrazoPagamentoFormData } from '@/services/prazosPagamentosService';
+import { metadataService, type FormaPagamento as MetadataFormaPagamento } from '@/services/metadataService';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -42,6 +43,8 @@ export function PrazosPagamentosTab() {
   const [filterCartao, setFilterCartao] = useState(false);
   const [filterMobile, setFilterMobile] = useState(false);
   const [filterB2b, setFilterB2b] = useState(false);
+  const [formasPagto, setFormasPagto] = useState<MetadataFormaPagamento[]>([]);
+  const [formasPagtoLoading, setFormasPagtoLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -80,6 +83,21 @@ export function PrazosPagamentosTab() {
   useEffect(() => {
     loadPrazos(true);
   }, [filtroStatus, filterCartao, filterMobile, filterB2b]);
+
+  useEffect(() => {
+    const loadFormasPagamento = async () => {
+      setFormasPagtoLoading(true);
+      try {
+        const data = await metadataService.getFormasPagamento();
+        setFormasPagto(data);
+      } catch {
+        setFormasPagto([]);
+      } finally {
+        setFormasPagtoLoading(false);
+      }
+    };
+    loadFormasPagamento();
+  }, []);
 
   const handleSearch = () => loadPrazos(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -289,13 +307,41 @@ export function PrazosPagamentosTab() {
         </div>
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma Pagto ID</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.forma_pagto_id ?? ''}
-              onChange={(e) => setFormData({ ...formData, forma_pagto_id: e.target.value ? Number(e.target.value) : null })}
-            />
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma de Pagamento</label>
+            <Select
+              value={formData.forma_pagto_id?.toString() || 'none'}
+              onValueChange={(val) => {
+                if (val === 'none') {
+                  setFormData({ ...formData, forma_pagto_id: null });
+                  return;
+                }
+                const parsed = Number(val);
+                setFormData({
+                  ...formData,
+                  forma_pagto_id: Number.isFinite(parsed) && parsed > 0 ? parsed : null,
+                });
+              }}
+              disabled={formasPagtoLoading}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder={formasPagtoLoading ? 'Carregando...' : 'Selecione uma forma'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {formasPagto.map((f) => {
+                  const id = String(f.id ?? '').trim();
+                  if (!id) return null;
+                  const label = f.codigo
+                    ? `${f.codigo} - ${f.descricao}`
+                    : f.descricao;
+                  return (
+                    <SelectItem key={id} value={id}>
+                      {label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </TabsContent>
