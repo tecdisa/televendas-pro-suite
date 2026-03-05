@@ -157,6 +157,10 @@ export function PrazosPagamentosTab() {
       toast.error('Prazos em dias é obrigatório quando houver número de parcelas');
       return;
     }
+    if (prazosEmDiasRaw && numeroParcelas <= 0) {
+      toast.error('Número de parcelas é obrigatório quando houver prazos em dias');
+      return;
+    }
     setFormLoading(true);
     try {
       const prazosEmDias = formData.prazos_em_dias;
@@ -188,6 +192,10 @@ export function PrazosPagamentosTab() {
     const prazosEmDiasRaw = String(formData.prazos_em_dias ?? '').trim();
     if (numeroParcelas > 0 && !prazosEmDiasRaw) {
       toast.error('Prazos em dias é obrigatório quando houver número de parcelas');
+      return;
+    }
+    if (prazosEmDiasRaw && numeroParcelas <= 0) {
+      toast.error('Número de parcelas é obrigatório quando houver prazos em dias');
       return;
     }
     setFormLoading(true);

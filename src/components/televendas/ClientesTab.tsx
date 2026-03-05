@@ -1204,6 +1204,8 @@ const validateFormData = (data: ClientFormData): string[] => {
         cobrancaEnderecoUf: toUpperTrimValue(payloadBase.cobrancaEnderecoUf || ''),
         cobrancaEnderecoCidadeId: Number(payloadBase.cobrancaEnderecoCidadeId) || 0,
       };
+      delete (payloadNormalized as any).aberto;
+      delete (payloadNormalized as any).disponivel;
       await clientsService.create({
         ...payloadNormalized,
         simplesNacional: Boolean(formData.simplesNacional),
@@ -1354,7 +1356,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           boleto: Boolean(d.boleto),
           prazo: String(d.prazo ?? '').trim(),
           aberto: Number(d.aberto ?? 0),
-          disponivel: Number(d.disponivel ?? 0),
+          disponivel: (Number(d.credito ?? 0) || 0) - Number(d.aberto ?? 0),
           observacaoFinanceiro: toUpperValue(d.observacao_financeiro ?? d.observacaoFinanceiro ?? ''),
         formaPagtoId: ensurePositiveId(d.forma_pagto_id ?? d.formaPagtoId),
         prazoPagtoId: ensurePositiveId(d.prazo_pagto_id ?? d.prazoPagtoId),
@@ -1397,6 +1399,8 @@ const validateFormData = (data: ClientFormData): string[] => {
         cobrancaEnderecoUf: toUpperTrimValue(payloadBase.cobrancaEnderecoUf || ''),
         cobrancaEnderecoCidadeId: Number(payloadBase.cobrancaEnderecoCidadeId) || 0,
       };
+      delete (payloadNormalized as any).aberto;
+      delete (payloadNormalized as any).disponivel;
       await clientsService.update(editId, {
         ...payloadNormalized,
         simplesNacional: Boolean(formData.simplesNacional),
@@ -3229,25 +3233,36 @@ const validateFormData = (data: ClientFormData): string[] => {
                       type="number"
                       className="h-8 text-sm text-right"
                       value={formData.credito}
-                      onChange={(e) => setFormData({ ...formData, credito: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setFormData((prev) => {
+                          const credito = parseFloat(e.target.value) || 0;
+                          return {
+                            ...prev,
+                            credito,
+                            disponivel: credito - (Number(prev.aberto) || 0),
+                          };
+                        })
+                      }
                     />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Aberto</label>
                     <Input
                       type="number"
-                      className="h-8 text-sm text-right"
+                      className="h-8 text-sm text-right bg-muted"
                       value={formData.aberto}
-                      onChange={(e) => setFormData({ ...formData, aberto: parseFloat(e.target.value) || 0 })}
+                      readOnly
+                      disabled
                     />
                   </div>
                   <div className="col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
                     <Input
                       type="number"
-                      className="h-8 text-sm text-right"
-                      value={formData.disponivel}
-                      onChange={(e) => setFormData({ ...formData, disponivel: parseFloat(e.target.value) || 0 })}
+                      className="h-8 text-sm text-right bg-muted"
+                      value={(Number(formData.credito) || 0) - (Number(formData.aberto) || 0)}
+                      readOnly
+                      disabled
                     />
                   </div>
                 </div>
@@ -4081,25 +4096,36 @@ const validateFormData = (data: ClientFormData): string[] => {
                         type="number"
                         className="h-8 text-sm text-right"
                         value={formData.credito}
-                        onChange={(e) => setFormData({ ...formData, credito: parseFloat(e.target.value) || 0 })}
+                        onChange={(e) =>
+                          setFormData((prev) => {
+                            const credito = parseFloat(e.target.value) || 0;
+                            return {
+                              ...prev,
+                              credito,
+                              disponivel: credito - (Number(prev.aberto) || 0),
+                            };
+                          })
+                        }
                       />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Aberto</label>
                       <Input
                         type="number"
-                        className="h-8 text-sm text-right"
+                        className="h-8 text-sm text-right bg-muted"
                         value={formData.aberto}
-                        onChange={(e) => setFormData({ ...formData, aberto: parseFloat(e.target.value) || 0 })}
+                        readOnly
+                        disabled
                       />
                     </div>
                     <div className="col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
                       <Input
                         type="number"
-                        className="h-8 text-sm text-right"
-                        value={formData.disponivel}
-                        onChange={(e) => setFormData({ ...formData, disponivel: parseFloat(e.target.value) || 0 })}
+                        className="h-8 text-sm text-right bg-muted"
+                        value={(Number(formData.credito) || 0) - (Number(formData.aberto) || 0)}
+                        readOnly
+                        disabled
                       />
                     </div>
                   </div>
