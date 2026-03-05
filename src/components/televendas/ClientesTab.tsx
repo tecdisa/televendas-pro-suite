@@ -108,7 +108,7 @@ const summarizeSelection = (items: string[], emptyLabel = 'Selecione...') => {
 };
 const generateB2bSenha = (length = 12) => {
   const size = Math.min(Math.max(length, 1), 20);
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: size }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 };
 
