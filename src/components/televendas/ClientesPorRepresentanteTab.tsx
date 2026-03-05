@@ -372,7 +372,7 @@ export function ClientesPorRepresentanteTab() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                Clientes de {selectedRep.codigo_representante} - {selectedRep.nome_representante}
+                Clientes de {selectedRep.codigo_representante} - {selectedRep.nome_representante} ({clients.length})
               </CardTitle>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={openImportModal}>

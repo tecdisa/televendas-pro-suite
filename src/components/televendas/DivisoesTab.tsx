@@ -245,7 +245,7 @@ export function DivisoesTab() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Grid3X3 className="h-5 w-5" />
-              Divisões de Produtos
+              Divisões de Produtos ({divisoes.length})
             </CardTitle>
             <Button onClick={openCreate} size="sm">
               <Plus className="h-4 w-4 mr-2" />

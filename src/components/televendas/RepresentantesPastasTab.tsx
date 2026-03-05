@@ -501,7 +501,7 @@ export function RepresentantesPastasTab() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base">
-                Fornecedores de {selectedRepresentante.codigo_representante} - {selectedRepresentante.nome_representante}
+                Fornecedores de {selectedRepresentante.codigo_representante} - {selectedRepresentante.nome_representante} ({fornecedoresLista.length})
               </CardTitle>
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" onClick={openIncludeDialog}>

@@ -776,7 +776,7 @@ export function FornecedoresTab() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Truck className="h-5 w-5" />
-              Fornecedores
+              Fornecedores ({fornecedores.length})
             </CardTitle>
             <Button onClick={openCreate} size="sm">
               <Plus className="h-4 w-4 mr-2" />
