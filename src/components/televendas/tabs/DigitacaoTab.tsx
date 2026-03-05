@@ -17,11 +17,11 @@ import { representativesService, type Representative } from '@/services/represen
 import { formatCurrency } from '@/utils/format';
 import { ordersService } from '@/services/ordersService';
 import { useStore } from '@/store/useStore';
-import { ProductSearchDialog } from './ProductSearchDialog';
-import { ClientInfoModal } from './ClientInfoModal';
-import { ClientReceivablesModal } from './ClientReceivablesModal';
-import { ClientPurchasesModal } from './ClientPurchasesModal';
-import { ProductBatchModal } from './ProductBatchModal';
+import { ProductSearchDialog } from '../overlays/ProductSearchDialog';
+import { ClientInfoModal } from '../overlays/ClientInfoModal';
+import { ClientReceivablesModal } from '../overlays/ClientReceivablesModal';
+import { ClientPurchasesModal } from '../overlays/ClientPurchasesModal';
+import { ProductBatchModal } from '../overlays/ProductBatchModal';
 import type { PurchaseOrder } from '@/services/purchasesService';
 
 type OrderItem = {

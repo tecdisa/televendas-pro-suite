@@ -27,7 +27,7 @@ import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto, FormaPagamento } from '@/services/metadataService';
 import { representativesService, Representative } from '@/services/representativesService';
 import { operacoes } from '@/mocks/data';
-import { ClientInfoModal } from './ClientInfoModal';
+import { ClientInfoModal } from '../overlays/ClientInfoModal';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 

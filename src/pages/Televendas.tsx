@@ -4,23 +4,25 @@ import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { DashboardTab } from '@/components/televendas/DashboardTab';
-import { PesquisaTab } from '@/components/televendas/PesquisaTab';
-import { DadosTab } from '@/components/televendas/DadosTab';
-import { ItinerariosTab } from '@/components/televendas/ItinerariosTab';
-import { VisitasTab } from '@/components/televendas/VisitasTab';
-import { ClientesTab } from '@/components/televendas/ClientesTab';
-import { FornecedoresTab } from '@/components/televendas/FornecedoresTab';
-import { RepresentantesTab } from '@/components/televendas/RepresentantesTab';
-import { GruposTab } from '@/components/televendas/GruposTab';
-import { DivisoesTab } from '@/components/televendas/DivisoesTab';
-import { RedesTab } from '@/components/televendas/RedesTab';
-import { PrazosPagamentosTab } from '@/components/televendas/PrazosPagamentosTab';
-import { FormasPagamentoTab } from '@/components/televendas/FormasPagamentoTab';
-import { SegmentosVendasTab } from '@/components/televendas/SegmentosVendasTab';
-import { RotasClientesTab } from '@/components/televendas/RotasClientesTab';
-import { ClientesPorRepresentanteTab } from '@/components/televendas/ClientesPorRepresentanteTab';
-import { DigitacaoModal } from '@/components/televendas/DigitacaoModal';
+import {
+  DashboardTab,
+  PesquisaTab,
+  DadosTab,
+  ItinerariosTab,
+  VisitasTab,
+  ClientesTab,
+  FornecedoresTab,
+  RepresentantesTab,
+  GruposTab,
+  DivisoesTab,
+  RedesTab,
+  PrazosPagamentosTab,
+  FormasPagamentoTab,
+  SegmentosVendasTab,
+  RotasClientesTab,
+  ClientesPorRepresentanteTab,
+} from '@/components/televendas/tabs';
+import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
 import { TopNavbar, navGroups, type NavChild } from '@/components/layout/TopNavbar';

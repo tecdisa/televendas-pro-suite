@@ -1,0 +1,16 @@
+export { DashboardTab } from './DashboardTab';
+export { PesquisaTab } from './PesquisaTab';
+export { DadosTab } from './DadosTab';
+export { ItinerariosTab } from './ItinerariosTab';
+export { VisitasTab } from './VisitasTab';
+export { ClientesTab } from './ClientesTab';
+export { FornecedoresTab } from './FornecedoresTab';
+export { RepresentantesTab } from './RepresentantesTab';
+export { GruposTab } from './GruposTab';
+export { DivisoesTab } from './DivisoesTab';
+export { RedesTab } from './RedesTab';
+export { PrazosPagamentosTab } from './PrazosPagamentosTab';
+export { FormasPagamentoTab } from './FormasPagamentoTab';
+export { SegmentosVendasTab } from './SegmentosVendasTab';
+export { RotasClientesTab } from './RotasClientesTab';
+export { ClientesPorRepresentanteTab } from './ClientesPorRepresentanteTab';

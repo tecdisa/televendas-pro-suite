@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
 import { clientsService } from '@/services/clientsService';
-import { RepresentantesPastasTab } from '@/components/televendas/RepresentantesPastasTab';
+import { RepresentantesPastasTab } from './RepresentantesPastasTab';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;

@@ -10,7 +10,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
-import { DigitacaoTab } from './DigitacaoTab';
+import { DigitacaoTab } from '../tabs/DigitacaoTab';
 import { useStore } from '@/store/useStore';
 
 interface DigitacaoModalProps {
