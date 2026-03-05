@@ -218,7 +218,6 @@ const createEmptyFormData = () => ({
   credito: 0,
   boleto: false,
   prazo: '',
-  limite: 0,
   aberto: 0,
   disponivel: 0,
   observacaoFinanceiro: '',
@@ -239,8 +238,8 @@ const createEmptyAjusteGeralForm = () => ({
   redeId: '',
   cepChecked: false,
   cep: '',
-  limiteCreditoChecked: false,
-  limiteCredito: '',
+  creditoChecked: false,
+  credito: '',
   boletoChecked: false,
   boleto: 'false',
   consumidorFinalChecked: false,
@@ -1004,13 +1003,10 @@ export const ClientesTab = () => {
       if (cep.length !== 8) errors.push('Informe um CEP válido com 8 dígitos.');
       else data.cep = cep;
     }
-    if (ajusteGeralForm.limiteCreditoChecked) {
-      const limite = parseDecimalInput(ajusteGeralForm.limiteCredito);
-      if (!Number.isFinite(limite)) errors.push('Informe um limite de crédito válido.');
-      else {
-        data.limiteCredito = limite;
-        data.limite_credito = limite;
-      }
+    if (ajusteGeralForm.creditoChecked) {
+      const credito = parseDecimalInput(ajusteGeralForm.credito);
+      if (!Number.isFinite(credito)) errors.push('Informe um crédito válido.');
+      else data.credito = credito;
     }
     if (ajusteGeralForm.boletoChecked) {
       data.boleto = ajusteGeralForm.boleto === 'true';
@@ -1036,7 +1032,7 @@ export const ClientesTab = () => {
       ajusteGeralForm.rotaChecked ||
       ajusteGeralForm.redeChecked ||
       ajusteGeralForm.cepChecked ||
-      ajusteGeralForm.limiteCreditoChecked ||
+      ajusteGeralForm.creditoChecked ||
       ajusteGeralForm.boletoChecked ||
       ajusteGeralForm.consumidorFinalChecked ||
       ajusteGeralForm.inativoChecked ||
@@ -1357,7 +1353,6 @@ const validateFormData = (data: ClientFormData): string[] => {
           credito: Number(d.credito ?? 0) || 0,
           boleto: Boolean(d.boleto),
           prazo: String(d.prazo ?? '').trim(),
-          limite: Number(d.limite_credito ?? d.limite ?? 0),
           aberto: Number(d.aberto ?? 0),
           disponivel: Number(d.disponivel ?? 0),
           observacaoFinanceiro: toUpperValue(d.observacao_financeiro ?? d.observacaoFinanceiro ?? ''),
@@ -2138,25 +2133,25 @@ const validateFormData = (data: ClientFormData): string[] => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    checked={ajusteGeralForm.limiteCreditoChecked}
+                    checked={ajusteGeralForm.creditoChecked}
                     onCheckedChange={(checked) =>
                       setAjusteGeralForm((prev) => ({
                         ...prev,
-                        limiteCreditoChecked: checked === true,
+                        creditoChecked: checked === true,
                       }))
                     }
                   />
-                  <label className="text-sm font-medium">Limite crédito</label>
+                  <label className="text-sm font-medium">Crédito</label>
                 </div>
                 <Input
-                  value={ajusteGeralForm.limiteCredito}
+                  value={ajusteGeralForm.credito}
                   onChange={(e) =>
                     setAjusteGeralForm((prev) => ({
                       ...prev,
-                      limiteCredito: e.target.value,
+                      credito: e.target.value,
                     }))
                   }
-                  disabled={!ajusteGeralForm.limiteCreditoChecked}
+                  disabled={!ajusteGeralForm.creditoChecked}
                   placeholder="0,00"
                 />
               </div>

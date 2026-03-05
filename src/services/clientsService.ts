@@ -152,7 +152,6 @@ function normalizeClient(raw: any): Client {
     representanteId ??
     null;
   const representanteNome = raw?.representanteNome ?? repObj?.nome ?? '';
-
   return {
     id: Number(id) || 0,
     codigoCliente: codigoCliente ? String(codigoCliente).trim() : undefined,
