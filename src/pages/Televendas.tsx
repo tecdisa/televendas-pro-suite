@@ -107,6 +107,8 @@ const Televendas = () => {
         return <ErrorBoundary><RotasClientesTab /></ErrorBoundary>;
       case 'clientes-representante':
         return <ErrorBoundary><ClientesPorRepresentanteTab /></ErrorBoundary>;
+      case 'produtos':
+        return <ErrorBoundary><ProdutosTab /></ErrorBoundary>;
       default:
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }
