@@ -55,6 +55,7 @@ export const navGroups: NavGroup[] = [
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
       { title: 'Representantes', tab: 'representantes', icon: UserCheck },
       { title: 'Grupos', tab: 'grupos', icon: Layers },
+      { title: 'Produtos', tab: 'produtos', icon: Package },
       { title: 'Divisões', tab: 'divisoes', icon: Grid3X3 },
       { title: 'Redes', tab: 'redes', icon: Network },
       { title: 'Prazos Pagamento', tab: 'prazos', icon: Clock },
