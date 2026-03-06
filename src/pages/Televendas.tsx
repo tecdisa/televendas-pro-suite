@@ -47,6 +47,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'formas-pagamento': { title: 'Formas de Pagamento', icon: CreditCard },
   segmentos: { title: 'Segmentos de Venda', icon: Target },
   rotas: { title: 'Rotas de Clientes', icon: Route },
+  produtos: { title: 'Cadastro de Produtos', icon: Layers },
   'clientes-representante': { title: 'Clientes por Representante', icon: Users },
 };
 
