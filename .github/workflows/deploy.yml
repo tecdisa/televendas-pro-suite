@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Env de produção/homologação
-      VITE_API_BASE: http://adsvendas-b.tecdisa.com.br:3001
+      VITE_API_BASE: http://adsvendas-b.adsapi.com.br:3001
       VITE_BASE_PATH: /
     steps:
       - name: Checkout

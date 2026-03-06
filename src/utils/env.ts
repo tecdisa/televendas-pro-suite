@@ -5,12 +5,12 @@ export const getApiBase = (): string => {
 
   // Force the production API when served from GitHub Pages to avoid hitting the static host
   if (host.endsWith('github.io')) {
-    return 'https://api.adsvendas.tecdisa.com.br';
+    return 'https://adsvendas.adsapi.com.br';
   }
 
   // Homologação (domínio atual do frontend)
-  if (host.endsWith('adsvendas-f.tecdisa.com.br')) {
-    return 'http://adsvendas-b.tecdisa.com.br:3001';
+  if (host.endsWith('adsvendas-f.adsapi.com.br')) {
+    return 'http://adsvendas-b.adsapi.com.br:3001';
   }
 
   // Prefer build-time Vite env when it is present and non-empty
