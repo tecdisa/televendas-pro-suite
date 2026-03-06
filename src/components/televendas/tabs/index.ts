@@ -14,3 +14,4 @@ export { FormasPagamentoTab } from './FormasPagamentoTab';
 export { SegmentosVendasTab } from './SegmentosVendasTab';
 export { RotasClientesTab } from './RotasClientesTab';
 export { ClientesPorRepresentanteTab } from './ClientesPorRepresentanteTab';
+export { ProdutosTab } from './ProdutosTab';

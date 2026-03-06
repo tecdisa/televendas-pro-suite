@@ -21,6 +21,7 @@ import {
   SegmentosVendasTab,
   RotasClientesTab,
   ClientesPorRepresentanteTab,
+  ProdutosTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -46,6 +47,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'formas-pagamento': { title: 'Formas de Pagamento', icon: CreditCard },
   segmentos: { title: 'Segmentos de Venda', icon: Target },
   rotas: { title: 'Rotas de Clientes', icon: Route },
+  produtos: { title: 'Cadastro de Produtos', icon: Layers },
   'clientes-representante': { title: 'Clientes por Representante', icon: Users },
 };
 
@@ -105,6 +107,8 @@ const Televendas = () => {
         return <ErrorBoundary><RotasClientesTab /></ErrorBoundary>;
       case 'clientes-representante':
         return <ErrorBoundary><ClientesPorRepresentanteTab /></ErrorBoundary>;
+      case 'produtos':
+        return <ErrorBoundary><ProdutosTab /></ErrorBoundary>;
       default:
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }
