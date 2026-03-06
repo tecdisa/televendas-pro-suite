@@ -21,6 +21,7 @@ import {
   SegmentosVendasTab,
   RotasClientesTab,
   ClientesPorRepresentanteTab,
+  ProdutosTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
