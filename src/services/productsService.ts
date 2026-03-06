@@ -37,6 +37,24 @@ export interface Product {
   precoFabrica?: number;
   descricaoComplementar?: string;
   codigoSiteB2c?: string;
+  ncm?: string;
+  cest?: string;
+  tipi?: string;
+  tipoItem?: string;
+  pno?: string;
+  inibeEanXmlNfe?: boolean;
+  medicamento?: boolean;
+  producaoPropria?: boolean;
+  apresentacao2?: string;
+  unidade2?: string;
+  dcb?: string;
+  dcbDescricao?: string;
+  portaria?: string;
+  produtoSimilar?: number;
+  mensagemNotaFiscal?: string;
+  regMs?: string;
+  origemProduto?: string;
+  validade?: string;
   lancamento?: boolean;
   inativo?: boolean;
 }
@@ -201,6 +219,24 @@ function normalizeProduct(raw: any): Product {
     precoFabrica: numberOrUndefined(raw?.preco_fabrica ?? raw?.precoFabrica),
     descricaoComplementar: raw?.descricao_complementar ?? raw?.descricaoComplementar,
     codigoSiteB2c: raw?.codigo_site_b2c ?? raw?.codigoSiteB2c,
+    ncm: trimOrUndefined(raw?.ncm),
+    cest: trimOrUndefined(raw?.cest),
+    tipi: trimOrUndefined(raw?.tipi),
+    tipoItem: trimOrUndefined(raw?.tipo_item ?? raw?.tipoItem),
+    pno: trimOrUndefined(raw?.pno),
+    inibeEanXmlNfe: boolOrUndefined(raw?.inibe_ean_xml_nfe ?? raw?.inibeEanXmlNfe),
+    medicamento: boolOrUndefined(raw?.medicamento),
+    producaoPropria: boolOrUndefined(raw?.producao_propria ?? raw?.producaoPropria),
+    apresentacao2: trimOrUndefined(raw?.apresentacao2 ?? raw?.segunda_apresentacao),
+    unidade2: trimOrUndefined(raw?.unidade2 ?? raw?.unidade_2),
+    dcb: trimOrUndefined(raw?.dcb),
+    dcbDescricao: trimOrUndefined(raw?.dcb_descricao ?? raw?.dcbDescricao),
+    portaria: trimOrUndefined(raw?.portaria),
+    produtoSimilar: numberOrUndefined(raw?.produto_similar ?? raw?.produtoSimilar),
+    mensagemNotaFiscal: trimOrUndefined(raw?.mensagem_nota_fiscal ?? raw?.mensagemNotaFiscal),
+    regMs: trimOrUndefined(raw?.reg_ms ?? raw?.regMs),
+    origemProduto: trimOrUndefined(raw?.origem_produto ?? raw?.origemProduto),
+    validade: trimOrUndefined(raw?.validade),
     lancamento: boolOrUndefined(raw?.lancamento),
     inativo: boolOrUndefined(raw?.inativo),
   };
@@ -221,6 +257,207 @@ export interface ProductFiltersParams {
   estoqueZerado?: boolean;
   lancamentos?: boolean;
   ultimasComprasDesde?: string;
+}
+
+export interface ProductCadastroFilters {
+  status?: 'ativos' | 'inativos' | 'todos';
+  searchType?: 'descricao' | 'codigo' | 'ean' | 'codFabrica';
+  buscaTipo?: 'inicial' | 'contido';
+  search?: string;
+  fornecedorId?: number;
+  divisaoId?: number;
+  marca?: string;
+  possuiFoto?: boolean;
+  permiteVendaB2b?: boolean;
+  permiteVendaB2c?: boolean;
+  lancamento?: boolean;
+}
+
+export interface ProductCadastroInput {
+  codigo_produto?: string;
+  descricao_produto: string;
+  unidade: string;
+  codigo_fabrica?: string | null;
+  ean13?: string | null;
+  dun14?: string | null;
+  apresentacao?: string | null;
+  marca?: string | null;
+  fornecedor_id: number;
+  divisao_id: number;
+  fator_compra?: number | null;
+  fator_venda?: number | null;
+  multiplo_de_vendas?: number | null;
+  peso_bruto?: number | null;
+  peso_liquido?: number | null;
+  controla_lote?: boolean;
+  permite_venda_b2b?: boolean;
+  permite_venda_b2c?: boolean;
+  possui_foto?: boolean;
+  principio_ativo?: string | null;
+  preco_nacional_consumidor?: number | null;
+  preco_fabrica?: number | null;
+  descricao_complementar?: string | null;
+  codigo_site_b2c?: string | null;
+  ncm?: string | null;
+  cest?: string | null;
+  tipi?: string | null;
+  tipo_item?: string | null;
+  pno?: string | null;
+  inibe_ean_xml_nfe?: boolean;
+  medicamento?: boolean;
+  producao_propria?: boolean;
+  apresentacao2?: string | null;
+  unidade2?: string | null;
+  dcb?: string | null;
+  dcb_descricao?: string | null;
+  portaria?: string | null;
+  produto_similar?: number | null;
+  mensagem_nota_fiscal?: string | null;
+  reg_ms?: string | null;
+  origem_produto?: string | null;
+  validade?: string | null;
+  lancamento?: boolean;
+  inativo?: boolean;
+}
+
+interface ProductListResponse {
+  data: any[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+function sanitizeNullableText(value: any): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const text = String(value).trim();
+  return text.length ? text : null;
+}
+
+function sanitizeNullableNumber(value: any): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const num = Number(value);
+  return Number.isNaN(num) ? undefined : num;
+}
+
+function getEmpresaAndToken() {
+  const empresa = authService.getEmpresa();
+  if (!empresa) return Promise.reject('Empresa não selecionada');
+  const token = authService.getToken();
+  if (!token) return Promise.reject('Token ausente');
+  return Promise.resolve({ empresa, token });
+}
+
+async function fetchCadastroProdutos({
+  filters,
+  page = 1,
+  limit = 100,
+}: {
+  filters?: ProductCadastroFilters;
+  page?: number;
+  limit?: number;
+}): Promise<{ data: Product[]; page: number; limit: number; total: number }> {
+  const { empresa } = await getEmpresaAndToken();
+  const params = new URLSearchParams();
+  params.set('empresaId', String(empresa.empresa_id));
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+  params.set('status', filters?.status ?? 'ativos');
+  params.set('buscaTipo', filters?.buscaTipo ?? 'contido');
+
+  if (filters?.search?.trim()) {
+    const term = filters.search.trim();
+    const type = filters.searchType ?? 'descricao';
+    if (type === 'codigo') params.set('codigoProduto', term);
+    else if (type === 'ean') params.set('ean13', term);
+    else if (type === 'codFabrica') params.set('codigoFabrica', term);
+    else params.set('descricao', term);
+  }
+  if (filters?.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
+  if (filters?.divisaoId) params.set('divisaoId', String(filters.divisaoId));
+  if (filters?.marca?.trim()) params.set('marca', filters.marca.trim());
+  if (filters?.lancamento !== undefined)
+    params.set('lancamento', String(Boolean(filters.lancamento)));
+  if (filters?.possuiFoto !== undefined)
+    params.set('possuiFoto', String(Boolean(filters.possuiFoto)));
+  if (filters?.permiteVendaB2b !== undefined)
+    params.set('permiteVendaB2b', String(Boolean(filters.permiteVendaB2b)));
+  if (filters?.permiteVendaB2c !== undefined)
+    params.set('permiteVendaB2c', String(Boolean(filters.permiteVendaB2c)));
+
+  const url = `${API_BASE}/api/produtos?${params.toString()}`;
+  const res = await apiClient.fetch(url, {
+    method: 'GET',
+    headers: { accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    let message = 'Falha ao buscar produtos';
+    try {
+      const err = await res.json();
+      message = err?.message || err?.error?.message || err?.error || message;
+    } catch {}
+    return Promise.reject(message);
+  }
+
+  const json = (await res.json()) as ProductListResponse | any[];
+  const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+  return {
+    data: arr.map(normalizeProduct),
+    page: Array.isArray(json) ? page : json?.page ?? page,
+    limit: Array.isArray(json) ? limit : json?.limit ?? limit,
+    total: Array.isArray(json) ? arr.length : json?.total ?? arr.length,
+  };
+}
+
+function buildCadastroPayload(data: Partial<ProductCadastroInput>): Record<string, any> {
+  return {
+    codigo_produto: sanitizeNullableText(data.codigo_produto),
+    descricao_produto: sanitizeNullableText(data.descricao_produto),
+    unidade: sanitizeNullableText(data.unidade),
+    codigo_fabrica: sanitizeNullableText(data.codigo_fabrica),
+    ean13: sanitizeNullableText(data.ean13),
+    dun14: sanitizeNullableText(data.dun14),
+    apresentacao: sanitizeNullableText(data.apresentacao),
+    marca: sanitizeNullableText(data.marca),
+    fornecedor_id: sanitizeNullableNumber(data.fornecedor_id),
+    divisao_id: sanitizeNullableNumber(data.divisao_id),
+    fator_compra: sanitizeNullableNumber(data.fator_compra),
+    fator_venda: sanitizeNullableNumber(data.fator_venda),
+    multiplo_de_vendas: sanitizeNullableNumber(data.multiplo_de_vendas),
+    peso_bruto: sanitizeNullableNumber(data.peso_bruto),
+    peso_liquido: sanitizeNullableNumber(data.peso_liquido),
+    controla_lote: data.controla_lote,
+    permite_venda_b2b: data.permite_venda_b2b,
+    permite_venda_b2c: data.permite_venda_b2c,
+    possui_foto: data.possui_foto,
+    principio_ativo: sanitizeNullableText(data.principio_ativo),
+    preco_nacional_consumidor: sanitizeNullableNumber(data.preco_nacional_consumidor),
+    preco_fabrica: sanitizeNullableNumber(data.preco_fabrica),
+    descricao_complementar: sanitizeNullableText(data.descricao_complementar),
+    codigo_site_b2c: sanitizeNullableText(data.codigo_site_b2c),
+    ncm: sanitizeNullableText(data.ncm),
+    cest: sanitizeNullableText(data.cest),
+    tipi: sanitizeNullableText(data.tipi),
+    tipo_item: sanitizeNullableText(data.tipo_item),
+    pno: sanitizeNullableText(data.pno),
+    inibe_ean_xml_nfe: data.inibe_ean_xml_nfe,
+    medicamento: data.medicamento,
+    producao_propria: data.producao_propria,
+    apresentacao2: sanitizeNullableText(data.apresentacao2),
+    unidade2: sanitizeNullableText(data.unidade2),
+    dcb: sanitizeNullableText(data.dcb),
+    dcb_descricao: sanitizeNullableText(data.dcb_descricao),
+    portaria: sanitizeNullableText(data.portaria),
+    produto_similar: sanitizeNullableNumber(data.produto_similar),
+    mensagem_nota_fiscal: sanitizeNullableText(data.mensagem_nota_fiscal),
+    reg_ms: sanitizeNullableText(data.reg_ms),
+    origem_produto: sanitizeNullableText(data.origem_produto),
+    validade: sanitizeNullableText(data.validade),
+    lancamento: data.lancamento,
+    inativo: data.inativo,
+  };
 }
 
 async function fetchFromApi({ 
@@ -441,5 +678,99 @@ export const productsService = {
       return Promise.reject(message);
     }
     await res.json();
+  },
+
+  listCadastro: async (
+    filters?: ProductCadastroFilters,
+    page = 1,
+    limit = 100,
+  ): Promise<{ data: Product[]; page: number; limit: number; total: number }> => {
+    return fetchCadastroProdutos({ filters, page, limit });
+  },
+
+  getCadastroById: async (id: number): Promise<Product | null> => {
+    const { empresa } = await getEmpresaAndToken();
+    const url = `${API_BASE}/api/produtos/${id}?empresaId=${empresa.empresa_id}`;
+    const res = await apiClient.fetch(url, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      let message = 'Falha ao buscar produto';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      return Promise.reject(message);
+    }
+
+    return normalizeProduct(await res.json());
+  },
+
+  createCadastro: async (data: ProductCadastroInput): Promise<Product> => {
+    const { empresa } = await getEmpresaAndToken();
+    const response = await apiClient.fetch(`${API_BASE}/api/produtos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        empresaId: empresa.empresa_id,
+        data: buildCadastroPayload(data),
+      }),
+    });
+
+    if (!response.ok) {
+      let message = 'Erro ao criar produto';
+      try {
+        const err = await response.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      return Promise.reject(message);
+    }
+
+    return normalizeProduct(await response.json());
+  },
+
+  updateCadastro: async (
+    id: number,
+    data: Partial<ProductCadastroInput>,
+  ): Promise<Product> => {
+    const { empresa } = await getEmpresaAndToken();
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/produtos/${id}?empresaId=${empresa.empresa_id}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ data: buildCadastroPayload(data) }),
+      },
+    );
+
+    if (!response.ok) {
+      let message = 'Erro ao atualizar produto';
+      try {
+        const err = await response.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      return Promise.reject(message);
+    }
+
+    return normalizeProduct(await response.json());
+  },
+
+  deleteCadastro: async (id: number): Promise<void> => {
+    const { empresa } = await getEmpresaAndToken();
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/produtos/${id}?empresaId=${empresa.empresa_id}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok && response.status !== 204) {
+      let message = 'Erro ao excluir produto';
+      try {
+        const err = await response.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      return Promise.reject(message);
+    }
   },
 };
