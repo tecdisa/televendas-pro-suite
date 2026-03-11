@@ -9,6 +9,8 @@ export interface Product {
   un: string;
   preco: number;
   estoque?: number;
+  quantidadeReservada?: number;
+  disponivel?: number;
   categoria?: string;
   codigoFabrica?: string;
   ean13?: string;
@@ -55,7 +57,28 @@ export interface Product {
   regMs?: string;
   origemProduto?: string;
   validade?: string;
+  custoMedio?: number;
+  custoNota?: number;
+  custoCompra?: number;
+  cst?: string;
+  aliquotaIcms?: number;
+  pfcp?: number;
+  pautaIcms?: number;
+  reducaoSt?: number;
+  reducaoConvenio?: number;
+  repasseIcms?: boolean;
   lancamento?: boolean;
+  inativo?: boolean;
+  kitItens?: ProductKitItem[];
+}
+
+export interface ProductKitItem {
+  produtoId: number;
+  produtoItemId: number;
+  codigoProduto?: string;
+  descricao: string;
+  un: string;
+  quantidade: number;
   inativo?: boolean;
 }
 
@@ -189,6 +212,8 @@ function normalizeProduct(raw: any): Product {
     un: String(un || '').trim() || 'UN',
     preco,
     estoque: typeof estoque === 'number' ? estoque : undefined,
+    quantidadeReservada: numberOrUndefined(raw?.quantidade_reservada ?? raw?.quantidadeReservada),
+    disponivel: numberOrUndefined(raw?.disponivel),
     categoria: categoria ? String(categoria) : undefined,
     codigoFabrica: trimOrUndefined(raw?.codigo_fabrica ?? raw?.codigoFabrica),
     ean13: trimOrUndefined(raw?.ean13 ?? raw?.ean_13 ?? raw?.ean),
@@ -237,8 +262,30 @@ function normalizeProduct(raw: any): Product {
     regMs: trimOrUndefined(raw?.reg_ms ?? raw?.regMs),
     origemProduto: trimOrUndefined(raw?.origem_produto ?? raw?.origemProduto),
     validade: trimOrUndefined(raw?.validade),
+    custoMedio: numberOrUndefined(raw?.custo_medio ?? raw?.custoMedio),
+    custoNota: numberOrUndefined(raw?.custo_nota ?? raw?.custoNota),
+    custoCompra: numberOrUndefined(raw?.custo_compra ?? raw?.custoCompra),
+    cst: trimOrUndefined(raw?.cst),
+    aliquotaIcms: numberOrUndefined(raw?.aliquota_icms ?? raw?.aliquotaIcms),
+    pfcp: numberOrUndefined(raw?.pfcp),
+    pautaIcms: numberOrUndefined(raw?.pauta_icms ?? raw?.pautaIcms),
+    reducaoSt: numberOrUndefined(raw?.reducao_st ?? raw?.reducaoSt),
+    reducaoConvenio: numberOrUndefined(raw?.reducao_convenio ?? raw?.reducaoConvenio),
+    repasseIcms: boolOrUndefined(raw?.repasse_icms ?? raw?.repasseIcms),
     lancamento: boolOrUndefined(raw?.lancamento),
     inativo: boolOrUndefined(raw?.inativo),
+    kitItens: Array.isArray(raw?.kit_itens ?? raw?.kitItens)
+      ? (raw?.kit_itens ?? raw?.kitItens).map((item: any) => ({
+          produtoId: numberOrUndefined(item?.produto_id) ?? 0,
+          produtoItemId:
+            numberOrUndefined(item?.produto_item_id ?? item?.produtoItemId ?? item?.id) ?? 0,
+          codigoProduto: trimOrUndefined(item?.codigo_produto ?? item?.codigoProduto),
+          descricao: trimOrUndefined(item?.descricao) ?? '',
+          un: trimOrUndefined(item?.un ?? item?.unidade) ?? 'UN',
+          quantidade: numberOrUndefined(item?.quantidade) ?? 0,
+          inativo: boolOrUndefined(item?.inativo),
+        }))
+      : undefined,
   };
 }
 
@@ -314,8 +361,24 @@ export interface ProductCadastroInput {
   reg_ms?: string | null;
   origem_produto?: string | null;
   validade?: string | null;
+  estoque?: number | null;
+  quantidade_reservada?: number | null;
+  custo_medio?: number | null;
+  custo_nota?: number | null;
+  custo_compra?: number | null;
+  cst?: string | null;
+  aliquota_icms?: number | null;
+  pfcp?: number | null;
+  pauta_icms?: number | null;
+  reducao_st?: number | null;
+  reducao_convenio?: number | null;
+  repasse_icms?: boolean;
   lancamento?: boolean;
   inativo?: boolean;
+  kit_itens?: Array<{
+    produto_item_id: number;
+    quantidade: number;
+  }>;
 }
 
 interface ProductListResponse {
@@ -447,8 +510,26 @@ function buildCadastroPayload(data: Partial<ProductCadastroInput>): Record<strin
     reg_ms: sanitizeNullableText(data.reg_ms),
     origem_produto: sanitizeNullableText(data.origem_produto),
     validade: sanitizeNullableText(data.validade),
+    estoque: sanitizeNullableNumber(data.estoque),
+    quantidade_reservada: sanitizeNullableNumber(data.quantidade_reservada),
+    custo_medio: sanitizeNullableNumber(data.custo_medio),
+    custo_nota: sanitizeNullableNumber(data.custo_nota),
+    custo_compra: sanitizeNullableNumber(data.custo_compra),
+    cst: sanitizeNullableText(data.cst),
+    aliquota_icms: sanitizeNullableNumber(data.aliquota_icms),
+    pfcp: sanitizeNullableNumber(data.pfcp),
+    pauta_icms: sanitizeNullableNumber(data.pauta_icms),
+    reducao_st: sanitizeNullableNumber(data.reducao_st),
+    reducao_convenio: sanitizeNullableNumber(data.reducao_convenio),
+    repasse_icms: data.repasse_icms,
     lancamento: data.lancamento,
     inativo: data.inativo,
+    kit_itens: Array.isArray(data.kit_itens)
+      ? data.kit_itens.map((item) => ({
+          produto_item_id: sanitizeNullableNumber(item.produto_item_id),
+          quantidade: sanitizeNullableNumber(item.quantidade),
+        }))
+      : undefined,
   };
 }
 

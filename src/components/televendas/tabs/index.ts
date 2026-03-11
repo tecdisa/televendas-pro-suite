@@ -15,3 +15,4 @@ export { SegmentosVendasTab } from './SegmentosVendasTab';
 export { RotasClientesTab } from './RotasClientesTab';
 export { ClientesPorRepresentanteTab } from './ClientesPorRepresentanteTab';
 export { ProdutosTab } from './ProdutosTab';
+export { EstoquesTab } from './EstoquesTab';

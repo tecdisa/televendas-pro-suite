@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
@@ -22,6 +22,7 @@ import {
   RotasClientesTab,
   ClientesPorRepresentanteTab,
   ProdutosTab,
+  EstoquesTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -48,6 +49,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   segmentos: { title: 'Segmentos de Venda', icon: Target },
   rotas: { title: 'Rotas de Clientes', icon: Route },
   produtos: { title: 'Cadastro de Produtos', icon: Layers },
+  estoques: { title: 'Cadastro de Estoques', icon: Package },
   'clientes-representante': { title: 'Clientes por Representante', icon: Users },
 };
 
@@ -109,6 +111,8 @@ const Televendas = () => {
         return <ErrorBoundary><ClientesPorRepresentanteTab /></ErrorBoundary>;
       case 'produtos':
         return <ErrorBoundary><ProdutosTab /></ErrorBoundary>;
+      case 'estoques':
+        return <ErrorBoundary><EstoquesTab /></ErrorBoundary>;
       default:
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }
