@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -469,51 +470,71 @@ export function ProdutosTab() {
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent gap-2">
-                  <CardTitle className="cursor-pointer text-base">Filtros</CardTitle>
-                  {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleClear}>
-                  Limpar filtros
-                </Button>
-                <Button size="sm" onClick={handleSearch} disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
+            <CardTitle className="text-lg">Filtros</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium mb-1 block">Status</label>
+                <Select
+                  value={filters.status}
+                  onValueChange={(v: StatusType) => updateFilter('status', v)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativos">Ativos</SelectItem>
+                    <SelectItem value="inativos">Inativos</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-6">
+                <label className="text-sm font-medium mb-1 block">Pesquisa</label>
+                <Input
+                  placeholder="Digite para pesquisar..."
+                  value={filters.search}
+                  onChange={(e) => updateFilter('search', e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={handleSearch} disabled={loading} className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                   Pesquisar
                 </Button>
-                <Button size="sm" onClick={openCreate}>
-                  <Plus className="h-4 w-4 mr-1" /> Novo
+              </div>
+              <div className="md:col-span-2">
+                <Button
+                  variant="outline"
+                  className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md"
+                  onClick={handleClear}
+                >
+                  Limpar filtros
                 </Button>
               </div>
             </div>
-          </CardHeader>
+          </CardContent>
+          <div className="px-6 pb-3">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full min-h-11 justify-between rounded-lg border bg-muted/40 px-4 text-sm font-semibold text-foreground hover:bg-muted/40 hover:text-foreground md:min-h-10 md:rounded-md"
+              >
+                <span>Mais filtros</span>
+                {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
           <CollapsibleContent>
             <CardContent className="space-y-3 pt-0">
-              <div className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-2">
-                  <Label className="text-xs">Status</Label>
-                  <Select
-                    value={filters.status}
-                    onValueChange={(v: StatusType) => updateFilter('status', v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativos">Ativos</SelectItem>
-                      <SelectItem value="inativos">Inativos</SelectItem>
-                      <SelectItem value="todos">Todos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">Buscar por</Label>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-1 block">Buscar por</label>
                   <Select
                     value={filters.searchType}
                     onValueChange={(v: SearchType) => updateFilter('searchType', v)}
                   >
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="descricao">Descrição</SelectItem>
                       <SelectItem value="codigo">Código</SelectItem>
@@ -522,53 +543,67 @@ export function ProdutosTab() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4">
-                  <Label className="text-xs">Pesquisa</Label>
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder="Buscar..."
-                    value={filters.search}
-                    onChange={(e) => updateFilter('search', e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
-                  />
+                <div className="md:col-span-3">
+                  <label className="text-sm font-medium mb-1 block">Tipo de busca</label>
+                  <RadioGroup
+                    value={filters.buscaTipo}
+                    onValueChange={(v: BuscaTipo) => updateFilter('buscaTipo', v)}
+                    className="flex flex-row gap-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="inicial" id="prodBuscaInicial" />
+                      <label htmlFor="prodBuscaInicial" className="text-sm">Inicial</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="contido" id="prodBuscaContido" />
+                      <label htmlFor="prodBuscaContido" className="text-sm">Contido</label>
+                    </div>
+                  </RadioGroup>
                 </div>
-                <div className="col-span-2 flex gap-2 items-center pt-4">
-                  <label className="flex items-center gap-1 text-xs">
-                    <input
-                      type="radio"
-                      name="buscaTipo"
-                      checked={filters.buscaTipo === 'inicial'}
-                      onChange={() => updateFilter('buscaTipo', 'inicial')}
-                      className="h-3 w-3"
-                    />
-                    Inicial
-                  </label>
-                  <label className="flex items-center gap-1 text-xs">
-                    <input
-                      type="radio"
-                      name="buscaTipo"
-                      checked={filters.buscaTipo === 'contido'}
-                      onChange={() => updateFilter('buscaTipo', 'contido')}
-                      className="h-3 w-3"
-                    />
-                    Contido
-                  </label>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">Marca</Label>
+                <div className="md:col-span-3">
+                  <label className="text-sm font-medium mb-1 block">Marca</label>
                   <Input
-                    className="h-8 text-xs"
                     value={filters.marca}
                     onChange={(e) => updateFilter('marca', e.target.value)}
                   />
                 </div>
+                <div className="md:col-span-4 flex flex-wrap gap-x-4 gap-y-2 pt-5">
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Checkbox
+                      checked={filters.possuiFoto === true}
+                      onCheckedChange={(v) => updateFilter('possuiFoto', v ? true : undefined)}
+                    />
+                    Com foto
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Checkbox
+                      checked={filters.permiteVendaB2b === true}
+                      onCheckedChange={(v) => updateFilter('permiteVendaB2b', v ? true : undefined)}
+                    />
+                    B2B
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Checkbox
+                      checked={filters.permiteVendaB2c === true}
+                      onCheckedChange={(v) => updateFilter('permiteVendaB2c', v ? true : undefined)}
+                    />
+                    B2C
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Checkbox
+                      checked={filters.lancamento === true}
+                      onCheckedChange={(v) => updateFilter('lancamento', v ? true : undefined)}
+                    />
+                    Lançamento
+                  </label>
+                </div>
               </div>
 
-              <div className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-4">
-                  <Label className="text-xs">Fornecedor</Label>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <div className="md:col-span-4">
+                  <label className="text-sm font-medium mb-1 block">Fornecedor</label>
                   <Select value={filters.fornecedor} onValueChange={(v) => updateFilter('fornecedor', v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
                       {fornecedores.map((f) => (
@@ -579,10 +614,10 @@ export function ProdutosTab() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4">
-                  <Label className="text-xs">Divisão</Label>
+                <div className="md:col-span-4">
+                  <label className="text-sm font-medium mb-1 block">Divisão</label>
                   <Select value={filters.divisao} onValueChange={(v) => updateFilter('divisao', v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
                       {divisoes.map((d) => (
@@ -593,48 +628,6 @@ export function ProdutosTab() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4 flex flex-wrap gap-x-4 gap-y-1 pt-3">
-                  <label className="flex items-center gap-1.5 text-xs">
-                    <Checkbox
-                      checked={filters.possuiFoto === true}
-                      onCheckedChange={(v) =>
-                        updateFilter('possuiFoto', v ? true : undefined)
-                      }
-                      className="h-3.5 w-3.5"
-                    />
-                    Com foto
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs">
-                    <Checkbox
-                      checked={filters.permiteVendaB2b === true}
-                      onCheckedChange={(v) =>
-                        updateFilter('permiteVendaB2b', v ? true : undefined)
-                      }
-                      className="h-3.5 w-3.5"
-                    />
-                    B2B
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs">
-                    <Checkbox
-                      checked={filters.permiteVendaB2c === true}
-                      onCheckedChange={(v) =>
-                        updateFilter('permiteVendaB2c', v ? true : undefined)
-                      }
-                      className="h-3.5 w-3.5"
-                    />
-                    B2C
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs">
-                    <Checkbox
-                      checked={filters.lancamento === true}
-                      onCheckedChange={(v) =>
-                        updateFilter('lancamento', v ? true : undefined)
-                      }
-                      className="h-3.5 w-3.5"
-                    />
-                    Lançamento
-                  </label>
-                </div>
               </div>
             </CardContent>
           </CollapsibleContent>
@@ -643,7 +636,12 @@ export function ProdutosTab() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Produtos ({totalProdutos})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Produtos ({totalProdutos})</CardTitle>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-1" /> Novo Produto
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[calc(100vh-460px)]">
