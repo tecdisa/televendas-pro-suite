@@ -636,7 +636,12 @@ export function ProdutosTab() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Produtos ({totalProdutos})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Produtos ({totalProdutos})</CardTitle>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-1" /> Novo Produto
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[calc(100vh-460px)]">
