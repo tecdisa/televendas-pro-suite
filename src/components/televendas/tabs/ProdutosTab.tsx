@@ -4,7 +4,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -51,9 +50,7 @@ const ORIGENS_PRODUTO = [
   { value: '8', label: '8 - Nacional conteúdo importação > 70%' },
 ];
 
-type SearchType = 'descricao' | 'codigo' | 'ean' | 'codFabrica';
 type StatusType = 'ativos' | 'inativos' | 'todos';
-type BuscaTipo = 'inicial' | 'contido';
 
 interface ProductFormState {
   id: number;
@@ -268,24 +265,20 @@ export function ProdutosTab() {
 
   const [filters, setFilters] = useState<{
     status: StatusType;
-    searchType: SearchType;
     search: string;
     fornecedor: string;
     divisao: string;
     marca: string;
-    buscaTipo: BuscaTipo;
     possuiFoto?: boolean;
     permiteVendaB2b?: boolean;
     permiteVendaB2c?: boolean;
     lancamento?: boolean;
   }>({
     status: 'ativos',
-    searchType: 'descricao',
     search: '',
     fornecedor: 'all',
     divisao: 'all',
     marca: '',
-    buscaTipo: 'contido',
     possuiFoto: undefined,
     permiteVendaB2b: undefined,
     permiteVendaB2c: undefined,
@@ -324,8 +317,6 @@ export function ProdutosTab() {
     try {
       const params: ProductCadastroFilters = {
         status: overrideFilters?.status ?? filters.status,
-        searchType: overrideFilters?.searchType ?? filters.searchType,
-        buscaTipo: overrideFilters?.buscaTipo ?? filters.buscaTipo,
         search: overrideFilters?.search ?? filters.search,
         fornecedorId:
           overrideFilters?.fornecedorId ??
@@ -366,12 +357,10 @@ export function ProdutosTab() {
   const handleClear = async () => {
     const resetFilters = {
       status: 'ativos' as StatusType,
-      searchType: 'descricao' as SearchType,
       search: '',
       fornecedor: 'all',
       divisao: 'all',
       marca: '',
-      buscaTipo: 'contido' as BuscaTipo,
       possuiFoto: undefined,
       permiteVendaB2b: undefined,
       permiteVendaB2c: undefined,
@@ -491,7 +480,7 @@ export function ProdutosTab() {
               <div className="md:col-span-6">
                 <label className="text-sm font-medium mb-1 block">Pesquisa</label>
                 <Input
-                  placeholder="Digite para pesquisar..."
+                  placeholder="Descrição, código, EAN, fornecedor, divisão..."
                   value={filters.search}
                   onChange={(e) => updateFilter('search', e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
@@ -528,46 +517,14 @@ export function ProdutosTab() {
           <CollapsibleContent>
             <CardContent className="space-y-3 pt-0">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium mb-1 block">Buscar por</label>
-                  <Select
-                    value={filters.searchType}
-                    onValueChange={(v: SearchType) => updateFilter('searchType', v)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="descricao">Descrição</SelectItem>
-                      <SelectItem value="codigo">Código</SelectItem>
-                      <SelectItem value="ean">EAN</SelectItem>
-                      <SelectItem value="codFabrica">Cód. Fábrica</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-3">
-                  <label className="text-sm font-medium mb-1 block">Tipo de busca</label>
-                  <RadioGroup
-                    value={filters.buscaTipo}
-                    onValueChange={(v: BuscaTipo) => updateFilter('buscaTipo', v)}
-                    className="flex flex-row gap-4"
-                  >
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="inicial" id="prodBuscaInicial" />
-                      <label htmlFor="prodBuscaInicial" className="text-sm">Inicial</label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="contido" id="prodBuscaContido" />
-                      <label htmlFor="prodBuscaContido" className="text-sm">Contido</label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                   <label className="text-sm font-medium mb-1 block">Marca</label>
                   <Input
                     value={filters.marca}
                     onChange={(e) => updateFilter('marca', e.target.value)}
                   />
                 </div>
-                <div className="md:col-span-4 flex flex-wrap gap-x-4 gap-y-2 pt-5">
+                <div className="md:col-span-8 flex flex-wrap gap-x-4 gap-y-2 pt-5">
                   <label className="flex items-center gap-1.5 text-sm">
                     <Checkbox
                       checked={filters.possuiFoto === true}

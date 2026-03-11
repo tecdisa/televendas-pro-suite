@@ -261,8 +261,6 @@ export interface ProductFiltersParams {
 
 export interface ProductCadastroFilters {
   status?: 'ativos' | 'inativos' | 'todos';
-  searchType?: 'descricao' | 'codigo' | 'ean' | 'codFabrica';
-  buscaTipo?: 'inicial' | 'contido';
   search?: string;
   fornecedorId?: number;
   divisaoId?: number;
@@ -364,15 +362,9 @@ async function fetchCadastroProdutos({
   params.set('page', String(page));
   params.set('limit', String(limit));
   params.set('status', filters?.status ?? 'ativos');
-  params.set('buscaTipo', filters?.buscaTipo ?? 'contido');
 
   if (filters?.search?.trim()) {
-    const term = filters.search.trim();
-    const type = filters.searchType ?? 'descricao';
-    if (type === 'codigo') params.set('codigoProduto', term);
-    else if (type === 'ean') params.set('ean13', term);
-    else if (type === 'codFabrica') params.set('codigoFabrica', term);
-    else params.set('descricao', term);
+    params.set('q', filters.search.trim());
   }
   if (filters?.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
   if (filters?.divisaoId) params.set('divisaoId', String(filters.divisaoId));
