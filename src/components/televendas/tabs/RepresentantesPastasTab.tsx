@@ -430,7 +430,7 @@ export function RepresentantesPastasTab() {
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="w-[360px] justify-start h-9 text-sm"
+              className="w-full sm:w-[360px] justify-start h-9 text-sm"
               disabled={repLoading || representantes.length === 0}
             >
               <Search className="h-4 w-4 mr-2" />
@@ -443,7 +443,7 @@ export function RepresentantesPastasTab() {
               </span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[95vw] sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Buscar Representante</DialogTitle>
             </DialogHeader>
@@ -673,7 +673,7 @@ export function RepresentantesPastasTab() {
       )}
 
       <Dialog open={includeDialogOpen} onOpenChange={setIncludeDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[95vw] max-w-3xl">
           <DialogHeader>
             <DialogTitle>Incluir fornecedor no representante</DialogTitle>
           </DialogHeader>
@@ -748,7 +748,7 @@ export function RepresentantesPastasTab() {
       </Dialog>
 
       <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[95vw] max-w-3xl">
           <DialogHeader>
             <DialogTitle>Copiar fornecedores de outro representante</DialogTitle>
           </DialogHeader>

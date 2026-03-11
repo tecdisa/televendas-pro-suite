@@ -462,7 +462,7 @@ export function FormasPagamentoTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Nova Forma de Pagamento</DialogTitle>
           </DialogHeader>
@@ -479,7 +479,7 @@ export function FormasPagamentoTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Forma de Pagamento</DialogTitle>
           </DialogHeader>

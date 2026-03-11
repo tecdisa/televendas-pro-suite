@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
@@ -13,6 +13,7 @@ import {
   ClientesTab,
   FornecedoresTab,
   RepresentantesTab,
+  CidadesTab,
   GruposTab,
   DivisoesTab,
   RedesTab,
@@ -41,6 +42,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   clientes: { title: 'Cadastro de Clientes', icon: Users },
   fornecedores: { title: 'Cadastro de Fornecedores', icon: Truck },
   representantes: { title: 'Cadastro de Representantes', icon: UserCheck },
+  cidades: { title: 'Cadastro de Cidades', icon: MapPinned },
   grupos: { title: 'Grupos de Produtos', icon: Layers },
   divisoes: { title: 'Divisões de Produtos', icon: Grid3X3 },
   redes: { title: 'Redes', icon: Network },
@@ -93,6 +95,8 @@ const Televendas = () => {
         return <ErrorBoundary><FornecedoresTab /></ErrorBoundary>;
       case 'representantes':
         return <ErrorBoundary><RepresentantesTab /></ErrorBoundary>;
+      case 'cidades':
+        return <ErrorBoundary><CidadesTab /></ErrorBoundary>;
       case 'grupos':
         return <ErrorBoundary><GruposTab /></ErrorBoundary>;
       case 'divisoes':

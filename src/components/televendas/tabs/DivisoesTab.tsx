@@ -197,8 +197,8 @@ export function DivisoesTab() {
 
   const formContent = (
     <div className="space-y-4">
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-9">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-9">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Grupo *</label>
           <Select
             value={formData.grupo_id ? String(formData.grupo_id) : ''}
@@ -216,7 +216,7 @@ export function DivisoesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-3 flex items-center gap-2 pt-5">
+        <div className="col-span-1 md:col-span-3 flex items-center gap-2 pt-5">
           <Checkbox
             checked={formData.inativo}
             onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
@@ -225,8 +225,8 @@ export function DivisoesTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-12">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-12">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
           <Input
             className="h-8 text-sm"
@@ -385,7 +385,7 @@ export function DivisoesTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg">
           <DialogHeader>
             <DialogTitle>Nova Divisão</DialogTitle>
           </DialogHeader>
@@ -402,7 +402,7 @@ export function DivisoesTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Divisão</DialogTitle>
           </DialogHeader>

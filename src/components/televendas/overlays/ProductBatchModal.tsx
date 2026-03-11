@@ -59,7 +59,7 @@ export const ProductBatchModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0">
+      <DialogContent className="w-[95vw] max-w-lg p-0">
         <DialogHeader className="px-4 pt-4 pb-2 border-b">
           <DialogTitle>Estoque</DialogTitle>
         </DialogHeader>

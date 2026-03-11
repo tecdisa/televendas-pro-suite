@@ -309,7 +309,7 @@ export function SegmentosVendasTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Novo Segmento de Venda</DialogTitle>
           </DialogHeader>
@@ -326,7 +326,7 @@ export function SegmentosVendasTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Segmento de Venda</DialogTitle>
           </DialogHeader>

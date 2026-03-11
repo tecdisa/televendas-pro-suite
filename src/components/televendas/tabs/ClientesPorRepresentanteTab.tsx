@@ -334,7 +334,7 @@ export function ClientesPorRepresentanteTab() {
             if (rep) handleSelectRep(rep);
           }}
         >
-          <SelectTrigger className="h-9 text-sm w-[360px]">
+          <SelectTrigger className="h-9 text-sm w-full sm:w-[360px]">
             <SelectValue placeholder={repLoading ? 'Carregando...' : 'Selecione um representante'} />
           </SelectTrigger>
           <SelectContent>
@@ -475,7 +475,7 @@ export function ClientesPorRepresentanteTab() {
 
       {/* Import Modal */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Importar clientes do cadastro</DialogTitle>
           </DialogHeader>
@@ -582,7 +582,7 @@ export function ClientesPorRepresentanteTab() {
 
       {/* Copy Modal */}
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Copiar clientes de outro representante</DialogTitle>
           </DialogHeader>

@@ -1336,7 +1336,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       <span className="truncate">{formData.clienteNome || 'Buscar cliente'}</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="w-[95vw] max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Buscar Cliente</DialogTitle>
                     </DialogHeader>
@@ -1431,7 +1431,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                     {formData.representanteNome || 'Buscar representante'}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="w-[95vw] max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Buscar Representante</DialogTitle>
                   </DialogHeader>

@@ -387,7 +387,7 @@ export function EstoquesTab() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>{editingStock ? 'Editar Estoque' : 'Novo Estoque'}</DialogTitle>
           </DialogHeader>
@@ -548,7 +548,7 @@ export function EstoquesTab() {
       </Dialog>
 
       <Dialog open={Boolean(deleteStock)} onOpenChange={(open) => !open && setDeleteStock(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Excluir Estoque</DialogTitle>
           </DialogHeader>

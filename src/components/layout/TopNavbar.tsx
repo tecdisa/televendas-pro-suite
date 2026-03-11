@@ -9,6 +9,7 @@ import {
   Grid3X3,
   UserCheck,
   Network,
+  MapPinned,
   Clock,
   Target,
   Route,
@@ -54,6 +55,7 @@ export const navGroups: NavGroup[] = [
       },
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
       { title: 'Representantes', tab: 'representantes', icon: UserCheck },
+      { title: 'Cidades', tab: 'cidades', icon: MapPinned },
       {
         title: 'Produtos',
         icon: Package,

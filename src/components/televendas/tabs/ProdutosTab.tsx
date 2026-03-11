@@ -872,7 +872,7 @@ export function ProdutosTab() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
@@ -881,7 +881,7 @@ export function ProdutosTab() {
           </DialogHeader>
 
           <Tabs defaultValue="caracteristicas" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="w-full justify-start">
+            <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="caracteristicas">Características</TabsTrigger>
               <TabsTrigger value="kit">Kit</TabsTrigger>
               <TabsTrigger value="estoque">Estoque</TabsTrigger>
@@ -891,8 +891,8 @@ export function ProdutosTab() {
 
             <ScrollArea className="flex-1 mt-2">
               <TabsContent value="caracteristicas" className="mt-0 space-y-4 px-1">
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Código produto</Label>
                     <Input
                       className="h-8 text-xs bg-muted"
@@ -900,7 +900,7 @@ export function ProdutosTab() {
                       readOnly
                     />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Código fábrica</Label>
                     <Input
                       className="h-8 text-xs"
@@ -908,7 +908,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('codigoFabrica', e.target.value.toUpperCase())}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs font-semibold">NCM</Label>
                     <Input
                       className="h-8 text-xs"
@@ -916,7 +916,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('ncm', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">CEST</Label>
                     <Input
                       className="h-8 text-xs"
@@ -926,8 +926,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">EAN13</Label>
                     <Input
                       className="h-8 text-xs"
@@ -935,7 +935,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('ean13', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">DUN14</Label>
                     <Input
                       className="h-8 text-xs"
@@ -943,7 +943,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('dun14', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">TIPI</Label>
                     <Input
                       className="h-8 text-xs"
@@ -951,7 +951,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('tipi', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">PNO</Label>
                     <Input
                       className="h-8 text-xs"
@@ -959,7 +959,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('pno', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Marca</Label>
                     <Input
                       className="h-8 text-xs"
@@ -969,8 +969,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs font-semibold">Tipo do item</Label>
                     <Select value={formData.tipoItem} onValueChange={(v) => updateForm('tipoItem', v)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -983,7 +983,7 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-8">
+                  <div className="col-span-1 md:col-span-8">
                     <Label className="text-xs font-semibold">Descrição *</Label>
                     <Input
                       className="h-8 text-xs"
@@ -993,8 +993,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">1ª Apresentação</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1002,7 +1002,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('apresentacao', e.target.value.toUpperCase())}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs font-semibold">Unidade *</Label>
                     <Select value={formData.unidade} onValueChange={(v) => updateForm('unidade', v)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -1013,7 +1013,7 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">2ª Apresentação</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1021,7 +1021,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('apresentacao2', e.target.value.toUpperCase())}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Unidade 2</Label>
                     <Select value={formData.unidade2} onValueChange={(v) => updateForm('unidade2', v)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -1032,7 +1032,7 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Múltiplo de vendas</Label>
                     <Input
                       type="number"
@@ -1043,8 +1043,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs font-semibold">Fornecedor *</Label>
                     <Select
                       value={formData.fornecedorId ? String(formData.fornecedorId) : 'none'}
@@ -1061,7 +1061,7 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs font-semibold">Divisão *</Label>
                     <Select
                       value={formData.divisaoId ? String(formData.divisaoId) : 'none'}
@@ -1078,7 +1078,7 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Princípio ativo</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1088,8 +1088,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">DCB</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1097,7 +1097,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('dcb', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-1 md:col-span-5">
                     <Label className="text-xs">DCB - descrição</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1105,7 +1105,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('dcbDescricao', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Portaria</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1113,7 +1113,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('portaria', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Produto similar</Label>
                     <Input
                       type="number"
@@ -1124,8 +1124,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-12 flex flex-wrap gap-x-4 gap-y-2 pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-12 flex flex-wrap gap-x-4 gap-y-2 pt-1">
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
                         checked={formData.inibeEanXmlNfe}
@@ -1179,8 +1179,8 @@ export function ProdutosTab() {
               </TabsContent>
 
               <TabsContent value="custos" className="mt-0 space-y-4 px-1">
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-12 flex flex-wrap gap-x-4 gap-y-2 pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-12 flex flex-wrap gap-x-4 gap-y-2 pt-1">
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
                         checked={formData.controlaLote}
@@ -1208,8 +1208,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">Fator compra</Label>
                     <Input
                       type="number"
@@ -1218,7 +1218,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('fatorCompra', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">Fator venda</Label>
                     <Input
                       type="number"
@@ -1229,8 +1229,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">Peso bruto (KG)</Label>
                     <Input
                       type="number"
@@ -1240,7 +1240,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('pesoBruto', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">Peso líquido (KG)</Label>
                     <Input
                       type="number"
@@ -1252,8 +1252,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">Preço nacional consumidor</Label>
                     <Input
                       type="number"
@@ -1265,7 +1265,7 @@ export function ProdutosTab() {
                       }
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Label className="text-xs">Preço fábrica</Label>
                     <Input
                       type="number"
@@ -1277,8 +1277,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-8">
                     <Label className="text-xs">Mensagem na nota fiscal</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1286,7 +1286,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('mensagemNotaFiscal', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Reg. MS</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1294,7 +1294,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('regMs', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Validade</Label>
                     <Input
                       type="date"
@@ -1305,8 +1305,8 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-8">
                     <Label className="text-xs">Origem do produto</Label>
                     <Select
                       value={formData.origemProduto || '0'}
@@ -1327,8 +1327,8 @@ export function ProdutosTab() {
 
               <TabsContent value="kit" className="mt-0 px-1 space-y-4">
                 <div className="rounded-md border p-3 space-y-3">
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-8">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-8">
                       <Label className="text-xs">Buscar produto componente</Label>
                       <Input
                         className="h-8 text-xs"
@@ -1340,7 +1340,7 @@ export function ProdutosTab() {
                         placeholder="Descrição, código ou EAN do componente"
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <Button
                         type="button"
                         variant="outline"
@@ -1358,8 +1358,8 @@ export function ProdutosTab() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-8">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-8">
                       <Label className="text-xs">Resultado da busca</Label>
                       <Select
                         value={selectedKitProductId}
@@ -1378,7 +1378,7 @@ export function ProdutosTab() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <Label className="text-xs">Quantidade</Label>
                       <Input
                         type="number"
@@ -1389,7 +1389,7 @@ export function ProdutosTab() {
                         onChange={(e) => setKitQuantity(Number(e.target.value) || 0)}
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <Button
                         type="button"
                         className="w-full h-8 text-xs"
@@ -1612,8 +1612,8 @@ export function ProdutosTab() {
                     onChange={(e) => updateForm('descricaoComplementar', e.target.value)}
                   />
                 </div>
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs">Código site B2C</Label>
                     <Input
                       className="h-8 text-xs"

@@ -661,7 +661,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
             <span className="truncate">{representanteNome || (filters.representante ? `Cód. ${filters.representante}` : 'Buscar representante')}</span>
           </Button>
           <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="w-[95vw] max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Buscar Representante</DialogTitle>
               </DialogHeader>
@@ -730,7 +730,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
             <span className="truncate">{clienteNome || (filters.cliente ? `Cód. ${filters.cliente}` : 'Buscar cliente')}</span>
           </Button>
           <Dialog open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="w-[95vw] max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Buscar Cliente</DialogTitle>
               </DialogHeader>
@@ -1043,7 +1043,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
       )}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="w-[95vw] max-w-4xl">
           <DialogHeader>
             <DialogTitle>{previewOrder ? `Pedido #${previewOrder.id}` : 'Pedido'}</DialogTitle>
           </DialogHeader>

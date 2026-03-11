@@ -309,7 +309,7 @@ export function RotasClientesTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Nova Rota</DialogTitle>
           </DialogHeader>
@@ -326,7 +326,7 @@ export function RotasClientesTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Rota</DialogTitle>
           </DialogHeader>

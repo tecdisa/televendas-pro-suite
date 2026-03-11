@@ -507,14 +507,14 @@ export function FornecedoresTab() {
 
   const formContent = (
     <Tabs defaultValue="identificacao" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2">
         <TabsTrigger value="identificacao">Identificação</TabsTrigger>
         <TabsTrigger value="complementar">Dados Complementares</TabsTrigger>
       </TabsList>
 
       <TabsContent value="identificacao" className="m-0 space-y-4 mt-4">
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ/CPF *</label>
             <div className="flex gap-1">
               <Input
@@ -537,7 +537,7 @@ export function FornecedoresTab() {
               </Button>
             </div>
           </div>
-          <div className="col-span-4 flex items-center gap-4 pt-5">
+          <div className="col-span-1 md:col-span-4 flex items-center gap-4 pt-5">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={formData.inativo}
@@ -555,8 +555,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-9">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social *</label>
             <Input
               className="h-8 text-sm"
@@ -566,8 +566,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-9">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
             <Input
               className="h-8 text-sm"
@@ -581,8 +581,8 @@ export function FornecedoresTab() {
           <span className="text-sm font-medium text-primary">Endereço</span>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep</label>
             <div className="flex gap-1">
               <Input
@@ -607,8 +607,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-9">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
             <Input
               className="h-8 text-sm"
@@ -616,7 +616,7 @@ export function FornecedoresTab() {
               onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
             />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
             <Input
               className="h-8 text-sm"
@@ -626,8 +626,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
             <Select
               value={formData.uf}
@@ -644,7 +644,7 @@ export function FornecedoresTab() {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-5">
+          <div className="col-span-1 md:col-span-5">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
             <Select
               value={formData.cidade_id ? String(formData.cidade_id) : ''}
@@ -661,7 +661,7 @@ export function FornecedoresTab() {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-5">
+          <div className="col-span-1 md:col-span-5">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
             <Input
               className="h-8 text-sm"
@@ -671,8 +671,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
             <Input
               className="h-8 text-sm"
@@ -686,8 +686,8 @@ export function FornecedoresTab() {
           <span className="text-sm font-medium text-primary">Telefones</span>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
             <Input
               className="h-8 text-sm"
@@ -695,7 +695,7 @@ export function FornecedoresTab() {
               onChange={(e) => setFormData({ ...formData, fone: formatPhone(e.target.value) })}
             />
           </div>
-          <div className="col-span-4">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
             <Input
               className="h-8 text-sm"
@@ -703,7 +703,7 @@ export function FornecedoresTab() {
               onChange={(e) => setFormData({ ...formData, whatsapp: formatPhone(e.target.value) })}
             />
           </div>
-          <div className="col-span-4">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Contato</label>
             <Input
               className="h-8 text-sm"
@@ -713,8 +713,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
             <Input
               className="h-8 text-sm"
@@ -723,7 +723,7 @@ export function FornecedoresTab() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })}
             />
           </div>
-          <div className="col-span-6">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Site</label>
             <Input
               className="h-8 text-sm"
@@ -743,8 +743,8 @@ export function FornecedoresTab() {
           <label className="text-sm">Permite cadastrar produtos</label>
         </div>
 
-        <div className="grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="col-span-1 md:col-span-12">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresas Autorizadas</label>
             <Input
               className="h-8 text-sm"
@@ -755,8 +755,8 @@ export function FornecedoresTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-12">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações</label>
             <Textarea
               className="text-sm min-h-[80px]"
@@ -906,7 +906,7 @@ export function FornecedoresTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Novo Fornecedor</DialogTitle>
           </DialogHeader>
@@ -925,7 +925,7 @@ export function FornecedoresTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Editar Fornecedor</DialogTitle>
           </DialogHeader>

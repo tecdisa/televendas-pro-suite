@@ -6,6 +6,7 @@ export { VisitasTab } from './VisitasTab';
 export { ClientesTab } from './ClientesTab';
 export { FornecedoresTab } from './FornecedoresTab';
 export { RepresentantesTab } from './RepresentantesTab';
+export { CidadesTab } from './CidadesTab';
 export { GruposTab } from './GruposTab';
 export { DivisoesTab } from './DivisoesTab';
 export { RedesTab } from './RedesTab';

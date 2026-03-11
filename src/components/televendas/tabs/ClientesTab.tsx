@@ -1569,15 +1569,15 @@ const validateFormData = (data: ClientFormData): string[] => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
             <div className="md:col-span-4">
               <label className="text-sm font-medium mb-1 block">Cidades</label>
-              <div className="grid grid-cols-12 gap-2">
-                <div className="col-span-2 flex items-center justify-center">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                <div className="col-span-1 md:col-span-2 flex items-center justify-center">
                   <Checkbox
                     id="filtrarCidades"
                     checked={filters.filtrarCidades}
                     onCheckedChange={(checked) => setFilters({ ...filters, filtrarCidades: checked === true })}
                   />
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-1 md:col-span-3">
                   <Select
                     value={filters.uf}
                     onValueChange={(v) => setFilters({ ...filters, uf: v, cidade: 'all' })}
@@ -1592,7 +1592,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-7">
+                <div className="col-span-1 md:col-span-7">
                   <Select
                     value={filters.cidade}
                     onValueChange={(v) => setFilters({ ...filters, cidade: v })}
@@ -1917,7 +1917,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           setAjusteGeralOpen(open);
         }}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[95vw] max-w-3xl">
           <DialogHeader>
             <DialogTitle>Ajuste Geral</DialogTitle>
           </DialogHeader>
@@ -2388,12 +2388,12 @@ const validateFormData = (data: ClientFormData): string[] => {
 
       {/* Create Client */}
       <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Cadastrar novo cliente</DialogTitle>
           </DialogHeader>
           <Tabs defaultValue="identificacao" className="flex-1 min-h-0 flex flex-col">
-            <TabsList className="w-auto">
+            <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
               <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
               <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
@@ -2403,8 +2403,8 @@ const validateFormData = (data: ClientFormData): string[] => {
               {/* =================== Identificação =================== */}
               <TabsContent value="identificacao" className="m-0 space-y-4">
                 {/* CNPJ/CPF + Tipo + Código */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
                     <div className="flex gap-1">
                       <Input
@@ -2426,23 +2426,23 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </Button>
                     </div>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
                     <Input className="h-8 text-sm bg-muted" value={formData.codigoCliente} readOnly />
                   </div>
-                  <div className="col-span-3 flex items-center gap-2">
+                  <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                     <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
                     <label className="text-sm">Cliente Inativo</label>
                   </div>
                 </div>
 
                 {/* Razão Social + Simples Nacional */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-9">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
                     <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3 flex items-center gap-2">
+                  <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                     <Checkbox
                       checked={formData.simplesNacional}
                       onCheckedChange={(checked) =>
@@ -2454,12 +2454,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 {/* Nome Fantasia + Consumidor final */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-9">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
                     <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3 flex items-center gap-2">
+                  <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                     <Checkbox
                       checked={formData.consumidorFinal}
                       onCheckedChange={(checked) =>
@@ -2471,16 +2471,16 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 {/* Inscrições + Contribuinte + Suframa */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
                     <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. municipal</label>
                     <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Select defaultValue="contribuinte">
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
@@ -2492,7 +2492,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
@@ -2503,8 +2503,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <span className="text-sm font-medium text-primary">Endereço</span>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep *</label>
                     <div className="flex gap-1">
                       <Input
@@ -2530,19 +2530,19 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-9">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
                     <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
                     <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">UF *</label>
                     <Select
                       value={formData.uf}
@@ -2559,7 +2559,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade *</label>
                     <Select
                       value={formData.cidadeId ? String(formData.cidadeId) : ''}
@@ -2579,16 +2579,16 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Complem.</label>
                     <Input className="h-8 text-sm" value={formData.complemento} onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })} />
                   </div>
@@ -2599,16 +2599,16 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <span className="text-sm font-medium text-primary">Telefones</span>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: formatPhone(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.whatsapp} onChange={(e) => setFormData({ ...formData, whatsapp: formatPhone(e.target.value) })} />
                   </div>
@@ -2643,47 +2643,47 @@ const validateFormData = (data: ClientFormData): string[] => {
               {/* =================== Dados Complementares =================== */}
               <TabsContent value="complementares" className="m-0 space-y-4">
                 {/* Proprietário + Aniversário */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
                     <Input type="date" className="h-8 text-sm" />
                   </div>
                 </div>
 
                 {/* CPF + RG + Início atividade */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
                     <Input className="h-8 text-sm" onChange={handleCpfChange} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
                     <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: formatRg(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
                     <Input type="date" className="h-8 text-sm" />
                   </div>
                 </div>
 
                 {/* Endereço complementar */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-8">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-4 flex items-center gap-2">
+                  <div className="col-span-1 md:col-span-4 flex items-center gap-2">
                     <Checkbox />
                     <label className="text-sm">Endereço para entrega</label>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-2">
                     <Select
                       value={complementarUf}
                       onValueChange={(v) => {
@@ -2704,7 +2704,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Select
                       value={complementarCidadeId ? String(complementarCidadeId) : ''}
                       onValueChange={(v) => {
@@ -2730,11 +2730,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
                     <Input className="h-8 text-sm" placeholder="-" onChange={handleCepChange} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
@@ -2747,42 +2747,42 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <span className="text-sm font-medium text-primary">Referências</span>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Input className="h-8 text-sm" placeholder="Agência" onChange={handleUpperChange} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
                 {/* Referências Comerciais + Sócios */}
-                <div className="grid grid-cols-12 gap-3 items-start mt-4">
-                  <div className="col-span-6 space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start mt-4">
+                  <div className="col-span-1 md:col-span-6 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-6 space-y-2">
+                  <div className="col-span-1 md:col-span-6 space-y-2">
                     <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
                     <div className="flex gap-2">
                       <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
@@ -2801,12 +2801,12 @@ const validateFormData = (data: ClientFormData): string[] => {
 
                 <FormField label="Cap. social" value="" onChange={() => {}} />
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-8">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contador</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
                     <Input className="h-8 text-sm" placeholder="( )" onChange={handlePhoneChange} />
                   </div>
@@ -2817,8 +2817,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <span className="text-sm font-medium text-primary">Cobrança</span>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-12">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-12">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
                     <Input
                       className="h-8 text-sm"
@@ -2833,8 +2833,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
                     <Input
                       className="h-8 text-sm"
@@ -2847,7 +2847,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       }
                     />
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
                     <Input
                       className="h-8 text-sm"
@@ -2860,7 +2860,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       }
                     />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
                     <Input
                       className="h-8 text-sm"
@@ -2875,8 +2875,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
                     <Select
                       value={formData.cobrancaEnderecoUf}
@@ -2899,7 +2899,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
                     <Select
                       value={
@@ -2935,7 +2935,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
                     <Input
                       className="h-8 text-sm"
@@ -2955,36 +2955,36 @@ const validateFormData = (data: ClientFormData): string[] => {
               {/* =================== Dados Comerciais =================== */}
               <TabsContent value="comerciais" className="m-0 space-y-4">
                 {/* Contatos */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
                     <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: formatPhone(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
                     <Input type="date" className="h-8 text-sm" value={formData.contato1Aniversario} onChange={(e) => setFormData({ ...formData, contato1Aniversario: e.target.value })} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-5">
                     <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: toUpperValue(e.target.value) })} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: formatPhone(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <Input type="date" className="h-8 text-sm" value={formData.contato2Aniversario} onChange={(e) => setFormData({ ...formData, contato2Aniversario: e.target.value })} />
                   </div>
                 </div>
 
                 {/* Segmentos / Checkouts / Dependência / Rede */}
-                <div className="grid grid-cols-12 gap-3 items-end mt-4">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mt-4">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Segmentos *</label>
                     <Select
                       value={formData.segmentoId ? String(formData.segmentoId) : ''}
@@ -3003,18 +3003,18 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Checkouts</label>
                     <Input type="number" className="h-8 text-sm text-right" value={formData.checkouts} onChange={(e) => setFormData({ ...formData, checkouts: parseInt(e.target.value) || 0 })} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Dependência</label>
                     <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Rede</label>
                     <Select
                       value={formData.redeId !== undefined && formData.redeId !== null ? String(formData.redeId) : ''}
@@ -3037,8 +3037,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 {/* Tabelas de preços / Permite venda */}
-                <div className="grid grid-cols-12 gap-3 items-end mt-4">
-                  <div className="col-span-5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mt-4">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
                     <Dialog open={tabelaSearchOpen && createOpen} onOpenChange={onTabelaDialogChange}>
                       <DialogTrigger asChild>
@@ -3046,7 +3046,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                           {tabelaSummary}
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent className="w-[95vw] sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Selecionar tabelas de preço</DialogTitle>
                         </DialogHeader>
@@ -3091,15 +3091,15 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <div className="col-span-7">
+                  <div className="col-span-1 md:col-span-7">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Permite venda nas empresas (ex: 01,02..)</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
                 </div>
 
                 {/* Representante */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
                     <Dialog open={repSearchOpen && createOpen} onOpenChange={setRepSearchOpen}>
                       <DialogTrigger asChild>
@@ -3107,7 +3107,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                           {representanteSummary}
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent className="w-[95vw] sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Buscar Representante</DialogTitle>
                         </DialogHeader>
@@ -3171,8 +3171,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 {/* Prazo máximo + Descontos */}
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma de pagamento *</label>
                     <Select
                       value={String(ensurePositiveId(formData.formaPagtoId))}
@@ -3193,7 +3193,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-6">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
                     <Select
                       value={formData.prazo}
@@ -3217,7 +3217,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-6">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">% Desconto máximo na nota fiscal</label>
                     <div className="flex items-center gap-1">
                       <Input type="number" className="h-8 text-sm text-right" value={formData.descontoFinanceiroBoleto} onChange={(e) => setFormData({ ...formData, descontoFinanceiroBoleto: parseFloat(e.target.value) || 0 })} />
@@ -3226,8 +3226,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Crédito</label>
                     <Input
                       type="number"
@@ -3245,7 +3245,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       }
                     />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Aberto</label>
                     <Input
                       type="number"
@@ -3255,7 +3255,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       disabled
                     />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
                     <Input
                       type="number"
@@ -3267,12 +3267,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-center">
-                  <div className="col-span-6 flex items-center gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                  <div className="col-span-1 md:col-span-6 flex items-center gap-2">
                     <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
                     <label className="text-sm">Boleto bancário</label>
                   </div>
-                  <div className="col-span-6">
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">% Despesas nota fiscal</label>
                     <div className="flex items-center gap-1">
                       <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
@@ -3281,9 +3281,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-6"></div>
-                  <div className="col-span-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6"></div>
+                  <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">% Frete nota fiscal</label>
                     <div className="flex items-center gap-1">
                       <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
@@ -3293,8 +3293,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 {/* B2B */}
-                <div className="grid grid-cols-12 gap-3 items-center mt-4">
-                  <div className="col-span-12 flex items-center gap-4 flex-wrap">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-4">
+                  <div className="col-span-1 md:col-span-12 flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={formData.b2bLiberado}
@@ -3377,7 +3377,7 @@ const validateFormData = (data: ClientFormData): string[] => {
 
       {/* Edit Client - mesmo layout */}
       <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
@@ -3385,7 +3385,7 @@ const validateFormData = (data: ClientFormData): string[] => {
             <div className="py-6 text-center text-sm text-muted-foreground">Carregando dados do cliente...</div>
           ) : (
             <Tabs defaultValue="identificacao" className="flex-1 min-h-0 flex flex-col">
-              <TabsList className="w-auto">
+              <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
                 <TabsTrigger value="identificacao">Identificação</TabsTrigger>
                 <TabsTrigger value="comerciais">Dados Comerciais</TabsTrigger>
                 <TabsTrigger value="complementares">Dados complementares</TabsTrigger>
@@ -3394,8 +3394,8 @@ const validateFormData = (data: ClientFormData): string[] => {
               <div className="flex-1 overflow-y-auto mt-4 px-2 pb-2">
                 {/* Identificação */}
                 <TabsContent value="identificacao" className="m-0 space-y-4">
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
                     <div className="flex gap-1">
                         <Input className="h-8 text-sm flex-1" value={formData.cnpjCpf} onChange={(e) => setFormData({ ...formData, cnpjCpf: toUpperValue(e.target.value) })} />
@@ -3410,22 +3410,22 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </Button>
                       </div>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
                       <Input className="h-8 text-sm bg-muted" value={formData.codigoCliente} readOnly />
                     </div>
-                    <div className="col-span-3 flex items-center gap-2">
+                    <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                       <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
                       <label className="text-sm">Cliente Inativo</label>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-9">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
                       <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
                     </div>
-                    <div className="col-span-3 flex items-center gap-2">
+                    <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                       <Checkbox
                         checked={formData.simplesNacional}
                         onCheckedChange={(checked) =>
@@ -3436,12 +3436,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-9">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
                       <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
                     </div>
-                    <div className="col-span-3 flex items-center gap-2">
+                    <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                       <Checkbox
                         checked={formData.consumidorFinal}
                         onCheckedChange={(checked) =>
@@ -3452,16 +3452,16 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
                       <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. municipal</label>
                       <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: toUpperValue(e.target.value) })} />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <Select defaultValue="contribuinte">
                         <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-background z-50">
@@ -3470,7 +3470,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Suframa</label>
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
@@ -3480,8 +3480,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <span className="text-sm font-medium text-primary">Endereço</span>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Cep *</label>
                       <div className="flex gap-1">
                         <Input
@@ -3506,19 +3506,19 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-9">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
                       <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
                       <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })} />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">UF *</label>
                       <Select
                         value={formData.uf}
@@ -3535,7 +3535,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-5">
+                    <div className="col-span-1 md:col-span-5">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade *</label>
                       <Select
                         value={formData.cidadeId ? String(formData.cidadeId) : ''}
@@ -3555,10 +3555,10 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })} />
                     </div>
                   </div>
@@ -3569,16 +3569,16 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <span className="text-sm font-medium text-primary">Telefones</span>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Fixo *</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.fax} onChange={(e) => setFormData({ ...formData, fax: formatPhone(e.target.value) })} />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.whatsapp} onChange={(e) => setFormData({ ...formData, whatsapp: formatPhone(e.target.value) })} />
                   </div>
@@ -3604,27 +3604,27 @@ const validateFormData = (data: ClientFormData): string[] => {
 
                 {/* Dados Complementares */}
                 <TabsContent value="complementares" className="m-0 space-y-4">
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
                       <Input type="date" className="h-8 text-sm" />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
                       <Input className="h-8 text-sm" onChange={handleCpfChange} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
                       <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: formatRg(e.target.value) })} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
                       <Input type="date" className="h-8 text-sm" />
                     </div>
@@ -3634,28 +3634,28 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <span className="text-sm font-medium text-primary">Referências</span>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <Input className="h-8 text-sm" placeholder="Agência" onChange={handleUpperChange} />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-start mt-4">
-                    <div className="col-span-6 space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start mt-4">
+                    <div className="col-span-1 md:col-span-6 space-y-2">
                       <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                       <Input className="h-8 text-sm" onChange={handleUpperChange} />
                     </div>
-                    <div className="col-span-6 space-y-2">
+                    <div className="col-span-1 md:col-span-6 space-y-2">
                       <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
                       <div className="flex gap-2">
                         <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
@@ -3672,8 +3672,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <span className="text-sm font-medium text-primary">Cobrança</span>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-12">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-12">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
                       <Input
                         className="h-8 text-sm"
@@ -3688,8 +3688,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
                       <Input
                         className="h-8 text-sm"
@@ -3702,7 +3702,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         }
                       />
                     </div>
-                    <div className="col-span-5">
+                    <div className="col-span-1 md:col-span-5">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
                       <Input
                         className="h-8 text-sm"
@@ -3715,7 +3715,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         }
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
                       <Input
                         className="h-8 text-sm"
@@ -3730,8 +3730,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
                       <Select
                         value={formData.cobrancaEnderecoUf}
@@ -3756,7 +3756,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-5">
+                    <div className="col-span-1 md:col-span-5">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
                       <Select
                         value={
@@ -3797,7 +3797,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-5">
+                    <div className="col-span-1 md:col-span-5">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
                       <Input
                         className="h-8 text-sm"
@@ -3816,35 +3816,35 @@ const validateFormData = (data: ClientFormData): string[] => {
 
                 {/* Dados Comerciais */}
                 <TabsContent value="comerciais" className="m-0 space-y-4">
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
                       <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: toUpperValue(e.target.value) })} />
                   </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
                       <Input className="h-8 text-sm" placeholder="( )" value={formData.contato1Celular} onChange={(e) => setFormData({ ...formData, contato1Celular: formatPhone(e.target.value) })} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
                       <Input type="date" className="h-8 text-sm" value={formData.contato1Aniversario} onChange={(e) => setFormData({ ...formData, contato1Aniversario: e.target.value })} />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-5">
                       <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: toUpperValue(e.target.value) })} />
                   </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: formatPhone(e.target.value) })} />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <Input type="date" className="h-8 text-sm" value={formData.contato2Aniversario} onChange={(e) => setFormData({ ...formData, contato2Aniversario: e.target.value })} />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end mt-4">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mt-4">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Segmentos *</label>
                       <Select
                         value={formData.segmentoId ? String(formData.segmentoId) : ''}
@@ -3863,18 +3863,18 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Checkouts</label>
                       <Input type="number" className="h-8 text-sm text-right" value={formData.checkouts} onChange={(e) => setFormData({ ...formData, checkouts: parseInt(e.target.value) || 0 })} />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Dependência</label>
                       <Input type="number" className="h-8 text-sm text-right" defaultValue={0} />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Rede</label>
                       <Select
                         value={formData.redeId !== undefined && formData.redeId !== null ? String(formData.redeId) : ''}
@@ -3896,8 +3896,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
                       <Dialog open={tabelaSearchOpen && editOpen} onOpenChange={onTabelaDialogChange}>
                         <DialogTrigger asChild>
@@ -3905,7 +3905,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                             {tabelaSummary}
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
+                        <DialogContent className="w-[95vw] sm:max-w-md">
                           <DialogHeader>
                             <DialogTitle>Selecionar tabelas de preço</DialogTitle>
                           </DialogHeader>
@@ -3950,7 +3950,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </DialogContent>
                       </Dialog>
                     </div>
-                    <div className="col-span-6">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
                       <Dialog open={repSearchOpen && editOpen} onOpenChange={setRepSearchOpen}>
                         <DialogTrigger asChild>
@@ -3958,7 +3958,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                             {representanteSummary}
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
+                        <DialogContent className="w-[95vw] sm:max-w-md">
                           <DialogHeader>
                             <DialogTitle>Buscar Representante</DialogTitle>
                           </DialogHeader>
@@ -4021,8 +4021,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma de pagamento *</label>
                       <Select
                         value={String(ensurePositiveId(formData.formaPagtoId))}
@@ -4043,7 +4043,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-6">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
                       <Select
                         value={formData.prazo}
@@ -4067,14 +4067,14 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-6 flex items-center gap-2 pt-5">
+                    <div className="col-span-1 md:col-span-6 flex items-center gap-2 pt-5">
                       <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
                       <label className="text-sm">Boleto bancário</label>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">% Desconto máximo na nota fiscal</label>
                       <div className="flex items-center gap-1">
                         <Input
@@ -4086,11 +4086,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                         <span className="text-sm">(%)</span>
                       </div>
                     </div>
-                    <div className="col-span-6" />
+                    <div className="col-span-1 md:col-span-6" />
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Crédito</label>
                       <Input
                         type="number"
@@ -4108,7 +4108,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         }
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Aberto</label>
                       <Input
                         type="number"
@@ -4118,7 +4118,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         disabled
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
                       <Input
                         type="number"
@@ -4130,8 +4130,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-3 items-center mt-4">
-                    <div className="col-span-12 flex items-center gap-4 flex-wrap">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-4">
+                    <div className="col-span-1 md:col-span-12 flex items-center gap-4 flex-wrap">
                       <div className="flex items-center gap-2">
                         <Checkbox
                           checked={formData.b2bLiberado}

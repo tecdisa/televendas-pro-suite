@@ -258,7 +258,7 @@ export function PrazosPagamentosTab() {
 
   const formContent = (
     <Tabs defaultValue="geral" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2">
         <TabsTrigger value="geral">Geral</TabsTrigger>
         <TabsTrigger value="config">Configurações</TabsTrigger>
       </TabsList>
@@ -272,8 +272,8 @@ export function PrazosPagamentosTab() {
             onChange={(e) => setFormData({ ...formData, descricao_prazo_pagto: toUpperValue(e.target.value) })}
           />
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Nº Parcelas</label>
             <Input
               type="number"
@@ -282,7 +282,7 @@ export function PrazosPagamentosTab() {
               onChange={(e) => setFormData({ ...formData, numero_de_parcelas: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-8">
+          <div className="col-span-1 md:col-span-8">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazos em Dias (ex: 30,60,90)</label>
             <Input
               className="h-8 text-sm"
@@ -292,8 +292,8 @@ export function PrazosPagamentosTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Pedido Mínimo</label>
             <Input
               type="number"
@@ -302,7 +302,7 @@ export function PrazosPagamentosTab() {
               onChange={(e) => setFormData({ ...formData, pedido_minimo: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-6">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
             <Input
               type="number"
@@ -313,8 +313,8 @@ export function PrazosPagamentosTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma de Pagamento</label>
             <Select
               value={formData.forma_pagto_id?.toString() || 'none'}
@@ -571,7 +571,7 @@ export function PrazosPagamentosTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="w-[95vw] max-w-xl">
           <DialogHeader>
             <DialogTitle>Novo Prazo de Pagamento</DialogTitle>
           </DialogHeader>
@@ -588,7 +588,7 @@ export function PrazosPagamentosTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="w-[95vw] max-w-xl">
           <DialogHeader>
             <DialogTitle>Editar Prazo de Pagamento</DialogTitle>
           </DialogHeader>

@@ -210,8 +210,8 @@ export function RedesTab() {
           onChange={(e) => setFormData({ ...formData, descricao_rede: toUpperValue(e.target.value) })}
         />
       </div>
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-4">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
           <Select
             value={formData.uf || 'none'}
@@ -229,7 +229,7 @@ export function RedesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-8">
+        <div className="col-span-1 md:col-span-8">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
           <Select
             value={formData.cidade_id ? String(formData.cidade_id) : 'none'}
@@ -248,8 +248,8 @@ export function RedesTab() {
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-9">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-9">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
           <Input
             type="email"
@@ -258,7 +258,7 @@ export function RedesTab() {
             onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })}
           />
         </div>
-        <div className="col-span-3 flex items-center gap-2 pt-5">
+        <div className="col-span-1 md:col-span-3 flex items-center gap-2 pt-5">
           <Checkbox
             checked={formData.inativo}
             onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
@@ -413,7 +413,7 @@ export function RedesTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg">
           <DialogHeader>
             <DialogTitle>Nova Rede</DialogTitle>
           </DialogHeader>
@@ -430,7 +430,7 @@ export function RedesTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Rede</DialogTitle>
           </DialogHeader>

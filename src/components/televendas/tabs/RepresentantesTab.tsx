@@ -505,15 +505,15 @@ export function RepresentantesTab() {
 
   const formContent = (
     <Tabs defaultValue="identificacao" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-3">
         <TabsTrigger value="identificacao">Identificação</TabsTrigger>
         <TabsTrigger value="endereco">Endereço</TabsTrigger>
         <TabsTrigger value="config">Configurações</TabsTrigger>
       </TabsList>
 
       <TabsContent value="identificacao" className="space-y-4 mt-4">
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
             <Input
               className="h-8 text-sm bg-muted"
@@ -521,7 +521,7 @@ export function RepresentantesTab() {
               readOnly
             />
           </div>
-          <div className="col-span-9">
+          <div className="col-span-1 md:col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
             <Input
               className="h-8 text-sm"
@@ -530,8 +530,8 @@ export function RepresentantesTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF/CNPJ</label>
             <div className="flex gap-1">
               <Input
@@ -554,7 +554,7 @@ export function RepresentantesTab() {
               </Button>
             </div>
           </div>
-          <div className="col-span-8">
+          <div className="col-span-1 md:col-span-8">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
             <Input
               className="h-8 text-sm"
@@ -563,8 +563,8 @@ export function RepresentantesTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
             <Input
               className="h-8 text-sm"
@@ -572,7 +572,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, fone: maskPhone(e.target.value) })}
             />
           </div>
-          <div className="col-span-4">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
             <Input
               className="h-8 text-sm"
@@ -580,7 +580,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, whatsapp: maskPhone(e.target.value) })}
             />
           </div>
-          <div className="col-span-4">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Data Nascimento</label>
             <Input
               type="date"
@@ -590,8 +590,8 @@ export function RepresentantesTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-12">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
             <Input
               type="email"
@@ -604,8 +604,8 @@ export function RepresentantesTab() {
       </TabsContent>
 
       <TabsContent value="endereco" className="space-y-4 mt-4">
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
             <div className="flex gap-1">
               <Input
@@ -628,7 +628,7 @@ export function RepresentantesTab() {
               </Button>
             </div>
           </div>
-          <div className="col-span-7">
+          <div className="col-span-1 md:col-span-7">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
             <Input
               className="h-8 text-sm"
@@ -636,7 +636,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
             <Input
               className="h-8 text-sm"
@@ -645,8 +645,8 @@ export function RepresentantesTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
             <Input
               className="h-8 text-sm"
@@ -654,7 +654,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })}
             />
           </div>
-          <div className="col-span-4">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
             <Input
               className="h-8 text-sm"
@@ -662,7 +662,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
             <Select
               value={formData.uf || ''}
@@ -682,7 +682,7 @@ export function RepresentantesTab() {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-2">
+          <div className="col-span-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
             <Select
               value={formData.cidade_id ? String(formData.cidade_id) : ''}
@@ -703,8 +703,8 @@ export function RepresentantesTab() {
       </TabsContent>
 
       <TabsContent value="config" className="space-y-4 mt-4">
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor</label>
             <Input
               className="h-8 text-sm"
@@ -712,7 +712,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, supervisor: toUpperValue(e.target.value) })}
             />
           </div>
-          <div className="col-span-6">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
             <Input
               className="h-8 text-sm"
@@ -721,8 +721,8 @@ export function RepresentantesTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
             <Input
               type="number"
@@ -731,7 +731,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, comissao: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo de Venda</label>
             <Input
               type="number"
@@ -741,7 +741,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, objetivo_de_venda: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Limite de Troca</label>
             <Input
               type="number"
@@ -751,7 +751,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, limite_de_troca: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Setor ID</label>
             <Input
               type="number"
@@ -760,7 +760,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, setor_id: e.target.value ? Number(e.target.value) : null })}
             />
           </div>
-          <div className="col-span-6">
+          <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Rotas Liberadas</label>
             <Input
               className="h-8 text-sm"
@@ -770,8 +770,8 @@ export function RepresentantesTab() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Máx. Pedidos Retidos</label>
             <Input
               type="number"
@@ -780,7 +780,7 @@ export function RepresentantesTab() {
               onChange={(e) => setFormData({ ...formData, quantidade_maxima_pedidos_retidos_para_sincronizar: e.target.value ? Number(e.target.value) : 0 })}
             />
           </div>
-          <div className="col-span-8 flex flex-wrap gap-4 items-end pb-1">
+          <div className="col-span-1 md:col-span-8 flex flex-wrap gap-4 items-end pb-1">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={formData.liberado_debito_credito}
@@ -975,7 +975,7 @@ export function RepresentantesTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Representante</DialogTitle>
           </DialogHeader>
@@ -992,7 +992,7 @@ export function RepresentantesTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Representante</DialogTitle>
           </DialogHeader>

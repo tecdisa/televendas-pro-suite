@@ -277,7 +277,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Informações Cadastrais</DialogTitle>
         </DialogHeader>
@@ -293,7 +293,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
           <div className="p-4 text-center text-destructive">{error}</div>
         ) : (
           <Tabs defaultValue="identificacao" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
               <TabsTrigger value="comercial">Comercial</TabsTrigger>
               <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
@@ -310,7 +310,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                     <Checkbox checked={data?.inativo ?? false} disabled />
                     <label className="text-sm">Inativo</label>
                   </div>
-                  <ReadOnlyField label="CNPJ/CPF" value={data?.cnpjCpf} className="col-span-1" />
+                  <ReadOnlyField label="CNPJ/CPF" value={data?.cnpjCpf} className="col-span-1 md:col-span-1" />
                   <ReadOnlyField label="Insc. Est." value={data?.inscEstadual} />
                 </div>
                 
@@ -330,8 +330,8 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                 </div>
                 
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                  <ReadOnlyField label="UF" value={data?.uf} className="col-span-1" />
-                  <ReadOnlyField label="Cidade" value={data?.cidade} className="col-span-2" />
+                  <ReadOnlyField label="UF" value={data?.uf} className="col-span-1 md:col-span-1" />
+                  <ReadOnlyField label="Cidade" value={data?.cidade} className="col-span-1 md:col-span-2" />
                   <ReadOnlyField label="CEP" value={data?.cep} />
                 </div>
                 

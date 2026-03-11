@@ -166,8 +166,8 @@ export function GruposTab() {
 
   const formContent = (
     <div className="space-y-4">
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-9">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-9">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
           <Input
             className="h-8 text-sm"
@@ -175,7 +175,7 @@ export function GruposTab() {
             onChange={(e) => setFormData({ ...formData, descricao_grupo: toUpperValue(e.target.value) })}
           />
         </div>
-        <div className="col-span-3 flex items-center gap-2 pt-5">
+        <div className="col-span-1 md:col-span-3 flex items-center gap-2 pt-5">
           <Checkbox
             checked={formData.inativo}
             onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
@@ -313,7 +313,7 @@ export function GruposTab() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Novo Grupo</DialogTitle>
           </DialogHeader>
@@ -330,7 +330,7 @@ export function GruposTab() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Grupo</DialogTitle>
           </DialogHeader>
