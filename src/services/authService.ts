@@ -2,6 +2,7 @@ export interface Empresa {
   empresa_id: number;
   razao_social: string;
   fantasia: string;
+  uf: string;
 }
 import { API_BASE } from '@/utils/env';
 import { apiClient } from '@/utils/apiClient';
@@ -59,8 +60,8 @@ export const authService = {
       }
 
       const session = {
-        usuario: data?.usuario ?? usuario,
-        nome: data?.nome ?? data?.name ?? data?.username ?? usuario,
+        usuario: data?.user?.usuario ?? data?.usuario ?? usuario,
+        nome: data?.user?.nome ?? data?.nome ?? data?.name ?? data?.username ?? usuario,
         token,
         // Keep full payload for potential future use
         payload: data,

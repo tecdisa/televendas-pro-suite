@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type ChangeEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -19,10 +19,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2, ChevronDown, ChevronUp, Columns3 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
+import { authService } from '@/services/authService';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Rota, Tabela, Uf, Cidade, SegmentoVenda, Rede, PrazoPagto, FormaPagamento } from '@/services/metadataService';
 import { representativesService, Representative } from '@/services/representativesService';
@@ -111,6 +113,16 @@ const generateB2bSenha = (length = 12) => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: size }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 };
+const formatGridNumber = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined || value === '') return '-';
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '-';
+  return parsed.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+const getLoggedCompanyUf = () => toUpperTrimValue(authService.getEmpresa()?.uf || '');
 
 type ClientListFilters = {
   status: 'ativos' | 'inativos' | 'todos';
@@ -164,8 +176,48 @@ const defaultClientFilters: ClientListFilters = {
   cadastroAte: '',
 };
 const CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY = 'televendas:clientes:filtersOpen';
+const CLIENTES_PINNED_COLUMNS_STORAGE_KEY = 'televendas:clientes:pinnedColumns';
+const CLIENTES_FIX_ACTIONS_STORAGE_KEY = 'televendas:clientes:fixActions';
 
-const createEmptyFormData = () => ({
+const CLIENTS_GRID_COLUMNS = [
+  { key: 'select', label: 'Seleção', width: 56, pinnable: true },
+  { key: 'codigo', label: 'Código', width: 120, pinnable: true },
+  { key: 'nome', label: 'Nome', width: 320, pinnable: true },
+  { key: 'fantasia', label: 'Fantasia', width: 220, pinnable: true },
+  { key: 'cnpjCpf', label: 'CNPJ/CPF', width: 150, pinnable: true },
+  { key: 'pessoa', label: 'Pessoa', width: 80, pinnable: true },
+  { key: 'cidade', label: 'Cidade', width: 160, pinnable: true },
+  { key: 'uf', label: 'UF', width: 64, pinnable: true },
+  { key: 'bairro', label: 'Bairro', width: 160, pinnable: true },
+  { key: 'endereco', label: 'Endereço', width: 220, pinnable: true },
+  { key: 'numero', label: 'Número', width: 96, pinnable: true },
+  { key: 'cep', label: 'CEP', width: 120, pinnable: true },
+  { key: 'telefone', label: 'Telefone', width: 140, pinnable: true },
+  { key: 'whatsapp', label: 'WhatsApp', width: 140, pinnable: true },
+  { key: 'email', label: 'Email', width: 220, pinnable: true },
+  { key: 'comprador', label: 'Comprador', width: 180, pinnable: true },
+  { key: 'segmento', label: 'Segmento', width: 160, pinnable: true },
+  { key: 'rede', label: 'Rede', width: 160, pinnable: true },
+  { key: 'rota', label: 'Rota', width: 160, pinnable: true },
+  { key: 'formaPagto', label: 'Forma Pagto', width: 170, pinnable: true },
+  { key: 'prazoPagto', label: 'Prazo Pagto', width: 170, pinnable: true },
+  { key: 'limiteCredito', label: 'Limite Crédito', width: 128, pinnable: true },
+  { key: 'credito', label: 'Crédito', width: 112, pinnable: true },
+  { key: 'aberto', label: 'Aberto', width: 112, pinnable: true },
+  { key: 'disponivel', label: 'Disponível', width: 112, pinnable: true },
+  { key: 'b2b', label: 'B2B', width: 80, pinnable: true },
+  { key: 'simples', label: 'Simples', width: 80, pinnable: true },
+  { key: 'consumidorFinal', label: 'Consum. Final', width: 96, pinnable: true },
+  { key: 'inativo', label: 'Inativo', width: 80, pinnable: true },
+  { key: 'acoes', label: 'Ações', width: 112, pinnable: false },
+] as const;
+
+type ClientsGridColumnKey = typeof CLIENTS_GRID_COLUMNS[number]['key'];
+const PINNABLE_CLIENT_COLUMNS = CLIENTS_GRID_COLUMNS.filter(
+  (column) => column.pinnable,
+);
+
+const createEmptyFormData = (defaultUf = '') => ({
   codigoCliente: '',
   inativo: false,
   simplesNacional: false,
@@ -179,7 +231,7 @@ const createEmptyFormData = () => ({
   endereco: '',
   numero: '',
   bairro: '',
-  uf: '',
+  uf: defaultUf,
   cidade: '',
   cidadeId: 0,
   cep: '',
@@ -381,6 +433,34 @@ export const ClientesTab = () => {
       return true;
     }
   });
+  const [pinnedColumns, setPinnedColumns] = useState<ClientsGridColumnKey[]>(
+    () => {
+      try {
+        if (typeof window === 'undefined') return [];
+        const saved = window.localStorage.getItem(
+          CLIENTES_PINNED_COLUMNS_STORAGE_KEY,
+        );
+        if (!saved) return [];
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((value) =>
+          PINNABLE_CLIENT_COLUMNS.some((column) => column.key === value),
+        );
+      } catch {
+        return [];
+      }
+    },
+  );
+  const [fixActionsColumn, setFixActionsColumn] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return true;
+      const saved = window.localStorage.getItem(CLIENTES_FIX_ACTIONS_STORAGE_KEY);
+      if (saved === null) return true;
+      return saved === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [selectedOperacao, setSelectedOperacao] = useState('');
   const [ajusteGeralOpen, setAjusteGeralOpen] = useState(false);
   const [ajusteGeralLoading, setAjusteGeralLoading] = useState(false);
@@ -445,16 +525,70 @@ export const ClientesTab = () => {
   const [filterRotas, setFilterRotas] = useState<Rota[]>([]);
   const [filterRedes, setFilterRedes] = useState<Rede[]>([]);
   const [filterFormas, setFilterFormas] = useState<FormaPagamento[]>([]);
+  const formasMap = useMemo(
+    () =>
+      new Map(
+        filterFormas.map((item) => [
+          Number(item.id),
+          item.descricao || item.descricao_forma_pagto || String(item.id),
+        ]),
+      ),
+    [filterFormas],
+  );
+  const prazosMap = useMemo(
+    () =>
+      new Map(
+        prazos.map((item) => [
+          Number(item.id),
+          item.descricao || item.descricao_prazo_pagto || String(item.id),
+        ]),
+      ),
+    [prazos],
+  );
+  const segmentosMap = useMemo(
+    () =>
+      new Map(
+        segmentos.map((item) => [
+          Number(item.id),
+          item.descricao || item.descricao_segmento || String(item.id),
+        ]),
+      ),
+    [segmentos],
+  );
+  const redesMap = useMemo(
+    () =>
+      new Map(
+        [...redes, ...filterRedes].map((item) => [
+          Number(item.id),
+          item.descricao || item.descricao_rede || String(item.id),
+        ]),
+      ),
+    [filterRedes, redes],
+  );
+  const rotasMap = useMemo(
+    () =>
+      new Map(
+        [...rotas, ...filterRotas].map((item) => [
+          Number(item.id),
+          item.descricao_rota || item.codigo_rota || String(item.id),
+        ]),
+      ),
+    [filterRotas, rotas],
+  );
 
   const onTabelaDialogChange = (open: boolean) => {
     setTabelaSearchOpen(open);
     if (!open) setTabelaSearch('');
   };
 
-  const [formData, setFormData] = useState<ClientFormData>(createEmptyFormData());
+  const [formData, setFormData] = useState<ClientFormData>(() =>
+    createEmptyFormData(getLoggedCompanyUf()),
+  );
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
-  const formSnapshotRef = useRef<string>(JSON.stringify(createEmptyFormData()));
+  const formSnapshotRef = useRef<string>(
+    JSON.stringify(createEmptyFormData(getLoggedCompanyUf())),
+  );
   const setFormSnapshot = (data: ClientFormData) => {
     formSnapshotRef.current = JSON.stringify(data);
   };
@@ -608,6 +742,26 @@ export const ClientesTab = () => {
       window.localStorage.setItem(CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY, String(filtersOpen));
     } catch {}
   }, [filtersOpen]);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(
+        CLIENTES_PINNED_COLUMNS_STORAGE_KEY,
+        JSON.stringify(pinnedColumns),
+      );
+    } catch {}
+  }, [pinnedColumns]);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(
+        CLIENTES_FIX_ACTIONS_STORAGE_KEY,
+        String(fixActionsColumn),
+      );
+    } catch {}
+  }, [fixActionsColumn]);
 
   // Carregar rotas, tabelas e UFs quando abrir os dialogs de criação/edição
   useEffect(() => {
@@ -934,6 +1088,79 @@ export const ClientesTab = () => {
     });
   };
 
+  const togglePinnedColumn = (columnKey: ClientsGridColumnKey, checked: boolean) => {
+    if (!PINNABLE_CLIENT_COLUMNS.some((column) => column.key === columnKey)) return;
+    setPinnedColumns((prev) => {
+      if (checked) {
+        if (prev.includes(columnKey)) return prev;
+        return [...prev, columnKey];
+      }
+      return prev.filter((key) => key !== columnKey);
+    });
+  };
+
+  const columnWidthMap = useMemo(() => {
+    const map = new Map<ClientsGridColumnKey, number>();
+    CLIENTS_GRID_COLUMNS.forEach((column) => map.set(column.key, column.width));
+    return map;
+  }, []);
+
+  const pinnedLeftColumnsInOrder = useMemo(
+    () =>
+      CLIENTS_GRID_COLUMNS.filter(
+        (column) =>
+          column.key !== 'acoes' && pinnedColumns.includes(column.key),
+      ).map((column) => column.key),
+    [pinnedColumns],
+  );
+
+  const pinnedLeftOffsets = useMemo(() => {
+    const offsets = new Map<ClientsGridColumnKey, number>();
+    let left = 0;
+    for (const key of pinnedLeftColumnsInOrder) {
+      offsets.set(key, left);
+      left += columnWidthMap.get(key) ?? 0;
+    }
+    return offsets;
+  }, [columnWidthMap, pinnedLeftColumnsInOrder]);
+
+  const getStickyHeadClass = (key: ClientsGridColumnKey) => {
+    if (key === 'acoes') {
+      return fixActionsColumn
+        ? 'sticky right-0 z-30 bg-background shadow-[-1px_0_0_hsl(var(--border))]'
+        : '';
+    }
+    return pinnedLeftOffsets.has(key)
+      ? 'sticky z-30 bg-background shadow-[1px_0_0_hsl(var(--border))]'
+      : '';
+  };
+
+  const getStickyCellClass = (key: ClientsGridColumnKey) => {
+    if (key === 'acoes') {
+      return fixActionsColumn
+        ? 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50'
+        : '';
+    }
+    return pinnedLeftOffsets.has(key)
+      ? 'sticky z-20 bg-background shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50'
+      : '';
+  };
+
+  const getStickyStyle = (key: ClientsGridColumnKey) => {
+    const width = columnWidthMap.get(key) ?? 0;
+    if (key === 'acoes') {
+      if (!fixActionsColumn) return {};
+      return { width, minWidth: width, maxWidth: width, right: 0 };
+    }
+    if (!pinnedLeftOffsets.has(key)) return {};
+    return {
+      width,
+      minWidth: width,
+      maxWidth: width,
+      left: pinnedLeftOffsets.get(key) ?? 0,
+    };
+  };
+
   const handleCadastrarPara = () => {
     if (selectedClients.length === 0) {
       toast.error('Selecione pelo menos um cliente');
@@ -1163,7 +1390,7 @@ const validateFormData = (data: ClientFormData): string[] => {
 };
   const openCreateDialog = () => {
     setFormErrors([]);
-    const empty = createEmptyFormData();
+    const empty = createEmptyFormData(getLoggedCompanyUf());
     setFormData(empty);
     setFormSnapshot(empty);
     setComplementarUf('');
@@ -1782,6 +2009,46 @@ const validateFormData = (data: ClientFormData): string[] => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <CardTitle className="text-base sm:text-lg">Clientes ({clients.length})</CardTitle>
             <div className="flex flex-wrap gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                    <Columns3 className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Fixar colunas</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-3">
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Colunas fixas</div>
+                    <div className="flex items-center justify-between rounded-md border p-2">
+                      <span className="text-sm">Fixar ações à direita</span>
+                      <Checkbox
+                        checked={fixActionsColumn}
+                        onCheckedChange={(checked) =>
+                          setFixActionsColumn(checked === true)
+                        }
+                      />
+                    </div>
+                    <ScrollArea className="h-56 pr-2">
+                      <div className="space-y-2">
+                        {PINNABLE_CLIENT_COLUMNS.map((column) => (
+                          <label
+                            key={column.key}
+                            className="flex items-center justify-between rounded-md border p-2 text-sm"
+                          >
+                            <span>{column.label}</span>
+                            <Checkbox
+                              checked={pinnedColumns.includes(column.key)}
+                              onCheckedChange={(checked) =>
+                                togglePinnedColumn(column.key, checked === true)
+                              }
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button
                 variant="outline"
                 size="sm"
@@ -1801,98 +2068,461 @@ const validateFormData = (data: ClientFormData): string[] => {
         </CardHeader>
         <CardContent>
           <div className="max-h-[60vh] overflow-auto scrollbar-thin" onScroll={handleClientsScroll}>
-            <Table className="min-w-[600px]">
+            <Table className="min-w-[2700px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox 
+                  <TableHead
+                    style={getStickyStyle('select')}
+                    className={cn('w-12 px-2', getStickyHeadClass('select'))}
+                  >
+                    <Checkbox
                       checked={selectedClients.length === clients.length && clients.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
-                  <TableHead className="w-20">Código</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="hidden md:table-cell">Cidade</TableHead>
-                  <TableHead className="w-12">UF</TableHead>
-                  <TableHead className="hidden lg:table-cell">Bairro</TableHead>
-                  <TableHead className="hidden sm:table-cell">Telefone</TableHead>
-                  <TableHead className="text-center w-28">Ações</TableHead>
+                  <TableHead
+                    style={getStickyStyle('codigo')}
+                    className={cn('w-24', getStickyHeadClass('codigo'))}
+                  >
+                    Código
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('nome')}
+                    className={cn('min-w-[260px]', getStickyHeadClass('nome'))}
+                  >
+                    Nome
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('fantasia')}
+                    className={cn('min-w-[220px]', getStickyHeadClass('fantasia'))}
+                  >
+                    Fantasia
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('cnpjCpf')}
+                    className={cn('min-w-[150px]', getStickyHeadClass('cnpjCpf'))}
+                  >
+                    CNPJ/CPF
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('pessoa')}
+                    className={cn('w-20', getStickyHeadClass('pessoa'))}
+                  >
+                    Pessoa
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('cidade')}
+                    className={cn('min-w-[160px]', getStickyHeadClass('cidade'))}
+                  >
+                    Cidade
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('uf')}
+                    className={cn('w-16', getStickyHeadClass('uf'))}
+                  >
+                    UF
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('bairro')}
+                    className={cn('min-w-[160px]', getStickyHeadClass('bairro'))}
+                  >
+                    Bairro
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('endereco')}
+                    className={cn('min-w-[220px]', getStickyHeadClass('endereco'))}
+                  >
+                    Endereço
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('numero')}
+                    className={cn('w-24', getStickyHeadClass('numero'))}
+                  >
+                    Número
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('cep')}
+                    className={cn('min-w-[120px]', getStickyHeadClass('cep'))}
+                  >
+                    CEP
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('telefone')}
+                    className={cn('min-w-[140px]', getStickyHeadClass('telefone'))}
+                  >
+                    Telefone
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('whatsapp')}
+                    className={cn('min-w-[140px]', getStickyHeadClass('whatsapp'))}
+                  >
+                    WhatsApp
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('email')}
+                    className={cn('min-w-[220px]', getStickyHeadClass('email'))}
+                  >
+                    Email
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('comprador')}
+                    className={cn('min-w-[180px]', getStickyHeadClass('comprador'))}
+                  >
+                    Comprador
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('segmento')}
+                    className={cn('min-w-[160px]', getStickyHeadClass('segmento'))}
+                  >
+                    Segmento
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('rede')}
+                    className={cn('min-w-[160px]', getStickyHeadClass('rede'))}
+                  >
+                    Rede
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('rota')}
+                    className={cn('min-w-[160px]', getStickyHeadClass('rota'))}
+                  >
+                    Rota
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('formaPagto')}
+                    className={cn('min-w-[170px]', getStickyHeadClass('formaPagto'))}
+                  >
+                    Forma Pagto
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('prazoPagto')}
+                    className={cn('min-w-[170px]', getStickyHeadClass('prazoPagto'))}
+                  >
+                    Prazo Pagto
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('limiteCredito')}
+                    className={cn('w-32 text-right', getStickyHeadClass('limiteCredito'))}
+                  >
+                    Limite Crédito
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('credito')}
+                    className={cn('w-28 text-right', getStickyHeadClass('credito'))}
+                  >
+                    Crédito
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('aberto')}
+                    className={cn('w-28 text-right', getStickyHeadClass('aberto'))}
+                  >
+                    Aberto
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('disponivel')}
+                    className={cn('w-28 text-right', getStickyHeadClass('disponivel'))}
+                  >
+                    Disponível
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('b2b')}
+                    className={cn('w-20 text-center', getStickyHeadClass('b2b'))}
+                  >
+                    B2B
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('simples')}
+                    className={cn('w-20 text-center', getStickyHeadClass('simples'))}
+                  >
+                    Simples
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('consumidorFinal')}
+                    className={cn('w-24 text-center', getStickyHeadClass('consumidorFinal'))}
+                  >
+                    Consum. Final
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('inativo')}
+                    className={cn('w-20 text-center', getStickyHeadClass('inativo'))}
+                  >
+                    Inativo
+                  </TableHead>
+                  <TableHead
+                    style={getStickyStyle('acoes')}
+                    className={cn('text-center w-28 min-w-[112px]', getStickyHeadClass('acoes'))}
+                  >
+                    Ações
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isClientsInitialLoading ? (
                   <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={30} className="text-center py-8 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : clients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                       Nenhum cliente encontrado
+                    <TableCell colSpan={30} className="text-center py-8 text-muted-foreground">
+                      Nenhum cliente encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
-                  clients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell>
-                        <Checkbox 
-                          checked={selectedClients.includes(client.id)}
-                          onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{client.codigoCliente ?? ''}</TableCell>
-                      <TableCell className="font-medium">{client.nome}</TableCell>
-                      <TableCell className="hidden md:table-cell">{client.cidade}</TableCell>
-                      <TableCell>{client.uf}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{client.bairro}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{client.fone}</TableCell>
-                      <TableCell className="text-center">
-                        <TooltipProvider>
-                          <div className="flex items-center justify-center gap-0.5">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setClientInfoId(client.id); setClientInfoOpen(true); }}>
-                                  <Info className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Visualizar</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => openEditDialog(client.id)}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Editar</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => handleDelete(client.id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Excluir</TooltipContent>
-                            </Tooltip>
+                  clients.map((client) => {
+                    const formaPagtoLabel =
+                      client.formaPagtoId != null
+                        ? formasMap.get(Number(client.formaPagtoId)) || String(client.formaPagtoId)
+                        : '-';
+                    const prazoPagtoLabel =
+                      client.prazoPagtoId != null
+                        ? prazosMap.get(Number(client.prazoPagtoId)) || String(client.prazoPagtoId)
+                        : '-';
+                    const segmentoLabel =
+                      client.segmentoId != null
+                        ? segmentosMap.get(Number(client.segmentoId)) || String(client.segmentoId)
+                        : '-';
+                    const redeLabel =
+                      client.redeId != null
+                        ? redesMap.get(Number(client.redeId)) || String(client.redeId)
+                        : '-';
+                    const rotaLabel =
+                      client.rotaId != null
+                        ? rotasMap.get(Number(client.rotaId)) || String(client.rotaId)
+                        : '-';
+
+                    return (
+                      <TableRow key={client.id} className="group">
+                        <TableCell
+                          style={getStickyStyle('select')}
+                          className={cn('px-2', getStickyCellClass('select'))}
+                        >
+                          <Checkbox
+                            checked={selectedClients.includes(client.id)}
+                            onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('codigo')}
+                          className={cn('font-mono text-xs', getStickyCellClass('codigo'))}
+                        >
+                          {client.codigoCliente ?? ''}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('nome')}
+                          className={cn('font-medium', getStickyCellClass('nome'))}
+                        >
+                          <div className="truncate whitespace-nowrap" title={client.nome}>
+                            {client.nome}
                           </div>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('fantasia')}
+                          className={cn(getStickyCellClass('fantasia'))}
+                        >
+                          {client.fantasia || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('cnpjCpf')}
+                          className={cn(getStickyCellClass('cnpjCpf'))}
+                        >
+                          {client.cnpjCpf || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('pessoa')}
+                          className={cn(getStickyCellClass('pessoa'))}
+                        >
+                          {client.tipoPessoa || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('cidade')}
+                          className={cn(getStickyCellClass('cidade'))}
+                        >
+                          {client.cidade || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('uf')}
+                          className={cn(getStickyCellClass('uf'))}
+                        >
+                          {client.uf || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('bairro')}
+                          className={cn(getStickyCellClass('bairro'))}
+                        >
+                          {client.bairro || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('endereco')}
+                          className={cn(getStickyCellClass('endereco'))}
+                        >
+                          {client.endereco || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('numero')}
+                          className={cn(getStickyCellClass('numero'))}
+                        >
+                          {client.numero || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('cep')}
+                          className={cn(getStickyCellClass('cep'))}
+                        >
+                          {client.cep || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('telefone')}
+                          className={cn(getStickyCellClass('telefone'))}
+                        >
+                          {client.fone || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('whatsapp')}
+                          className={cn(getStickyCellClass('whatsapp'))}
+                        >
+                          {client.whatsapp || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('email')}
+                          className={cn(getStickyCellClass('email'))}
+                        >
+                          {client.email || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('comprador')}
+                          className={cn(getStickyCellClass('comprador'))}
+                        >
+                          {client.compradorNome || '-'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('segmento')}
+                          className={cn(getStickyCellClass('segmento'))}
+                        >
+                          {segmentoLabel}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('rede')}
+                          className={cn(getStickyCellClass('rede'))}
+                        >
+                          {redeLabel}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('rota')}
+                          className={cn(getStickyCellClass('rota'))}
+                        >
+                          {rotaLabel}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('formaPagto')}
+                          className={cn(getStickyCellClass('formaPagto'))}
+                        >
+                          {formaPagtoLabel}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('prazoPagto')}
+                          className={cn(getStickyCellClass('prazoPagto'))}
+                        >
+                          {prazoPagtoLabel}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('limiteCredito')}
+                          className={cn('text-right', getStickyCellClass('limiteCredito'))}
+                        >
+                          {formatGridNumber(client.limiteCredito)}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('credito')}
+                          className={cn('text-right', getStickyCellClass('credito'))}
+                        >
+                          {formatGridNumber(client.credito)}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('aberto')}
+                          className={cn('text-right', getStickyCellClass('aberto'))}
+                        >
+                          {formatGridNumber(client.aberto)}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('disponivel')}
+                          className={cn('text-right', getStickyCellClass('disponivel'))}
+                        >
+                          {formatGridNumber(client.disponivel)}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('b2b')}
+                          className={cn('text-center', getStickyCellClass('b2b'))}
+                        >
+                          {client.b2bLiberado ? 'Sim' : 'Não'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('simples')}
+                          className={cn('text-center', getStickyCellClass('simples'))}
+                        >
+                          {client.simplesNacional ? 'Sim' : 'Não'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('consumidorFinal')}
+                          className={cn('text-center', getStickyCellClass('consumidorFinal'))}
+                        >
+                          {client.consumidorFinal ? 'Sim' : 'Não'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('inativo')}
+                          className={cn('text-center', getStickyCellClass('inativo'))}
+                        >
+                          {client.inativo ? 'Sim' : 'Não'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('acoes')}
+                          className={cn('w-28 min-w-[112px] text-center', getStickyCellClass('acoes'))}
+                        >
+                          <TooltipProvider>
+                            <div className="flex items-center justify-center gap-0.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setClientInfoId(client.id); setClientInfoOpen(true); }}>
+                                    <Info className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Visualizar</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => openEditDialog(client.id)}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => handleDelete(client.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Excluir</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
                 {isClientsLoadingMore && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={30} className="text-center py-4 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>

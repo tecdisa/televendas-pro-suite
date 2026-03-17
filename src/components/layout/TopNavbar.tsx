@@ -51,6 +51,9 @@ export const navGroups: NavGroup[] = [
         children: [
           { title: 'Todos', tab: 'clientes', icon: Users },
           { title: 'Por Representantes', tab: 'clientes-representante', icon: UserCheck },
+          { title: 'Redes', tab: 'redes', icon: Network },
+          { title: 'Segmentos Venda', tab: 'segmentos', icon: Target },
+          { title: 'Rotas Clientes', tab: 'rotas', icon: Route },
         ],
       },
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
@@ -66,11 +69,14 @@ export const navGroups: NavGroup[] = [
           { title: 'Estoques', tab: 'estoques', icon: Package },
         ],
       },
-      { title: 'Redes', tab: 'redes', icon: Network },
-      { title: 'Prazos Pagamento', tab: 'prazos', icon: Clock },
-      { title: 'Formas Pagamento', tab: 'formas-pagamento', icon: CreditCard },
-      { title: 'Segmentos Venda', tab: 'segmentos', icon: Target },
-      { title: 'Rotas Clientes', tab: 'rotas', icon: Route },
+      {
+        title: 'Financeiro',
+        icon: CreditCard,
+        children: [
+          { title: 'Prazos', tab: 'prazos', icon: Clock },
+          { title: 'Formas Pagamento', tab: 'formas-pagamento', icon: CreditCard },
+        ],
+      },
     ],
   },
   {

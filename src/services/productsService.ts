@@ -60,13 +60,21 @@ export interface Product {
   custoMedio?: number;
   custoNota?: number;
   custoCompra?: number;
+  codigoSituacaoIcms?: string;
   cst?: string;
+  csosn?: string;
   aliquotaIcms?: number;
   pfcp?: number;
   pautaIcms?: number;
   reducaoSt?: number;
   reducaoConvenio?: number;
   repasseIcms?: boolean;
+  cstPis?: string;
+  cstCofins?: string;
+  aliquotaPis?: number;
+  aliquotaCofins?: number;
+  ibsCbs?: string;
+  ibsCbsClassifTrib?: string;
   lancamento?: boolean;
   inativo?: boolean;
   kitItens?: ProductKitItem[];
@@ -265,13 +273,30 @@ function normalizeProduct(raw: any): Product {
     custoMedio: numberOrUndefined(raw?.custo_medio ?? raw?.custoMedio),
     custoNota: numberOrUndefined(raw?.custo_nota ?? raw?.custoNota),
     custoCompra: numberOrUndefined(raw?.custo_compra ?? raw?.custoCompra),
+    codigoSituacaoIcms: trimOrUndefined(
+      raw?.codigo_situacao_icms ?? raw?.codigoSituacaoIcms,
+    ),
     cst: trimOrUndefined(raw?.cst),
+    csosn: trimOrUndefined(raw?.csosn),
     aliquotaIcms: numberOrUndefined(raw?.aliquota_icms ?? raw?.aliquotaIcms),
     pfcp: numberOrUndefined(raw?.pfcp),
     pautaIcms: numberOrUndefined(raw?.pauta_icms ?? raw?.pautaIcms),
     reducaoSt: numberOrUndefined(raw?.reducao_st ?? raw?.reducaoSt),
     reducaoConvenio: numberOrUndefined(raw?.reducao_convenio ?? raw?.reducaoConvenio),
     repasseIcms: boolOrUndefined(raw?.repasse_icms ?? raw?.repasseIcms),
+    cstPis: trimOrUndefined(raw?.cst_pis ?? raw?.cstPis),
+    cstCofins: trimOrUndefined(raw?.cst_cofins ?? raw?.cstCofins),
+    aliquotaPis: numberOrUndefined(raw?.aliquota_pis ?? raw?.aliquotaPis),
+    aliquotaCofins: numberOrUndefined(
+      raw?.aliquota_cofins ??
+        raw?.aliquota_confins ??
+        raw?.aliquotaCofins ??
+        raw?.aliquotaConfins,
+    ),
+    ibsCbs: trimOrUndefined(raw?.ibs_cbs ?? raw?.ibsCbs),
+    ibsCbsClassifTrib: trimOrUndefined(
+      raw?.ibs_cbs_classif_trib ?? raw?.ibsCbsClassifTrib,
+    ),
     lancamento: boolOrUndefined(raw?.lancamento),
     inativo: boolOrUndefined(raw?.inativo),
     kitItens: Array.isArray(raw?.kit_itens ?? raw?.kitItens)
@@ -366,13 +391,21 @@ export interface ProductCadastroInput {
   custo_medio?: number | null;
   custo_nota?: number | null;
   custo_compra?: number | null;
+  codigo_situacao_icms?: string | null;
   cst?: string | null;
+  csosn?: string | null;
   aliquota_icms?: number | null;
   pfcp?: number | null;
   pauta_icms?: number | null;
   reducao_st?: number | null;
   reducao_convenio?: number | null;
   repasse_icms?: boolean;
+  cst_pis?: string | null;
+  cst_cofins?: string | null;
+  aliquota_pis?: number | null;
+  aliquota_cofins?: number | null;
+  ibs_cbs?: string | null;
+  ibs_cbs_classif_trib?: string | null;
   lancamento?: boolean;
   inativo?: boolean;
   kit_itens?: Array<{
@@ -515,13 +548,21 @@ function buildCadastroPayload(data: Partial<ProductCadastroInput>): Record<strin
     custo_medio: sanitizeNullableNumber(data.custo_medio),
     custo_nota: sanitizeNullableNumber(data.custo_nota),
     custo_compra: sanitizeNullableNumber(data.custo_compra),
+    codigo_situacao_icms: sanitizeNullableText(data.codigo_situacao_icms),
     cst: sanitizeNullableText(data.cst),
+    csosn: sanitizeNullableText(data.csosn),
     aliquota_icms: sanitizeNullableNumber(data.aliquota_icms),
     pfcp: sanitizeNullableNumber(data.pfcp),
     pauta_icms: sanitizeNullableNumber(data.pauta_icms),
     reducao_st: sanitizeNullableNumber(data.reducao_st),
     reducao_convenio: sanitizeNullableNumber(data.reducao_convenio),
     repasse_icms: data.repasse_icms,
+    cst_pis: sanitizeNullableText(data.cst_pis),
+    cst_cofins: sanitizeNullableText(data.cst_cofins),
+    aliquota_pis: sanitizeNullableNumber(data.aliquota_pis),
+    aliquota_cofins: sanitizeNullableNumber(data.aliquota_cofins),
+    ibs_cbs: sanitizeNullableText(data.ibs_cbs),
+    ibs_cbs_classif_trib: sanitizeNullableText(data.ibs_cbs_classif_trib),
     lancamento: data.lancamento,
     inativo: data.inativo,
     kit_itens: Array.isArray(data.kit_itens)

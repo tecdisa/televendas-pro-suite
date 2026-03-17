@@ -23,6 +23,7 @@ import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { authService } from '@/services/authService';
 import {
   Product,
   ProductCadastroFilters,
@@ -50,6 +51,22 @@ const ORIGENS_PRODUTO = [
   { value: '7', label: '7 - Estrangeira mercado interno sem similar' },
   { value: '8', label: '8 - Nacional conteúdo importação > 70%' },
 ];
+const parseEmpresasAutorizadas = (value?: string | null) =>
+  Array.from(
+    new Set(
+      (String(value ?? '').match(/\d+/g) ?? [])
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0),
+    ),
+  );
+
+const isFornecedorAutorizadoParaEmpresa = (
+  fornecedor: Fornecedor,
+  empresaId: number,
+) => {
+  const autorizadas = parseEmpresasAutorizadas(fornecedor.empresas_autorizadas);
+  return autorizadas.length === 0 || autorizadas.includes(empresaId);
+};
 
 type StatusType = 'ativos' | 'inativos' | 'todos';
 
@@ -103,12 +120,20 @@ interface ProductFormState {
   custoNota: number;
   custoCompra: number;
   cst: string;
+  codigoSituacaoIcms: string;
+  csosn: string;
   aliquotaIcms: number;
   pfcp: number;
   pautaIcms: number;
   reducaoSt: number;
   reducaoConvenio: number;
   repasseIcms: boolean;
+  cstPis: string;
+  cstCofins: string;
+  aliquotaPis: number;
+  aliquotaCofins: number;
+  ibsCbs: string;
+  ibsCbsClassifTrib: string;
   lancamento: boolean;
   inativo: boolean;
 }
@@ -172,12 +197,20 @@ const initialFormData: ProductFormState = {
   custoNota: 0,
   custoCompra: 0,
   cst: '',
+  codigoSituacaoIcms: '',
+  csosn: '',
   aliquotaIcms: 0,
   pfcp: 0,
   pautaIcms: 0,
   reducaoSt: 0,
   reducaoConvenio: 0,
   repasseIcms: false,
+  cstPis: '',
+  cstCofins: '',
+  aliquotaPis: 0,
+  aliquotaCofins: 0,
+  ibsCbs: '',
+  ibsCbsClassifTrib: '',
   lancamento: false,
   inativo: false,
 };
@@ -233,12 +266,20 @@ function mapProductToForm(product: Product): ProductFormState {
     custoNota: Number(product.custoNota ?? 0) || 0,
     custoCompra: Number(product.custoCompra ?? 0) || 0,
     cst: String(product.cst ?? '').trim(),
+    codigoSituacaoIcms: String(product.codigoSituacaoIcms ?? '').trim(),
+    csosn: String(product.csosn ?? '').trim(),
     aliquotaIcms: Number(product.aliquotaIcms ?? 0) || 0,
     pfcp: Number(product.pfcp ?? 0) || 0,
     pautaIcms: Number(product.pautaIcms ?? 0) || 0,
     reducaoSt: Number(product.reducaoSt ?? 0) || 0,
     reducaoConvenio: Number(product.reducaoConvenio ?? 0) || 0,
     repasseIcms: Boolean(product.repasseIcms ?? false),
+    cstPis: String(product.cstPis ?? '').trim(),
+    cstCofins: String(product.cstCofins ?? '').trim(),
+    aliquotaPis: Number(product.aliquotaPis ?? 0) || 0,
+    aliquotaCofins: Number(product.aliquotaCofins ?? 0) || 0,
+    ibsCbs: String(product.ibsCbs ?? '').trim(),
+    ibsCbsClassifTrib: String(product.ibsCbsClassifTrib ?? '').trim(),
     lancamento: Boolean(product.lancamento ?? false),
     inativo: Boolean(product.inativo ?? false),
   };
@@ -258,8 +299,11 @@ function mapProductKitToFormItems(product?: Product | null): ProductKitFormItem[
 const toFixedNumber = (value: number, decimals = 3) =>
   Number.isFinite(value) ? value.toFixed(decimals) : '0.000';
 
-function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
-  return {
+function mapFormToPayload(
+  form: ProductFormState,
+  options?: { includeStock?: boolean },
+): ProductCadastroInput {
+  const payload: ProductCadastroInput = {
     codigo_produto: form.codigoProduto.trim() || undefined,
     descricao_produto: form.descricao.trim(),
     unidade: form.unidade.trim().toUpperCase(),
@@ -304,21 +348,34 @@ function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
     reg_ms: form.regMs.trim() || null,
     origem_produto: form.origemProduto.trim() || null,
     validade: form.validade.trim() || null,
-    estoque: Number(form.estoque) || 0,
-    quantidade_reservada: Number(form.quantidadeReservada) || 0,
-    custo_medio: Number(form.custoMedio) || 0,
-    custo_nota: Number(form.custoNota) || 0,
-    custo_compra: Number(form.custoCompra) || 0,
-    cst: form.cst.trim() || null,
-    aliquota_icms: Number(form.aliquotaIcms) || 0,
-    pfcp: Number(form.pfcp) || 0,
-    pauta_icms: Number(form.pautaIcms) || 0,
-    reducao_st: Number(form.reducaoSt) || 0,
-    reducao_convenio: Number(form.reducaoConvenio) || 0,
-    repasse_icms: Boolean(form.repasseIcms),
     lancamento: Boolean(form.lancamento),
     inativo: Boolean(form.inativo),
   };
+
+  if (options?.includeStock !== false) {
+    payload.estoque = Number(form.estoque) || 0;
+    payload.quantidade_reservada = Number(form.quantidadeReservada) || 0;
+    payload.custo_medio = Number(form.custoMedio) || 0;
+    payload.custo_nota = Number(form.custoNota) || 0;
+    payload.custo_compra = Number(form.custoCompra) || 0;
+    payload.cst = form.cst.trim() || null;
+    payload.codigo_situacao_icms = form.codigoSituacaoIcms.trim() || null;
+    payload.csosn = form.csosn.trim() || null;
+    payload.aliquota_icms = Number(form.aliquotaIcms) || 0;
+    payload.pfcp = Number(form.pfcp) || 0;
+    payload.pauta_icms = Number(form.pautaIcms) || 0;
+    payload.reducao_st = Number(form.reducaoSt) || 0;
+    payload.reducao_convenio = Number(form.reducaoConvenio) || 0;
+    payload.repasse_icms = Boolean(form.repasseIcms);
+    payload.cst_pis = form.cstPis.trim() || null;
+    payload.cst_cofins = form.cstCofins.trim() || null;
+    payload.aliquota_pis = Number(form.aliquotaPis) || 0;
+    payload.aliquota_cofins = Number(form.aliquotaCofins) || 0;
+    payload.ibs_cbs = form.ibsCbs.trim() || null;
+    payload.ibs_cbs_classif_trib = form.ibsCbsClassifTrib.trim() || null;
+  }
+
+  return payload;
 }
 
 export function ProdutosTab() {
@@ -340,6 +397,8 @@ export function ProdutosTab() {
   const [kitQuantity, setKitQuantity] = useState(1);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const empresaAtual = authService.getEmpresa();
+  const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
 
   const [filters, setFilters] = useState<{
     status: StatusType;
@@ -368,6 +427,14 @@ export function ProdutosTab() {
       fornecedores.map((f) => [Number(f.fornecedor_id) || 0, String(f.nome_fornecedor ?? '').trim()]),
     );
   }, [fornecedores]);
+  const fornecedoresDisponiveis = useMemo(() => {
+    if (!empresaIdAtual) return fornecedores;
+    return fornecedores.filter(
+      (fornecedor) =>
+        isFornecedorAutorizadoParaEmpresa(fornecedor, empresaIdAtual) ||
+        Number(fornecedor.fornecedor_id) === Number(formData.fornecedorId || 0),
+    );
+  }, [empresaIdAtual, formData.fornecedorId, fornecedores]);
 
   const divisoesMap = useMemo(() => {
     return new Map<number, string>(
@@ -504,7 +571,7 @@ export function ProdutosTab() {
     setSubmitting(true);
     try {
       const payload = {
-        ...mapFormToPayload(formData),
+        ...mapFormToPayload(formData, { includeStock: !editingProduct }),
         kit_itens: kitItens.map((item) => ({
           produto_item_id: item.produtoItemId,
           quantidade: Number(item.quantidade) || 0,
@@ -733,7 +800,7 @@ export function ProdutosTab() {
                     <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      {fornecedores.map((f) => (
+                      {fornecedoresDisponiveis.map((f) => (
                         <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
                           {f.fornecedor_id} - {f.nome_fornecedor}
                         </SelectItem>
@@ -883,10 +950,11 @@ export function ProdutosTab() {
           <Tabs defaultValue="caracteristicas" className="flex-1 overflow-hidden flex flex-col">
             <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="caracteristicas">Características</TabsTrigger>
+              <TabsTrigger value="complementar">Dados complementares</TabsTrigger>
+              <TabsTrigger value="estoque" disabled={Boolean(editingProduct)}>
+                Estoque
+              </TabsTrigger>
               <TabsTrigger value="kit">Kit</TabsTrigger>
-              <TabsTrigger value="estoque">Estoque</TabsTrigger>
-              <TabsTrigger value="custos">Custos e Venda</TabsTrigger>
-              <TabsTrigger value="complementar">Descrição complementar</TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1 mt-2">
@@ -1044,7 +1112,7 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-4">
+                  <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs font-semibold">Fornecedor *</Label>
                     <Select
                       value={formData.fornecedorId ? String(formData.fornecedorId) : 'none'}
@@ -1053,7 +1121,7 @@ export function ProdutosTab() {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Selecione</SelectItem>
-                        {fornecedores.map((f) => (
+                        {fornecedoresDisponiveis.map((f) => (
                           <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
                             {f.fornecedor_id} - {f.nome_fornecedor}
                           </SelectItem>
@@ -1061,7 +1129,7 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-1 md:col-span-4">
+                  <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs font-semibold">Divisão *</Label>
                     <Select
                       value={formData.divisaoId ? String(formData.divisaoId) : 'none'}
@@ -1077,14 +1145,6 @@ export function ProdutosTab() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <Label className="text-xs">Princípio ativo</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.principioAtivo}
-                      onChange={(e) => updateForm('principioAtivo', e.target.value.toUpperCase())}
-                    />
                   </div>
                 </div>
 
@@ -1144,6 +1204,14 @@ export function ProdutosTab() {
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
+                        checked={formData.permiteVendaB2c}
+                        onCheckedChange={(v) => updateForm('permiteVendaB2c', Boolean(v))}
+                        className="h-3.5 w-3.5"
+                      />
+                      B2C
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <Checkbox
                         checked={formData.medicamento}
                         onCheckedChange={(v) => updateForm('medicamento', Boolean(v))}
                         className="h-3.5 w-3.5"
@@ -1160,6 +1228,22 @@ export function ProdutosTab() {
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
+                        checked={formData.controlaLote}
+                        onCheckedChange={(v) => updateForm('controlaLote', Boolean(v))}
+                        className="h-3.5 w-3.5"
+                      />
+                      Controla lote
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <Checkbox
+                        checked={formData.possuiFoto}
+                        onCheckedChange={(v) => updateForm('possuiFoto', Boolean(v))}
+                        className="h-3.5 w-3.5"
+                      />
+                      Possui foto
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <Checkbox
                         checked={formData.lancamento}
                         onCheckedChange={(v) => updateForm('lancamento', Boolean(v))}
                         className="h-3.5 w-3.5"
@@ -1173,37 +1257,6 @@ export function ProdutosTab() {
                         className="h-3.5 w-3.5"
                       />
                       Produto inativo
-                    </label>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="custos" className="mt-0 space-y-4 px-1">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-12 flex flex-wrap gap-x-4 gap-y-2 pt-1">
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
-                        checked={formData.controlaLote}
-                        onCheckedChange={(v) => updateForm('controlaLote', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      Controla lote
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
-                        checked={formData.permiteVendaB2c}
-                        onCheckedChange={(v) => updateForm('permiteVendaB2c', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      B2C
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
-                        checked={formData.possuiFoto}
-                        onCheckedChange={(v) => updateForm('possuiFoto', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      Possui foto
                     </label>
                   </div>
                 </div>
@@ -1253,31 +1306,6 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">Preço nacional consumidor</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.precoNacionalConsumidor}
-                      onChange={(e) =>
-                        updateForm('precoNacionalConsumidor', Number(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">Preço fábrica</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.precoFabrica}
-                      onChange={(e) => updateForm('precoFabrica', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-8">
                     <Label className="text-xs">Mensagem na nota fiscal</Label>
                     <Input
@@ -1312,7 +1340,9 @@ export function ProdutosTab() {
                       value={formData.origemProduto || '0'}
                       onValueChange={(v) => updateForm('origemProduto', v)}
                     >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {ORIGENS_PRODUTO.map((origem) => (
                           <SelectItem key={origem.value} value={origem.value}>
@@ -1465,7 +1495,7 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-4">
                     <Label className="text-xs">Estoque</Label>
                     <Input
                       type="number"
@@ -1475,7 +1505,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-4">
                     <Label className="text-xs">Quantidade reservada</Label>
                     <Input
                       type="number"
@@ -1485,7 +1515,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('quantidadeReservada', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-4">
                     <Label className="text-xs">Disponível</Label>
                     <Input
                       className="h-8 text-xs bg-muted"
@@ -1496,18 +1526,10 @@ export function ProdutosTab() {
                       readOnly
                     />
                   </div>
-                  <div className="md:col-span-3 flex items-center gap-2 pt-5">
-                    <Checkbox
-                      checked={formData.repasseIcms}
-                      onCheckedChange={(checked) => updateForm('repasseIcms', Boolean(checked))}
-                      className="h-3.5 w-3.5"
-                    />
-                    <label className="text-xs">Repasse ICMS</label>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-4">
                     <Label className="text-xs">Custo médio</Label>
                     <Input
                       type="number"
@@ -1517,7 +1539,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('custoMedio', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-4">
                     <Label className="text-xs">Custo nota</Label>
                     <Input
                       type="number"
@@ -1527,7 +1549,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('custoNota', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-4">
                     <Label className="text-xs">Custo compra</Label>
                     <Input
                       type="number"
@@ -1537,81 +1559,214 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('custoCompra', Number(e.target.value) || 0)}
                     />
                   </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">CST</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      maxLength={2}
-                      value={formData.cst}
-                      onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
-                    />
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Aliq. ICMS</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.aliquotaIcms}
-                      onChange={(e) => updateForm('aliquotaIcms', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">PFCP</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.pfcp}
-                      onChange={(e) => updateForm('pfcp', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Pauta ICMS</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.pautaIcms}
-                      onChange={(e) => updateForm('pautaIcms', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Redução ST</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.reducaoSt}
-                      onChange={(e) => updateForm('reducaoSt', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Redução convênio</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.reducaoConvenio}
-                      onChange={(e) => updateForm('reducaoConvenio', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
+                <Tabs defaultValue="icms_ipi" className="space-y-3">
+                  <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
+                    <TabsTrigger value="icms_ipi">ICMS/IPI</TabsTrigger>
+                    <TabsTrigger value="pis_cofins">PIS/COFINS</TabsTrigger>
+                    <TabsTrigger value="ibs_cbs">IBS/CBS</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="icms_ipi" className="mt-0 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div className="md:col-span-3">
+                        <Label className="text-xs">Código situação ICMS</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          value={formData.codigoSituacaoIcms}
+                          onChange={(e) =>
+                            updateForm('codigoSituacaoIcms', e.target.value.toUpperCase())
+                          }
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs">CST</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          maxLength={2}
+                          value={formData.cst}
+                          onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs">CSOSN</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          maxLength={3}
+                          value={formData.csosn}
+                          onChange={(e) => updateForm('csosn', e.target.value.toUpperCase())}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs">Aliq. ICMS</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.aliquotaIcms}
+                          onChange={(e) => updateForm('aliquotaIcms', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs">PFCP</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.pfcp}
+                          onChange={(e) => updateForm('pfcp', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex items-center gap-2 pt-5">
+                        <Checkbox
+                          checked={formData.repasseIcms}
+                          onCheckedChange={(checked) => updateForm('repasseIcms', Boolean(checked))}
+                          className="h-3.5 w-3.5"
+                        />
+                        <label className="text-xs">Repasse</label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div className="md:col-span-4">
+                        <Label className="text-xs">Pauta ICMS</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.pautaIcms}
+                          onChange={(e) => updateForm('pautaIcms', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-4">
+                        <Label className="text-xs">Redução ST</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.reducaoSt}
+                          onChange={(e) => updateForm('reducaoSt', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-4">
+                        <Label className="text-xs">Redução convênio</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.reducaoConvenio}
+                          onChange={(e) => updateForm('reducaoConvenio', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="pis_cofins" className="mt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div className="md:col-span-3">
+                        <Label className="text-xs">CST PIS</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          maxLength={2}
+                          value={formData.cstPis}
+                          onChange={(e) => updateForm('cstPis', e.target.value.toUpperCase())}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label className="text-xs">CST COFINS</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          maxLength={2}
+                          value={formData.cstCofins}
+                          onChange={(e) => updateForm('cstCofins', e.target.value.toUpperCase())}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label className="text-xs">Aliquota PIS</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.aliquotaPis}
+                          onChange={(e) => updateForm('aliquotaPis', Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label className="text-xs">Aliquota COFINS</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={formData.aliquotaCofins}
+                          onChange={(e) =>
+                            updateForm('aliquotaCofins', Number(e.target.value) || 0)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="ibs_cbs" className="mt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div className="md:col-span-4">
+                        <Label className="text-xs">IBS/CBS</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          value={formData.ibsCbs}
+                          maxLength={3}
+                          onChange={(e) => updateForm('ibsCbs', e.target.value.toUpperCase())}
+                        />
+                      </div>
+                      <div className="md:col-span-8">
+                        <Label className="text-xs">Classificação tributária IBS/CBS</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          value={formData.ibsCbsClassifTrib}
+                          onChange={(e) =>
+                            updateForm('ibsCbsClassifTrib', e.target.value.toUpperCase())
+                          }
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
 
               <TabsContent value="complementar" className="mt-0 px-1 space-y-3">
-                <div>
-                  <Label className="text-xs">Descrição complementar</Label>
-                  <Textarea
-                    className="min-h-[200px] text-xs"
-                    placeholder="Descrição complementar do produto..."
-                    value={formData.descricaoComplementar}
-                    onChange={(e) => updateForm('descricaoComplementar', e.target.value)}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-6">
+                    <Label className="text-xs">Princípio ativo</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.principioAtivo}
+                      onChange={(e) => updateForm('principioAtivo', e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-3">
+                    <Label className="text-xs">Preço nacional consumidor</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.precoNacionalConsumidor}
+                      onChange={(e) =>
+                        updateForm('precoNacionalConsumidor', Number(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-3">
+                    <Label className="text-xs">Preço fábrica</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.precoFabrica}
+                      onChange={(e) => updateForm('precoFabrica', Number(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs">Código site B2C</Label>
@@ -1621,6 +1776,16 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('codigoSiteB2c', e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Descrição complementar</Label>
+                  <Textarea
+                    className="min-h-[200px] text-xs"
+                    placeholder="Descrição complementar do produto..."
+                    value={formData.descricaoComplementar}
+                    onChange={(e) => updateForm('descricaoComplementar', e.target.value)}
+                  />
                 </div>
               </TabsContent>
             </ScrollArea>

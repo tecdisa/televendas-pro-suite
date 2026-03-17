@@ -10,15 +10,56 @@ export interface ClientRota {
 
 export interface Client {
   id: number;
+  empresaId?: number;
   codigoCliente?: string;
+  cnpjCpf?: string;
+  tipoPessoa?: string;
+  consumidorFinal?: boolean;
   nome: string;
+  fantasia?: string;
+  inscricaoEstadual?: string;
+  inscricaoMunicipal?: string;
+  rg?: string;
+  cep?: string;
+  cidadeId?: number;
   cidade: string;
   uf: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
   bairro: string;
   fone?: string;
+  fax?: string;
+  celular?: string;
+  whatsapp?: string;
   contato?: string;
+  email?: string;
+  emailDanfe?: string;
+  site?: string;
+  compradorNome?: string;
+  compradorFone?: string;
+  compradorDataNascimento?: string;
+  contato2Nome?: string;
+  contato2Celular?: string;
+  contato2DataAniversario?: string;
+  segmentoId?: number;
+  redeId?: number;
+  limiteCredito?: number | null;
+  descontoFinanceiroBoleto?: number | null;
+  checkouts?: number | null;
+  credito?: number | null;
+  boleto?: boolean | null;
+  prazo?: string | null;
+  aberto?: number | null;
+  disponivel?: number | null;
   formaPagtoId?: number | string | null;
   prazoPagtoId?: number | string | null;
+  b2bLiberado?: boolean;
+  b2bSenha?: string | null;
+  b2bTabelaId?: number | null;
+  observacaoComercial?: string | null;
+  observacaoFinanceiro?: string | null;
+  inativo?: boolean;
   simplesNacional?: boolean;
   cobrancaEndereco?: string | null;
   cobrancaEnderecoNumero?: string | null;
@@ -90,8 +131,60 @@ function normalizeClient(raw: any): Client {
   const bairro = raw?.bairro ?? raw?.district ?? raw?.bairro_nome ?? '';
   const fone = raw?.fone ?? raw?.telefone ?? raw?.phone ?? '';
   const contato = raw?.contato ?? raw?.responsavel ?? raw?.contact ?? '';
+  const empresaId = raw?.empresa_id ?? raw?.empresaId ?? undefined;
+  const cnpjCpf = raw?.cnpj_cpf ?? raw?.cnpjCpf ?? undefined;
+  const tipoPessoa = raw?.tipo_pessoa ?? raw?.tipoPessoa ?? undefined;
+  const consumidorFinal = raw?.consumidor_final ?? raw?.consumidorFinal ?? undefined;
+  const fantasia = raw?.fantasia ?? raw?.nome_fantasia ?? undefined;
+  const inscricaoEstadual =
+    raw?.inscricao_estadual ?? raw?.inscricaoEstadual ?? undefined;
+  const inscricaoMunicipal =
+    raw?.inscricao_municipal ?? raw?.inscricaoMunicipal ?? undefined;
+  const rg = raw?.rg ?? undefined;
+  const cep = raw?.cep ?? undefined;
+  const cidadeId = raw?.cidade_id ?? raw?.cidadeId ?? undefined;
+  const endereco = raw?.endereco ?? undefined;
+  const numero = raw?.numero ?? undefined;
+  const complemento = raw?.complemento ?? undefined;
+  const fax = raw?.fax ?? undefined;
+  const celular = raw?.celular ?? undefined;
+  const whatsapp = raw?.whatsapp ?? undefined;
+  const email = raw?.email ?? undefined;
+  const emailDanfe = raw?.email_danfe ?? raw?.emailDanfe ?? undefined;
+  const site = raw?.site ?? undefined;
+  const compradorNome = raw?.comprador_nome ?? raw?.compradorNome ?? undefined;
+  const compradorFone = raw?.comprador_fone ?? raw?.compradorFone ?? undefined;
+  const compradorDataNascimento =
+    raw?.comprador_data_nascimento ?? raw?.compradorDataNascimento ?? undefined;
+  const contato2Nome = raw?.contato2_nome ?? raw?.contato2Nome ?? undefined;
+  const contato2Celular =
+    raw?.contato2_celular ?? raw?.contato2Celular ?? undefined;
+  const contato2DataAniversario =
+    raw?.contato2_data_aniversario ??
+    raw?.contato2DataAniversario ??
+    undefined;
+  const segmentoId = raw?.segmento_id ?? raw?.segmentoId ?? undefined;
+  const redeId = raw?.rede_id ?? raw?.redeId ?? undefined;
+  const limiteCredito =
+    raw?.limite_credito ?? raw?.limiteCredito ?? raw?.limite ?? null;
+  const descontoFinanceiroBoleto =
+    raw?.desconto_financeiro_boleto ?? raw?.descontoFinanceiroBoleto ?? null;
+  const checkouts = raw?.checkouts ?? null;
+  const credito = raw?.credito ?? null;
+  const boleto = raw?.boleto ?? null;
+  const prazo = raw?.prazo ?? null;
+  const aberto = raw?.aberto ?? null;
+  const disponivel = raw?.disponivel ?? null;
   const formaPagtoId = raw?.forma_pagto_id ?? raw?.formaPagtoId ?? raw?.forma_pagto ?? null;
   const prazoPagtoId = raw?.prazo_pagto_id ?? raw?.prazoPagtoId ?? null;
+  const b2bLiberado = raw?.b2b_liberado ?? raw?.b2bLiberado ?? undefined;
+  const b2bSenha = raw?.b2b_senha ?? raw?.b2bSenha ?? null;
+  const b2bTabelaId = raw?.b2b_tabela_id ?? raw?.b2bTabelaId ?? null;
+  const observacaoComercial =
+    raw?.observacao_comercial ?? raw?.observacaoComercial ?? null;
+  const observacaoFinanceiro =
+    raw?.observacao_financeiro ?? raw?.observacaoFinanceiro ?? null;
+  const inativo = raw?.inativo ?? undefined;
   const rotaId = raw?.rota_id ?? raw?.rotaId ?? null;
   const cobrancaEndereco =
     raw?.cobranca_endereco ?? raw?.cobrancaEndereco ?? null;
@@ -154,15 +247,77 @@ function normalizeClient(raw: any): Client {
   const representanteNome = raw?.representanteNome ?? repObj?.nome ?? '';
   return {
     id: Number(id) || 0,
+    empresaId: empresaId != null ? Number(empresaId) : undefined,
     codigoCliente: codigoCliente ? String(codigoCliente).trim() : undefined,
+    cnpjCpf: cnpjCpf != null ? String(cnpjCpf).trim() : undefined,
+    tipoPessoa: tipoPessoa != null ? String(tipoPessoa).trim() : undefined,
+    consumidorFinal:
+      consumidorFinal !== undefined ? Boolean(consumidorFinal) : undefined,
     nome: String(nome || '').trim(),
+    fantasia: fantasia != null ? String(fantasia).trim() : undefined,
+    inscricaoEstadual:
+      inscricaoEstadual != null ? String(inscricaoEstadual).trim() : undefined,
+    inscricaoMunicipal:
+      inscricaoMunicipal != null ? String(inscricaoMunicipal).trim() : undefined,
+    rg: rg != null ? String(rg).trim() : undefined,
+    cep: cep != null ? String(cep).trim() : undefined,
+    cidadeId: cidadeId != null ? Number(cidadeId) : undefined,
     cidade: String(cidade || '').trim(),
     uf: String(uf || '').trim(),
+    endereco: endereco != null ? String(endereco).trim() : undefined,
+    numero: numero != null ? String(numero).trim() : undefined,
+    complemento: complemento != null ? String(complemento).trim() : undefined,
     bairro: String(bairro || '').trim(),
     fone: fone ? String(fone) : undefined,
+    fax: fax ? String(fax).trim() : undefined,
+    celular: celular ? String(celular).trim() : undefined,
+    whatsapp: whatsapp ? String(whatsapp).trim() : undefined,
     contato: contato ? String(contato) : undefined,
+    email: email ? String(email).trim() : undefined,
+    emailDanfe: emailDanfe ? String(emailDanfe).trim() : undefined,
+    site: site ? String(site).trim() : undefined,
+    compradorNome: compradorNome ? String(compradorNome).trim() : undefined,
+    compradorFone: compradorFone ? String(compradorFone).trim() : undefined,
+    compradorDataNascimento: compradorDataNascimento
+      ? String(compradorDataNascimento).trim()
+      : undefined,
+    contato2Nome: contato2Nome ? String(contato2Nome).trim() : undefined,
+    contato2Celular: contato2Celular
+      ? String(contato2Celular).trim()
+      : undefined,
+    contato2DataAniversario: contato2DataAniversario
+      ? String(contato2DataAniversario).trim()
+      : undefined,
+    segmentoId: segmentoId != null ? Number(segmentoId) : undefined,
+    redeId: redeId != null ? Number(redeId) : undefined,
+    limiteCredito:
+      limiteCredito != null && limiteCredito !== ''
+        ? Number(limiteCredito)
+        : null,
+    descontoFinanceiroBoleto:
+      descontoFinanceiroBoleto != null && descontoFinanceiroBoleto !== ''
+        ? Number(descontoFinanceiroBoleto)
+        : null,
+    checkouts:
+      checkouts != null && checkouts !== '' ? Number(checkouts) : null,
+    credito: credito != null && credito !== '' ? Number(credito) : null,
+    boleto: boleto != null ? Boolean(boleto) : null,
+    prazo: prazo != null ? String(prazo).trim() : null,
+    aberto: aberto != null && aberto !== '' ? Number(aberto) : null,
+    disponivel:
+      disponivel != null && disponivel !== '' ? Number(disponivel) : null,
     formaPagtoId: typeof formaPagtoId === 'number' ? formaPagtoId : (formaPagtoId != null ? String(formaPagtoId) : null),
     prazoPagtoId: typeof prazoPagtoId === 'number' ? prazoPagtoId : (prazoPagtoId != null ? String(prazoPagtoId) : null),
+    b2bLiberado:
+      b2bLiberado !== undefined ? Boolean(b2bLiberado) : undefined,
+    b2bSenha: b2bSenha != null ? String(b2bSenha).trim() : null,
+    b2bTabelaId:
+      b2bTabelaId != null && b2bTabelaId !== '' ? Number(b2bTabelaId) : null,
+    observacaoComercial:
+      observacaoComercial != null ? String(observacaoComercial).trim() : null,
+    observacaoFinanceiro:
+      observacaoFinanceiro != null ? String(observacaoFinanceiro).trim() : null,
+    inativo: inativo !== undefined ? Boolean(inativo) : undefined,
     simplesNacional: Boolean(raw?.simples_nacional ?? raw?.simplesNacional ?? false),
     cobrancaEndereco:
       cobrancaEndereco != null ? String(cobrancaEndereco).trim() : null,
