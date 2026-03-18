@@ -911,8 +911,10 @@ export const clientsService = {
     }
   },
 
-  // GET /api/clientes/por-representante
+  // GET /api/clientes/por-forca-de-vendas
   getByRepresentante: async (params: {
+    forcaDeVendas?: string;
+    forcaDeVendasId?: number;
     representante?: string;
     representanteId?: number;
     q?: string;
@@ -929,8 +931,13 @@ export const clientsService = {
 
     const qs = new URLSearchParams();
     qs.set('empresaId', String(empresa.empresa_id));
-    if (params.representante) qs.set('representante', params.representante);
-    if (params.representanteId) qs.set('representanteId', String(params.representanteId));
+    if (params.forcaDeVendas || params.representante)
+      qs.set('forcaDeVendas', params.forcaDeVendas ?? String(params.representante));
+    if (params.forcaDeVendasId || params.representanteId)
+      qs.set(
+        'forcaDeVendasId',
+        String(params.forcaDeVendasId ?? params.representanteId),
+      );
     if (params.q) qs.set('q', params.q);
     if (params.uf) qs.set('uf', params.uf);
     if (params.cidade) qs.set('cidade', params.cidade);
@@ -939,10 +946,10 @@ export const clientsService = {
     if (params.limit) qs.set('limit', String(params.limit));
 
     try {
-      const url = `${API_BASE}/api/clientes/por-representante?${qs.toString()}`;
+      const url = `${API_BASE}/api/clientes/por-forca-de-vendas?${qs.toString()}`;
       const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
       if (!res.ok) {
-        let message = 'Falha ao buscar clientes por representante';
+        let message = 'Falha ao buscar clientes por força de vendas';
         try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
         return Promise.reject(message);
       }

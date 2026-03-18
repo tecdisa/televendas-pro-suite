@@ -184,7 +184,7 @@ export const representativesService = {
     params.set('status', status);
     if (status === 'todos') params.set('incluirInativos', 'true');
 
-    const url = `${API_BASE}/api/representantes/empresa/${empresaId}?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/empresa/${empresaId}?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
@@ -208,7 +208,7 @@ export const representativesService = {
 
   async getById(id: number): Promise<Representante | null> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/representantes/${id}?empresaId=${empresaId}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${id}?empresaId=${empresaId}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
@@ -227,7 +227,7 @@ export const representativesService = {
 
   async create(data: RepresentanteFormData): Promise<Representante> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/representantes`;
+    const url = `${API_BASE}/api/forca-de-vendas`;
     const body = {
       empresaId,
       data: {
@@ -282,7 +282,7 @@ export const representativesService = {
 
   async update(id: number, data: Partial<RepresentanteFormData>): Promise<Representante> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/representantes/${id}?empresaId=${empresaId}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${id}?empresaId=${empresaId}`;
     const body = { data };
 
     const res = await apiClient.fetch(url, {
@@ -306,7 +306,7 @@ export const representativesService = {
 
   async delete(id: number): Promise<void> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/representantes/${id}?empresaId=${empresaId}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${id}?empresaId=${empresaId}`;
 
     const res = await apiClient.fetch(url, { method: 'DELETE' });
 
@@ -320,10 +320,10 @@ export const representativesService = {
     }
   },
 
-  // DELETE /api/clientes/:id/representantes/:representanteId?empresaId=5
+  // DELETE /api/clientes/:id/forca-de-vendas/:forcaDeVendasId?empresaId=5
   async removeClienteRepresentante(clienteId: number, representanteId: number | string): Promise<boolean> {
     const empresaId = await getEmpresaId();
-    const url = `${API_BASE}/api/clientes/${encodeURIComponent(clienteId)}/representantes/${encodeURIComponent(representanteId)}?empresaId=${encodeURIComponent(empresaId)}`;
+    const url = `${API_BASE}/api/clientes/${encodeURIComponent(clienteId)}/forca-de-vendas/${encodeURIComponent(representanteId)}?empresaId=${encodeURIComponent(empresaId)}`;
     const res = await apiClient.fetch(url, { method: 'DELETE', headers: { accept: 'application/json' } });
     if (res.status === 404) throw new Error('Cliente ou vínculo com representante não encontrado');
     if (!res.ok && res.status !== 204) {
@@ -350,7 +350,7 @@ export const representativesService = {
     params.set('limit', String(limit));
     if (options?.q?.trim()) params.set('q', options.q.trim());
 
-    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
@@ -379,7 +379,7 @@ export const representativesService = {
     const empresaId = await getEmpresaId();
     const params = new URLSearchParams();
     params.set('empresaId', String(empresaId));
-    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores?${params.toString()}`;
 
     const res = await apiClient.fetch(url, {
       method: 'POST',
@@ -406,7 +406,7 @@ export const representativesService = {
     const empresaId = await getEmpresaId();
     const params = new URLSearchParams();
     params.set('empresaId', String(empresaId));
-    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}?${params.toString()}`;
 
     const res = await apiClient.fetch(url, {
       method: 'DELETE',
@@ -437,7 +437,7 @@ export const representativesService = {
     const empresaId = await getEmpresaId();
     const params = new URLSearchParams();
     params.set('empresaId', String(empresaId));
-    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}?${params.toString()}`;
 
     const res = await apiClient.fetch(url, {
       method: 'PUT',
@@ -468,7 +468,7 @@ export const representativesService = {
     const empresaId = await getEmpresaId();
     const params = new URLSearchParams();
     params.set('empresaId', String(empresaId));
-    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteDestinoId)}/copiar-clientes?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteDestinoId)}/copiar-clientes?${params.toString()}`;
 
     const res = await apiClient.fetch(url, {
       method: 'POST',
@@ -500,7 +500,7 @@ export const representativesService = {
     const empresaId = await getEmpresaId();
     const params = new URLSearchParams();
     params.set('empresaId', String(empresaId));
-    const url = `${API_BASE}/api/representantes/${encodeURIComponent(representanteDestinoId)}/copiar-fornecedores?${params.toString()}`;
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteDestinoId)}/copiar-fornecedores?${params.toString()}`;
 
     const res = await apiClient.fetch(url, {
       method: 'POST',
