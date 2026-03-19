@@ -41,7 +41,12 @@ function normalizeReceivable(raw: any): Receivable {
     nosso_numero_boleto: raw?.nosso_numero_boleto ?? undefined,
     nf: raw?.nf ?? undefined,
     cliente_id: raw?.cliente_id ?? raw?.clienteId ?? undefined,
-    representante_id: raw?.representante_id ?? raw?.representanteId ?? undefined,
+    representante_id:
+      raw?.representante_id ??
+      raw?.representanteId ??
+      raw?.forca_de_venda_id ??
+      raw?.forcaDeVendaId ??
+      undefined,
     datapagto: raw?.datapagto ?? raw?.data_pagto ?? null,
     emissao: raw?.emissao ?? undefined,
     vencto: raw?.vencto ?? raw?.vencimento ?? undefined,

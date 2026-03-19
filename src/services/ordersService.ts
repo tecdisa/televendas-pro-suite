@@ -307,17 +307,28 @@ const extractClienteCodigo = (raw: any): string | undefined => {
 };
 
 const extractRepresentanteCodigo = (raw: any): string | undefined => {
-  const repObj = raw?.representante && typeof raw.representante === 'object' ? raw.representante : null;
+  const repObj =
+    raw?.representante && typeof raw.representante === 'object'
+      ? raw.representante
+      : raw?.forca_de_vendas && typeof raw.forca_de_vendas === 'object'
+      ? raw.forca_de_vendas
+      : raw?.forcaDeVendas && typeof raw.forcaDeVendas === 'object'
+      ? raw.forcaDeVendas
+      : null;
   const candidates = [
     raw?.representanteCodigo,
     raw?.representante_codigo,
     raw?.codigo_representante,
     raw?.codigoRepresentante,
+    raw?.codigo_forca_de_vendas,
+    raw?.codigoForcaDeVendas,
     raw?.representanteCod,
     raw?.representante_cod,
     repObj?.codigo,
     repObj?.codigo_representante,
     repObj?.codigoRepresentante,
+    repObj?.codigo_forca_de_vendas,
+    repObj?.codigoForcaDeVendas,
   ];
 
   for (const val of candidates) {
@@ -385,7 +396,13 @@ export const ordersService = {
         const opFields = resolveOperacaoFields(p);
         const formaPagtoId = extractFormaPagtoId(p);
         const prazoPagtoId = extractPrazoPagtoId(p);
-        const representanteId = p?.representanteId ?? p?.representante_id ?? '017';
+        const representanteId =
+          p?.representanteId ??
+          p?.representante_id ??
+          p?.forcaDeVendasId ??
+          p?.forca_de_venda_id ??
+          p?.forca_de_vendas_id ??
+          '017';
         const representanteCodigo = extractRepresentanteCodigo(p);
         const clienteId = p?.clienteId ?? p?.cliente_id ?? p?.cliente ?? 0;
         const clienteCodigo = extractClienteCodigo(p);
@@ -401,7 +418,14 @@ export const ordersService = {
           clienteNome: p?.clienteNome ?? p?.cliente_nome ?? p?.clienteRazao ?? '',
           representanteId: representanteId ?? '017',
           representanteCodigo,
-          representanteNome: p?.representanteNome ?? p?.representante_nome ?? 'REPRESENTANTE',
+          representanteNome:
+            p?.representanteNome ??
+            p?.representante_nome ??
+            p?.nome_representante ??
+            p?.forcaDeVendasNome ??
+            p?.forca_de_vendas_nome ??
+            p?.nome_forca_de_vendas ??
+            'FORÇA DE VENDAS',
           tabela: p?.tabela ?? p?.tabela_preco ?? 'TABELA 01',
           formaPagamento: extractFormaPagtoDescricao(p) ?? 'BOLETO BANCARIO',
           formaPagtoId,
@@ -460,7 +484,13 @@ export const ordersService = {
       const opFields = resolveOperacaoFields(p);
       const formaPagtoId = extractFormaPagtoId(p);
       const prazoPagtoId = extractPrazoPagtoId(p);
-      const representanteId = p?.representanteId ?? p?.representante_id ?? '';
+      const representanteId =
+        p?.representanteId ??
+        p?.representante_id ??
+        p?.forcaDeVendasId ??
+        p?.forca_de_venda_id ??
+        p?.forca_de_vendas_id ??
+        '';
       const representanteCodigo = extractRepresentanteCodigo(p);
       const clienteId = p?.clienteId ?? p?.cliente_id ?? p?.cliente ?? 0;
       const clienteCodigo = extractClienteCodigo(p);
@@ -476,7 +506,14 @@ export const ordersService = {
         clienteNome: p?.clienteNome ?? p?.cliente_nome ?? '',
         representanteId: representanteId ?? '',
         representanteCodigo,
-        representanteNome: p?.representanteNome ?? p?.representante_nome ?? '',
+        representanteNome:
+          p?.representanteNome ??
+          p?.representante_nome ??
+          p?.nome_representante ??
+          p?.forcaDeVendasNome ??
+          p?.forca_de_vendas_nome ??
+          p?.nome_forca_de_vendas ??
+          '',
         tabela: p?.tabela ?? p?.tabela_preco ?? '',
         formaPagamento: extractFormaPagtoDescricao(p) ?? '',
         formaPagtoId,

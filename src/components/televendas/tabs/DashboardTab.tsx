@@ -267,7 +267,7 @@ export function DashboardTab() {
           loading={loading}
         />
         <KpiCard
-          title="Representantes"
+          title="Força de Vendas"
           value={data?.totalRepresentantes ?? 0}
           icon={Package}
           loading={loading}
@@ -355,12 +355,12 @@ export function DashboardTab() {
         </Card>
       </div>
 
-      {/* Vendas por Representante */}
+      {/* Vendas por Força de Vendas */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Vendas por Representante
+            Vendas por Força de Vendas
           </CardTitle>
         </CardHeader>
         <CardContent>

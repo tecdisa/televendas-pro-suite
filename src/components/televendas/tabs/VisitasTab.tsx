@@ -56,7 +56,7 @@ export const VisitasTab = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Representante</label>
+              <label className="text-sm font-medium mb-2 block">Força de Vendas</label>
               <Select value={filters.representante} onValueChange={(v) => setFilters({...filters, representante: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />

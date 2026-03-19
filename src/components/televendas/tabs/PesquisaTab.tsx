@@ -507,7 +507,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           <div>Data: ${new Date(order.data).toLocaleDateString('pt-BR')}</div>
           <div>Cliente: ${order.clienteNome ?? ''}${clienteCodigoLabel}</div>
           <div>Operação: ${opLabel ?? ''}</div>
-          <div>Representante: ${representanteLabel}</div>
+          <div>Força de Vendas: ${representanteLabel}</div>
         </div>
         <table>
           <thead>
@@ -655,15 +655,15 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs">Representante</Label>
+          <Label className="text-xs">Força de Vendas</Label>
           <Button variant="outline" className="w-full justify-start text-xs truncate" onClick={() => setRepSearchOpen(true)}>
             <Search className="h-3 w-3 mr-1 shrink-0" />
-            <span className="truncate">{representanteNome || (filters.representante ? `Cód. ${filters.representante}` : 'Buscar representante')}</span>
+            <span className="truncate">{representanteNome || (filters.representante ? `Cód. ${filters.representante}` : 'Buscar força de vendas')}</span>
           </Button>
           <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
             <DialogContent className="w-[95vw] max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Buscar Representante</DialogTitle>
+                <DialogTitle>Buscar Força de Vendas</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <Input
@@ -679,7 +679,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                   }
                 }}>
                   {loadingReps ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
+                    <div className="py-6 text-center text-sm text-muted-foreground">Carregando força de vendas...</div>
                   ) : repsError ? (
                     <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
                 ) : (
@@ -710,7 +710,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                         {representatives.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
-                              Nenhum representante encontrado
+                              Nenhuma força de vendas encontrada
                             </TableCell>
                           </TableRow>
                         )}
@@ -1053,7 +1053,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                 <div>Data: {new Date(previewOrder.data).toLocaleDateString('pt-BR')}</div>
                 <div>Cliente: {previewOrder.clienteNome}{previewClienteCodigo ? ` (Cód.: ${previewClienteCodigo})` : ''}</div>
                 <div>Operação: {formatOperacao(previewOrder)}</div>
-                <div>Representante: {previewRepresentanteCodigo ? `${previewRepresentanteCodigo} - ` : ''}{previewOrder.representanteNome}</div>
+                <div>Força de Vendas: {previewRepresentanteCodigo ? `${previewRepresentanteCodigo} - ` : ''}{previewOrder.representanteNome}</div>
                 <div>Endereço: {formatEnderecoCliente(previewOrder) || '-'}</div>
                 <div>Forma de pagamento: {previewOrder.formaPagamento || '-'}</div>
                 <div>Prazo: {previewOrder.prazo || '-'}</div>

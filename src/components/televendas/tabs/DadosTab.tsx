@@ -60,7 +60,7 @@ export const DadosTab = () => {
               <p className="text-sm">{selectedOrder.especial ? <Badge variant="secondary">Sim</Badge> : 'Não'}</p>
             </div>
             <div>
-              <span className="text-sm font-medium text-muted-foreground">Representante:</span>
+              <span className="text-sm font-medium text-muted-foreground">Força de Vendas:</span>
               <p className="text-sm">
                 {representanteCodigo ? `${representanteCodigo} - ` : ''}
                 {selectedOrder.representanteNome || 'N/A'}

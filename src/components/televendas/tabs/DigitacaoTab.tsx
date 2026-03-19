@@ -882,7 +882,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     const itemToAdd = productToAdd || newItem;
     
     if (!formData.operacao || !formData.clienteId || !formData.representanteId) {
-      toast.error('Preencha operação, cliente e representante antes de adicionar itens');
+      toast.error('Preencha operação, cliente e força de vendas antes de adicionar itens');
       return;
     }
     
@@ -1205,7 +1205,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
 
   const handleSave = async () => {
     if (!formData.operacao || !formData.clienteId || !formData.representanteId || items.length === 0) {
-      toast.error('Preencha operação, cliente, representante e adicione pelo menos um item');
+      toast.error('Preencha operação, cliente, força de vendas e adicione pelo menos um item');
       return;
     }
     // Valida prazo máximo conforme a tabela selecionada
@@ -1423,17 +1423,17 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Representante *</label>
+              <label className="text-sm font-medium mb-2 block">Força de Vendas *</label>
               <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full justify-start">
                     <Search className="h-4 w-4 mr-2" />
-                    {formData.representanteNome || 'Buscar representante'}
+                    {formData.representanteNome || 'Buscar força de vendas'}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="w-[95vw] max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Buscar Representante</DialogTitle>
+                    <DialogTitle>Buscar Força de Vendas</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <Input
@@ -1449,7 +1449,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       }
                     }}>
                       {loadingReps ? (
-                        <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
+                        <div className="py-6 text-center text-sm text-muted-foreground">Carregando força de vendas...</div>
                       ) : repsError ? (
                         <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
                       ) : (
@@ -1482,7 +1482,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                             {filteredRepresentatives.length === 0 && (
                               <TableRow>
                                 <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
-                                  Nenhum representante encontrado
+                                  Nenhuma força de vendas encontrada
                                 </TableCell>
                               </TableRow>
                             )}

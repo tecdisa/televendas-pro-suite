@@ -100,9 +100,25 @@ function normalizeRepresentante(raw: any): Representante {
   };
 
   return {
-    representante_id: raw.representante_id ?? raw.id ?? 0,
-    codigo_representante: raw.codigo_representante ?? raw.codigoRepresentante ?? '',
-    nome_representante: raw.nome_representante ?? raw.nomeRepresentante ?? raw.nome ?? '',
+    representante_id:
+      raw.representante_id ??
+      raw.forca_de_venda_id ??
+      raw.forcaDeVendaId ??
+      raw.id ??
+      0,
+    codigo_representante:
+      raw.codigo_representante ??
+      raw.codigoRepresentante ??
+      raw.codigo_forca_de_vendas ??
+      raw.codigoForcaDeVendas ??
+      '',
+    nome_representante:
+      raw.nome_representante ??
+      raw.nomeRepresentante ??
+      raw.nome_forca_de_vendas ??
+      raw.nomeForcaDeVendas ??
+      raw.nome ??
+      '',
     cnpj_cpf: raw.cnpj_cpf ?? raw.cnpjCpf ?? '',
     fantasia: raw.fantasia ?? '',
     endereco: raw.endereco ?? '',
@@ -156,7 +172,9 @@ function normalizeRepresentanteFornecedorItem(raw: any): RepresentanteFornecedor
       : Number(objetivoRaw);
   return {
     empresa_id: raw?.empresa_id ?? undefined,
-    representante: normalizeRepresentante(raw?.representante ?? {}),
+    representante: normalizeRepresentante(
+      raw?.representante ?? raw?.forca_de_vendas ?? raw?.forcaDeVendas ?? {},
+    ),
     fornecedor: normalizeRepresentanteFornecedor(raw?.fornecedor ?? {}),
     objetivo_de_venda: Number.isFinite(objetivo) ? objetivo : undefined,
   };
@@ -188,7 +206,7 @@ export const representativesService = {
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
-      let message = 'Falha ao buscar representantes';
+      let message = 'Falha ao buscar força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -213,7 +231,7 @@ export const representativesService = {
 
     if (!res.ok) {
       if (res.status === 404) return null;
-      let message = 'Falha ao buscar representante';
+      let message = 'Falha ao buscar força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -268,7 +286,7 @@ export const representativesService = {
     });
 
     if (!res.ok) {
-      let message = 'Falha ao criar representante';
+      let message = 'Falha ao criar força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -292,7 +310,7 @@ export const representativesService = {
     });
 
     if (!res.ok) {
-      let message = 'Falha ao atualizar representante';
+      let message = 'Falha ao atualizar força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -311,7 +329,7 @@ export const representativesService = {
     const res = await apiClient.fetch(url, { method: 'DELETE' });
 
     if (!res.ok && res.status !== 204) {
-      let message = 'Falha ao excluir representante';
+      let message = 'Falha ao excluir força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -325,9 +343,9 @@ export const representativesService = {
     const empresaId = await getEmpresaId();
     const url = `${API_BASE}/api/clientes/${encodeURIComponent(clienteId)}/forca-de-vendas/${encodeURIComponent(representanteId)}?empresaId=${encodeURIComponent(empresaId)}`;
     const res = await apiClient.fetch(url, { method: 'DELETE', headers: { accept: 'application/json' } });
-    if (res.status === 404) throw new Error('Cliente ou vínculo com representante não encontrado');
+    if (res.status === 404) throw new Error('Cliente ou vínculo com força de vendas não encontrado');
     if (!res.ok && res.status !== 204) {
-      let message = 'Falha ao remover representante do cliente';
+      let message = 'Falha ao remover força de vendas do cliente';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -354,7 +372,7 @@ export const representativesService = {
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
 
     if (!res.ok) {
-      let message = 'Falha ao buscar fornecedores do representante';
+      let message = 'Falha ao buscar fornecedores da força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -388,7 +406,7 @@ export const representativesService = {
     });
 
     if (!res.ok && res.status !== 201 && res.status !== 204) {
-      let message = 'Falha ao incluir fornecedor no representante';
+      let message = 'Falha ao incluir fornecedor na força de vendas';
       try {
         const err = await res.json();
         message = err?.message || err?.error?.message || err?.error || message;
@@ -414,7 +432,7 @@ export const representativesService = {
     });
 
     if (res.status === 404) {
-      throw new Error('Fornecedor não vinculado ao representante');
+      throw new Error('Fornecedor não vinculado à força de vendas');
     }
 
     if (!res.ok && res.status !== 204) {

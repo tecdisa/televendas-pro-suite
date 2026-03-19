@@ -317,8 +317,8 @@ export function RepresentantesTab() {
       const nextHasMore = total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT;
       setHasMore(nextHasMore);
     } catch (error: any) {
-      console.error('Erro ao carregar representantes:', error);
-      toast.error(error?.message || 'Erro ao carregar representantes');
+      console.error('Erro ao carregar força de vendas:', error);
+      toast.error(error?.message || 'Erro ao carregar força de vendas');
     } finally {
       setLoading(false);
     }
@@ -432,7 +432,7 @@ export function RepresentantesTab() {
         setFormSnapshot(nextData);
       }
     } catch (e: any) {
-      toast.error('Erro ao carregar dados do representante');
+      toast.error('Erro ao carregar dados da força de vendas');
       setEditOpen(false);
     } finally {
       setFormLoading(false);
@@ -447,12 +447,12 @@ export function RepresentantesTab() {
     setFormLoading(true);
     try {
       await representativesService.create(formData);
-      toast.success('Representante criado com sucesso');
+      toast.success('Força de vendas criada com sucesso');
       setCreateOpen(false);
       resetForm();
       loadRepresentantes(true);
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao criar representante');
+      toast.error(e?.message || 'Erro ao criar força de vendas');
     } finally {
       setFormLoading(false);
     }
@@ -467,26 +467,26 @@ export function RepresentantesTab() {
     setFormLoading(true);
     try {
       await representativesService.update(editId, formData);
-      toast.success('Representante atualizado com sucesso');
+      toast.success('Força de vendas atualizada com sucesso');
       setEditOpen(false);
       resetForm();
       loadRepresentantes(true);
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao atualizar representante');
+      toast.error(e?.message || 'Erro ao atualizar força de vendas');
     } finally {
       setFormLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este representante?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta força de vendas?')) return;
     setDeleteLoading(id);
     try {
       await representativesService.delete(id);
-      toast.success('Representante excluído com sucesso');
+      toast.success('Força de vendas excluída com sucesso');
       loadRepresentantes(true);
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao excluir representante');
+      toast.error(e?.message || 'Erro ao excluir força de vendas');
     } finally {
       setDeleteLoading(null);
     }
@@ -830,11 +830,11 @@ export function RepresentantesTab() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <UserCheck className="h-5 w-5" />
-                  Representantes ({representantes.length})
+                  Força de Vendas ({representantes.length})
                 </CardTitle>
                 <Button onClick={openCreate} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Novo Representante
+                  Nova Força de Vendas
                 </Button>
               </div>
             </CardHeader>
@@ -890,7 +890,7 @@ export function RepresentantesTab() {
                         ) : representantes.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                              Nenhum representante encontrado
+                              Nenhuma força de vendas encontrada
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -964,7 +964,7 @@ export function RepresentantesTab() {
         <TabsContent value="pastas" className="mt-0">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Pastas por Representante</CardTitle>
+              <CardTitle className="text-lg">Pastas por Força de Vendas</CardTitle>
             </CardHeader>
             <CardContent>
               <RepresentantesPastasTab />
@@ -977,7 +977,7 @@ export function RepresentantesTab() {
       <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Representante</DialogTitle>
+            <DialogTitle>Nova Força de Vendas</DialogTitle>
           </DialogHeader>
           {formContent}
           <DialogFooter>
@@ -994,7 +994,7 @@ export function RepresentantesTab() {
       <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Representante</DialogTitle>
+            <DialogTitle>Editar Força de Vendas</DialogTitle>
           </DialogHeader>
           {formLoading && !formData.nome_representante ? (
             <div className="flex justify-center py-8">

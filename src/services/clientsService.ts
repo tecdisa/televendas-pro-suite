@@ -208,16 +208,50 @@ function normalizeClient(raw: any): Client {
     codigo_rota: raw.rota.codigo_rota,
     descricao_rota: raw.rota.descricao_rota,
   } : null;
-  const repObj = raw?.representante && typeof raw.representante === 'object' ? raw.representante : null;
-  const representantesArr = Array.isArray(raw?.representantes) ? raw.representantes : [];
+  const repObj =
+    raw?.representante && typeof raw.representante === 'object'
+      ? raw.representante
+      : raw?.forca_de_vendas && typeof raw.forca_de_vendas === 'object'
+      ? raw.forca_de_vendas
+      : raw?.forcaDeVendas && typeof raw.forcaDeVendas === 'object'
+      ? raw.forcaDeVendas
+      : null;
+  const representantesArr = Array.isArray(raw?.representantes)
+    ? raw.representantes
+    : Array.isArray(raw?.forcas_de_vendas)
+    ? raw.forcas_de_vendas
+    : Array.isArray(raw?.forcasDeVendas)
+    ? raw.forcasDeVendas
+    : [];
   const representantes = representantesArr
     .map((r: any) => {
       if (!r) return null;
-      const rid = r.id ?? r.codigo_representante ?? r.codigo ?? r.cod ?? r.matricula ?? null;
+      const rid =
+        r.id ??
+        r.representante_id ??
+        r.forca_de_venda_id ??
+        r.forcaDeVendaId ??
+        r.codigo_representante ??
+        r.codigo_forca_de_vendas ??
+        r.codigo ??
+        r.cod ??
+        r.matricula ??
+        null;
       return {
         id: rid != null ? String(rid).trim() : '',
-        codigoRepresentante: r.codigo_representante ?? r.codigoRepresentante ?? r.codigo ?? r.cod ?? r.matricula ?? undefined,
-        nome: r.nome ? String(r.nome).trim() : undefined,
+        codigoRepresentante:
+          r.codigo_representante ??
+          r.codigoRepresentante ??
+          r.codigo_forca_de_vendas ??
+          r.codigoForcaDeVendas ??
+          r.codigo ??
+          r.cod ??
+          r.matricula ??
+          undefined,
+        nome:
+          (r.nome ?? r.nome_representante ?? r.nome_forca_de_vendas) != null
+            ? String(r.nome ?? r.nome_representante ?? r.nome_forca_de_vendas).trim()
+            : undefined,
       };
     })
     .filter(Boolean) as Client['representantes'];
@@ -225,26 +259,48 @@ function normalizeClient(raw: any): Client {
   const representanteId =
     raw?.representanteId ??
     raw?.representante_id ??
+    raw?.forcaDeVendasId ??
+    raw?.forca_de_venda_id ??
+    raw?.forca_de_vendas_id ??
     raw?.representante ??
+    raw?.forca_de_vendas ??
+    raw?.forcaDeVendas ??
     repObj?.id ??
+    repObj?.representante_id ??
+    repObj?.forca_de_venda_id ??
+    repObj?.forcaDeVendaId ??
     repObj?.codigo ??
     repObj?.cod ??
     null;
   const representanteCodigo =
     raw?.codigo_representante ??
     raw?.codigoRepresentante ??
+    raw?.codigo_forca_de_vendas ??
+    raw?.codigoForcaDeVendas ??
     raw?.representante_codigo ??
     raw?.representanteCod ??
     raw?.representante_cod ??
     repObj?.codigo_representante ??
     repObj?.codigoRepresentante ??
+    repObj?.codigo_forca_de_vendas ??
+    repObj?.codigoForcaDeVendas ??
     repObj?.codigo ??
     repObj?.cod ??
     firstRep?.codigoRepresentante ??
     firstRep?.id ??
     representanteId ??
     null;
-  const representanteNome = raw?.representanteNome ?? repObj?.nome ?? '';
+  const representanteNome =
+    raw?.representanteNome ??
+    raw?.representante_nome ??
+    raw?.nome_representante ??
+    raw?.forcaDeVendasNome ??
+    raw?.forca_de_vendas_nome ??
+    raw?.nome_forca_de_vendas ??
+    repObj?.nome ??
+    repObj?.nome_representante ??
+    repObj?.nome_forca_de_vendas ??
+    '';
   return {
     id: Number(id) || 0,
     empresaId: empresaId != null ? Number(empresaId) : undefined,

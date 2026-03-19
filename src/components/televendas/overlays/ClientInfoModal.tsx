@@ -297,7 +297,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
               <TabsTrigger value="comercial">Comercial</TabsTrigger>
               <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-              <TabsTrigger value="itinerario">Representantes</TabsTrigger>
+              <TabsTrigger value="itinerario">Força de Vendas</TabsTrigger>
               <TabsTrigger value="tabelas">Tabelas</TabsTrigger>
             </TabsList>
 
@@ -460,7 +460,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                       ) : (
                         <TableRow>
                           <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
-                            Nenhum representante cadastrado
+                            Nenhuma força de vendas cadastrada
                           </TableCell>
                         </TableRow>
                       )}

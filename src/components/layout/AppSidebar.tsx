@@ -60,7 +60,7 @@ const menuItems: MenuItem[] = [
     children: [
       { title: 'Clientes', path: '/televendas?tab=clientes', icon: Users },
       { title: 'Fornecedores', path: '/televendas?tab=fornecedores', icon: Truck },
-      { title: 'Representantes', path: '/televendas?tab=representantes', icon: UserCheck },
+      { title: 'Força de Vendas', path: '/televendas?tab=representantes', icon: UserCheck },
       { title: 'Grupos', path: '/televendas?tab=grupos', icon: Layers },
       { title: 'Divisões', path: '/televendas?tab=divisoes', icon: Grid3X3 },
       { title: 'Redes', path: '/televendas?tab=redes', icon: Network },
@@ -68,7 +68,7 @@ const menuItems: MenuItem[] = [
       { title: 'Formas Pagamento', path: '/televendas?tab=formas-pagamento', icon: CreditCard },
       { title: 'Segmentos Venda', path: '/televendas?tab=segmentos', icon: Target },
       { title: 'Rotas Clientes', path: '/televendas?tab=rotas', icon: Route },
-      { title: 'Clientes por Representante', path: '/televendas?tab=clientes-representante', icon: Users },
+      { title: 'Clientes por Força de Vendas', path: '/televendas?tab=clientes-representante', icon: Users },
     ],
   },
 ];

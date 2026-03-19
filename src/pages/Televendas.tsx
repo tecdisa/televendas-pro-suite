@@ -41,7 +41,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   visitas: { title: 'Visitas', icon: ClipboardList },
   clientes: { title: 'Cadastro de Clientes', icon: Users },
   fornecedores: { title: 'Cadastro de Fornecedores', icon: Truck },
-  representantes: { title: 'Cadastro de Representantes', icon: UserCheck },
+  representantes: { title: 'Cadastro de Força de Vendas', icon: UserCheck },
   cidades: { title: 'Cadastro de Cidades', icon: MapPinned },
   grupos: { title: 'Grupos de Produtos', icon: Layers },
   divisoes: { title: 'Divisões de Produtos', icon: Grid3X3 },
@@ -52,7 +52,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   rotas: { title: 'Rotas de Clientes', icon: Route },
   produtos: { title: 'Cadastro de Produtos', icon: Layers },
   estoques: { title: 'Cadastro de Estoques', icon: Package },
-  'clientes-representante': { title: 'Clientes por Representante', icon: Users },
+  'clientes-representante': { title: 'Clientes por Força de Vendas', icon: Users },
 };
 
 const Televendas = () => {

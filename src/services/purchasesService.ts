@@ -67,9 +67,27 @@ function normalizeOrder(raw: any): PurchaseOrder {
     id: raw?.id ?? raw?.pedido_id ?? raw?.pedidoId ?? 0,
     data: raw?.data ?? raw?.data_pedido ?? raw?.dataPedido ?? '',
     pedido: raw?.pedido ?? raw?.numero ?? raw?.numero_pedido ?? raw?.numeroPedido ?? String(raw?.id ?? ''),
-    representanteId: raw?.representante_id ?? raw?.representanteId ?? '',
-    representanteCodigo: raw?.representante_codigo ?? raw?.representanteCodigo ?? raw?.codigo_representante ?? '',
-    representanteNome: raw?.representante_nome ?? raw?.representanteNome ?? '',
+    representanteId:
+      raw?.representante_id ??
+      raw?.representanteId ??
+      raw?.forca_de_venda_id ??
+      raw?.forcaDeVendaId ??
+      '',
+    representanteCodigo:
+      raw?.representante_codigo ??
+      raw?.representanteCodigo ??
+      raw?.codigo_representante ??
+      raw?.codigo_forca_de_vendas ??
+      raw?.codigoForcaDeVendas ??
+      '',
+    representanteNome:
+      raw?.representante_nome ??
+      raw?.representanteNome ??
+      raw?.nome_representante ??
+      raw?.forca_de_vendas_nome ??
+      raw?.forcaDeVendasNome ??
+      raw?.nome_forca_de_vendas ??
+      '',
     clienteId: raw?.cliente_id ?? raw?.clienteId ?? 0,
     clienteNome: raw?.cliente_nome ?? raw?.clienteNome ?? '',
     operacao: raw?.operacao ?? raw?.operacao_codigo ?? raw?.operacaoCodigo ?? '',

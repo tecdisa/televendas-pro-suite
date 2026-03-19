@@ -64,7 +64,7 @@ export function RepresentantesPastasTab() {
       const result = await representativesService.getAll(query, 1, 200, 'ativos');
       setRepresentantes(result.data);
     } catch (error: any) {
-      toast.error(error?.message || 'Erro ao carregar representantes');
+      toast.error(error?.message || 'Erro ao carregar força de vendas');
     } finally {
       setRepLoading(false);
     }
@@ -90,7 +90,7 @@ export function RepresentantesPastasTab() {
     } catch (error: any) {
       if (reqId !== fornecedorReqRef.current) return;
       setFornecedores([]);
-      toast.error(error?.message || 'Erro ao carregar fornecedores do representante');
+      toast.error(error?.message || 'Erro ao carregar fornecedores da força de vendas');
     } finally {
       if (reqId === fornecedorReqRef.current) {
         setFornecedoresLoading(false);
@@ -202,7 +202,7 @@ export function RepresentantesPastasTab() {
 
   const openIncludeDialog = async () => {
     if (!selectedRepresentanteId) {
-      toast.error('Selecione um representante');
+      toast.error('Selecione uma força de vendas');
       return;
     }
     setIncludeDialogOpen(true);
@@ -222,7 +222,7 @@ export function RepresentantesPastasTab() {
 
   const handleIncludeFornecedor = async (fornecedorId: number) => {
     if (!selectedRepresentanteId) {
-      toast.error('Selecione um representante');
+      toast.error('Selecione uma força de vendas');
       return;
     }
     setIncludeSubmittingId(fornecedorId);
@@ -255,7 +255,7 @@ export function RepresentantesPastasTab() {
 
   const handleSaveObjetivo = async (fornecedorId: number) => {
     if (!selectedRepresentanteId) {
-      toast.error('Selecione um representante');
+      toast.error('Selecione uma força de vendas');
       return;
     }
 
@@ -317,10 +317,10 @@ export function RepresentantesPastasTab() {
 
   const handleExcluirFornecedor = async (fornecedorId: number) => {
     if (!selectedRepresentanteId) {
-      toast.error('Selecione um representante');
+      toast.error('Selecione uma força de vendas');
       return;
     }
-    if (!confirm('Deseja excluir este fornecedor da pasta do representante?')) return;
+    if (!confirm('Deseja excluir este fornecedor da pasta da força de vendas?')) return;
 
     setRemoveFornecedorLoadingId(fornecedorId);
     try {
@@ -341,7 +341,7 @@ export function RepresentantesPastasTab() {
 
   const handleExcluirSelecionados = async () => {
     if (!selectedRepresentanteId) {
-      toast.error('Selecione um representante');
+      toast.error('Selecione uma força de vendas');
       return;
     }
     const ids = fornecedoresLista
@@ -375,7 +375,7 @@ export function RepresentantesPastasTab() {
 
   const openCopyDialog = async () => {
     if (!selectedRepresentanteId) {
-      toast.error('Selecione um representante');
+      toast.error('Selecione uma força de vendas');
       return;
     }
     setCopyDialogOpen(true);
@@ -391,7 +391,7 @@ export function RepresentantesPastasTab() {
         ),
       );
     } catch (error: any) {
-      toast.error(error?.message || 'Erro ao carregar representantes');
+      toast.error(error?.message || 'Erro ao carregar força de vendas');
       setCopyRepList([]);
     } finally {
       setCopyRepLoading(false);
@@ -400,7 +400,7 @@ export function RepresentantesPastasTab() {
 
   const handleCopyFornecedores = async () => {
     if (!selectedRepresentanteId || !copyFromRep) {
-      toast.error('Selecione um representante de origem');
+      toast.error('Selecione uma força de vendas de origem');
       return;
     }
 
@@ -425,7 +425,7 @@ export function RepresentantesPastasTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Representante:</label>
+        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Força de Vendas:</label>
         <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
           <DialogTrigger asChild>
             <Button
@@ -438,14 +438,14 @@ export function RepresentantesPastasTab() {
                 {selectedRepresentante
                   ? `${selectedRepresentante.codigo_representante || '-'} - ${selectedRepresentante.nome_representante}`
                   : repLoading
-                  ? 'Carregando representantes...'
-                  : 'Buscar representante'}
+                  ? 'Carregando força de vendas...'
+                  : 'Buscar força de vendas'}
               </span>
             </Button>
           </DialogTrigger>
           <DialogContent className="w-[95vw] sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Buscar Representante</DialogTitle>
+              <DialogTitle>Buscar Força de Vendas</DialogTitle>
             </DialogHeader>
             <Input
               placeholder="Digite nome, código ou CPF/CNPJ..."
@@ -456,11 +456,11 @@ export function RepresentantesPastasTab() {
             <ScrollArea className="h-64 mt-2">
               {repLoading ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  Carregando representantes...
+                  Carregando força de vendas...
                 </div>
               ) : filteredRepresentantes.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  Nenhum representante encontrado
+                  Nenhuma força de vendas encontrada
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -544,7 +544,7 @@ export function RepresentantesPastasTab() {
                 </div>
               ) : fornecedoresLista.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Nenhum fornecedor encontrado para este representante
+                  Nenhum fornecedor encontrado para esta força de vendas
                 </p>
               ) : (
                 <Table>
@@ -675,7 +675,7 @@ export function RepresentantesPastasTab() {
       <Dialog open={includeDialogOpen} onOpenChange={setIncludeDialogOpen}>
         <DialogContent className="w-[95vw] max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Incluir fornecedor no representante</DialogTitle>
+            <DialogTitle>Incluir fornecedor na força de vendas</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -750,13 +750,13 @@ export function RepresentantesPastasTab() {
       <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
         <DialogContent className="w-[95vw] max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Copiar fornecedores de outro representante</DialogTitle>
+            <DialogTitle>Copiar fornecedores de outra força de vendas</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3">
             <Input
               className="h-9 text-sm"
-              placeholder="Buscar representante por nome, código ou CPF/CNPJ..."
+              placeholder="Buscar força de vendas por nome, código ou CPF/CNPJ..."
               value={copyRepSearch}
               onChange={(event) => setCopyRepSearch(event.target.value)}
             />
@@ -781,7 +781,7 @@ export function RepresentantesPastasTab() {
                     ) : filteredCopyReps.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                          Nenhum representante disponível para cópia
+                          Nenhuma força de vendas disponível para cópia
                         </TableCell>
                       </TableRow>
                     ) : (

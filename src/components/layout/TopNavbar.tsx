@@ -50,14 +50,14 @@ export const navGroups: NavGroup[] = [
         icon: Users,
         children: [
           { title: 'Todos', tab: 'clientes', icon: Users },
-          { title: 'Por Representantes', tab: 'clientes-representante', icon: UserCheck },
+          { title: 'Por Força de Vendas', tab: 'clientes-representante', icon: UserCheck },
           { title: 'Redes', tab: 'redes', icon: Network },
           { title: 'Segmentos Venda', tab: 'segmentos', icon: Target },
           { title: 'Rotas Clientes', tab: 'rotas', icon: Route },
         ],
       },
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
-      { title: 'Representantes', tab: 'representantes', icon: UserCheck },
+      { title: 'Força de Vendas', tab: 'representantes', icon: UserCheck },
       { title: 'Cidades', tab: 'cidades', icon: MapPinned },
       {
         title: 'Produtos',
