@@ -1,8 +1,13 @@
 export interface Empresa {
   empresa_id: number;
   razao_social: string;
-  fantasia: string;
+  fantasia: string | null;
   uf: string;
+  empresa_master_id?: number | null;
+  empresa_master_razao_social?: string | null;
+  empresa_master_fantasia?: string | null;
+  empresa_master_uf?: string | null;
+  fornecedores_permitidos?: string | null;
 }
 import { API_BASE } from '@/utils/env';
 import { apiClient } from '@/utils/apiClient';
@@ -10,6 +15,68 @@ import { apiClient } from '@/utils/apiClient';
 export interface ParametrosAppMobile {
   empresa_id?: number;
   bloqueia_desconto_acima_tabela?: boolean;
+}
+
+export interface EmpresaMasterGroup {
+  empresa_master_id: number;
+  razao_social: string;
+  fantasia: string | null;
+  uf: string;
+  empresas: Empresa[];
+}
+
+export function getEmpresaMasterId(empresa: Empresa): number {
+  const masterId = Number(empresa.empresa_master_id ?? empresa.empresa_id);
+  return Number.isInteger(masterId) && masterId > 0 ? masterId : Number(empresa.empresa_id);
+}
+
+export function getEmpresaDisplayName(empresa: Empresa): string {
+  return (
+    empresa.fantasia?.trim() ||
+    empresa.razao_social?.trim() ||
+    `Empresa ${empresa.empresa_id}`
+  );
+}
+
+export function getMasterDisplayName(master: Pick<EmpresaMasterGroup, 'fantasia' | 'razao_social' | 'empresa_master_id'>): string {
+  return (
+    master.fantasia?.trim() ||
+    master.razao_social?.trim() ||
+    `Master ${master.empresa_master_id}`
+  );
+}
+
+export function groupEmpresasByMaster(empresas: Empresa[]): EmpresaMasterGroup[] {
+  const groups = new Map<number, EmpresaMasterGroup>();
+
+  empresas.forEach((empresa) => {
+    const masterId = getEmpresaMasterId(empresa);
+    if (!groups.has(masterId)) {
+      groups.set(masterId, {
+        empresa_master_id: masterId,
+        razao_social:
+          empresa.empresa_master_razao_social?.trim() ||
+          empresa.razao_social?.trim() ||
+          '',
+        fantasia:
+          empresa.empresa_master_fantasia?.trim() ||
+          empresa.fantasia?.trim() ||
+          null,
+        uf: empresa.empresa_master_uf?.trim() || empresa.uf?.trim() || '',
+        empresas: [],
+      });
+    }
+    groups.get(masterId)!.empresas.push(empresa);
+  });
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      empresas: group.empresas
+        .slice()
+        .sort((a, b) => getEmpresaDisplayName(a).localeCompare(getEmpresaDisplayName(b))),
+    }))
+    .sort((a, b) => getMasterDisplayName(a).localeCompare(getMasterDisplayName(b)));
 }
 
 export const authService = {

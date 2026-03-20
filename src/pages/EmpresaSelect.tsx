@@ -1,26 +1,60 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authService, Empresa } from '@/services/authService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  authService,
+  Empresa,
+  getEmpresaDisplayName,
+  getEmpresaMasterId,
+  getMasterDisplayName,
+  groupEmpresasByMaster,
+} from '@/services/authService';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const EmpresaSelect = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [masterId, setMasterId] = useState<string>('');
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
+  const forceSwitch = searchParams.get('trocar') === '1';
 
+  const masterGroups = useMemo(() => groupEmpresasByMaster(empresas), [empresas]);
+  const selectedMaster = useMemo(
+    () =>
+      masterGroups.find(
+        (item) => item.empresa_master_id === Number(masterId),
+      ),
+    [masterGroups, masterId],
+  );
+  const selectingMaster = masterGroups.length > 1 && !selectedMaster;
+  const empresasDoMaster = selectedMaster?.empresas ?? [];
   const selectedEmpresa = useMemo(
-    () => empresas.find(e => String(e.empresa_id) === selectedId),
-    [empresas, selectedId]
+    () =>
+      empresasDoMaster.find((e) => String(e.empresa_id) === selectedId),
+    [empresasDoMaster, selectedId],
   );
 
   useEffect(() => {
-    // If an empresa is already selected, jump to app
     const atual = authService.getEmpresa();
-    if (atual) {
+    if (atual && !forceSwitch) {
       navigate('/televendas');
       return;
     }
@@ -28,25 +62,89 @@ const EmpresaSelect = () => {
     setLoading(true);
     authService
       .getEmpresas()
-      .then(list => {
+      .then((list) => {
         setEmpresas(list);
-        if (list.length === 1) {
-          // Auto select if only one
-          authService.setEmpresa(list[0]);
+        if (!list.length) {
+          toast.error('Nenhuma empresa disponível para este usuário');
+          return;
+        }
+
+        const groups = groupEmpresasByMaster(list);
+        const currentMasterId = atual ? getEmpresaMasterId(atual) : null;
+        const currentGroup = groups.find(
+          (group) => group.empresa_master_id === currentMasterId,
+        );
+
+        if (groups.length > 1) {
+          setMasterId(currentGroup ? String(currentGroup.empresa_master_id) : '');
+          setSelectedId(
+            atual && currentGroup ? String(atual.empresa_id) : undefined,
+          );
+          return;
+        }
+
+        const singleGroup = groups[0];
+        if (!singleGroup) return;
+        setMasterId(String(singleGroup.empresa_master_id));
+
+        const fallbackEmpresa =
+          atual &&
+          singleGroup.empresas.some(
+            (empresa) => empresa.empresa_id === atual.empresa_id,
+          )
+            ? atual
+            : singleGroup.empresas[0];
+
+        if (!fallbackEmpresa) return;
+
+        setSelectedId(String(fallbackEmpresa.empresa_id));
+        if (singleGroup.empresas.length === 1) {
+          authService.setEmpresa(fallbackEmpresa);
+          if (forceSwitch) toast.success('Empresa operacional alterada');
           navigate('/televendas');
         }
       })
-      .catch(err => toast.error(String(err)))
+      .catch((err) => toast.error(String(err)))
       .finally(() => setLoading(false));
-  }, [navigate]);
+  }, [forceSwitch, navigate]);
 
   const handleConfirm = () => {
+    if (selectingMaster) {
+      if (!selectedMaster) {
+        toast.error('Selecione uma empresa master');
+        return;
+      }
+
+      if (selectedMaster.empresas.length === 1) {
+        authService.setEmpresa(selectedMaster.empresas[0]);
+        toast.success(
+          forceSwitch ? 'Empresa operacional alterada' : 'Empresa selecionada',
+        );
+        navigate('/televendas');
+        return;
+      }
+
+      setSelectedId(String(selectedMaster.empresas[0].empresa_id));
+      return;
+    }
+
     if (!selectedEmpresa) {
-      toast.error('Selecione uma empresa');
+      toast.error('Selecione uma empresa operacional');
       return;
     }
     authService.setEmpresa(selectedEmpresa);
-    toast.success('Empresa selecionada');
+    toast.success(
+      forceSwitch ? 'Empresa operacional alterada' : 'Empresa selecionada',
+    );
+    navigate('/televendas');
+  };
+
+  const handleBack = () => {
+    if (!selectingMaster && masterGroups.length > 1) {
+      setMasterId('');
+      setSelectedId(undefined);
+      return;
+    }
     navigate('/televendas');
   };
 
@@ -54,26 +152,102 @@ const EmpresaSelect = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-primary/5 p-3 sm:p-4">
       <Card className="w-full max-w-md mx-auto shadow-xl">
         <CardHeader className="space-y-1 text-center px-4 sm:px-6">
-          <CardTitle className="text-xl sm:text-2xl font-bold">Selecione a Empresa</CardTitle>
-          <CardDescription>Escolha a empresa para continuar</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">
+            {selectingMaster
+              ? 'Selecione a Empresa Master'
+              : 'Selecione a Empresa Operacional'}
+          </CardTitle>
+          <CardDescription>
+            {selectingMaster
+              ? 'Escolha a master para continuar'
+              : 'Escolha a empresa em que você vai operar'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-4">
-          <div className="space-y-2">
-            <Select value={selectedId} onValueChange={(v) => setSelectedId(v)} disabled={loading || empresas.length === 0}>
-              <SelectTrigger>
-                <SelectValue placeholder={loading ? 'Carregando...' : 'Selecione'} />
-              </SelectTrigger>
-              <SelectContent>
-                {empresas.map((e) => (
-                  <SelectItem key={e.empresa_id} value={String(e.empresa_id)}>
-                    {e.fantasia?.trim() || e.razao_social?.trim() || `Empresa ${e.empresa_id}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button className="w-full" onClick={handleConfirm} disabled={loading || empresas.length === 0}>Continuar</Button>
-          <Button variant="outline" className="w-full" onClick={() => navigate('/login')} disabled={loading}>Voltar</Button>
+          {selectingMaster ? (
+            <div className="space-y-2">
+              <Label htmlFor="master">Empresa master</Label>
+              <Select
+                value={masterId}
+                onValueChange={(v) => {
+                  setMasterId(v);
+                  setSelectedId(undefined);
+                }}
+                disabled={loading || masterGroups.length === 0}
+              >
+                <SelectTrigger id="master">
+                  <SelectValue
+                    placeholder={loading ? 'Carregando...' : 'Selecione'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterGroups.map((group) => (
+                    <SelectItem
+                      key={group.empresa_master_id}
+                      value={String(group.empresa_master_id)}
+                    >
+                      {`${getMasterDisplayName(group)} (${group.uf})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="master-display">Empresa master</Label>
+                <Input
+                  id="master-display"
+                  readOnly
+                  className="bg-muted"
+                  value={
+                    selectedMaster
+                      ? `${getMasterDisplayName(selectedMaster)} (${selectedMaster.uf})`
+                      : ''
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="empresa-operacional">Empresa operacional</Label>
+                <Select
+                  value={selectedId}
+                  onValueChange={(v) => setSelectedId(v)}
+                  disabled={loading || empresasDoMaster.length === 0}
+                >
+                  <SelectTrigger id="empresa-operacional">
+                    <SelectValue
+                      placeholder={loading ? 'Carregando...' : 'Selecione'}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {empresasDoMaster.map((empresa) => (
+                      <SelectItem
+                        key={empresa.empresa_id}
+                        value={String(empresa.empresa_id)}
+                      >
+                        {`${getEmpresaDisplayName(empresa)} (${empresa.uf})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          <Button
+            className="w-full"
+            onClick={handleConfirm}
+            disabled={loading || empresas.length === 0}
+          >
+            {selectingMaster ? 'Continuar' : 'Acessar sistema'}
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleBack}
+            disabled={loading}
+          >
+            Voltar
+          </Button>
         </CardContent>
       </Card>
     </div>
