@@ -420,7 +420,6 @@ function mapFormToPayload(
 
   if (options?.includeStock !== false) {
     payload.estoque = Number(form.estoque) || 0;
-    payload.quantidade_reservada = Number(form.quantidadeReservada) || 0;
     payload.custo_medio = Number(form.custoMedio) || 0;
     payload.custo_nota = Number(form.custoNota) || 0;
     payload.custo_compra = Number(form.custoCompra) || 0;
@@ -1888,9 +1887,9 @@ export function ProdutosTab() {
                     <Input
                       type="number"
                       step="0.001"
-                      className="h-8 text-xs"
+                      className="h-8 text-xs bg-muted"
                       value={formData.quantidadeReservada}
-                      onChange={(e) => updateForm('quantidadeReservada', Number(e.target.value) || 0)}
+                      readOnly
                     />
                   </div>
                   <div className="md:col-span-4">
