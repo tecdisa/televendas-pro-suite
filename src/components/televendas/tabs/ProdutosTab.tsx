@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import {
@@ -33,6 +34,7 @@ import {
 } from '@/services/productsService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
+import { cn } from '@/lib/utils';
 
 const UNIDADES = ['UN', 'CX', 'PC', 'KG', 'LT', 'DP', 'FR', 'TB', 'CT'];
 const TIPOS_ITEM = [
@@ -51,6 +53,53 @@ const ORIGENS_PRODUTO = [
   { value: '7', label: '7 - Estrangeira mercado interno sem similar' },
   { value: '8', label: '8 - Nacional conteúdo importação > 70%' },
 ];
+const PRODUTOS_PINNED_COLUMNS_STORAGE_KEY = 'televendas:produtos:pinnedColumns';
+const PRODUTOS_FIX_ACTIONS_STORAGE_KEY = 'televendas:produtos:fixActions';
+
+const PRODUCTS_GRID_COLUMNS = [
+  { key: 'codigoProduto', label: 'Código', width: 132, pinnable: true },
+  { key: 'descricao', label: 'Descrição', width: 320, pinnable: true },
+  { key: 'apresentacao', label: 'Apresentação', width: 180, pinnable: true },
+  { key: 'un', label: 'UN', width: 72, pinnable: true },
+  { key: 'marca', label: 'Marca', width: 140, pinnable: true },
+  { key: 'codigoFabrica', label: 'Código fábrica', width: 156, pinnable: true },
+  { key: 'ean13', label: 'EAN13', width: 156, pinnable: true },
+  { key: 'dun14', label: 'DUN14', width: 156, pinnable: true },
+  { key: 'fornecedorId', label: 'ID fornecedor', width: 130, pinnable: true },
+  { key: 'fornecedor', label: 'Fornecedor', width: 260, pinnable: true },
+  { key: 'divisaoId', label: 'ID divisão', width: 118, pinnable: true },
+  { key: 'divisao', label: 'Divisão', width: 220, pinnable: true },
+  { key: 'pesoBruto', label: 'Peso bruto', width: 130, pinnable: true },
+  { key: 'pesoLiquido', label: 'Peso líquido', width: 130, pinnable: true },
+  { key: 'controlaLote', label: 'Controla lote', width: 126, pinnable: true },
+  { key: 'permiteVendaB2b', label: 'Permite B2B', width: 120, pinnable: true },
+  { key: 'permiteVendaB2c', label: 'Permite B2C', width: 120, pinnable: true },
+  { key: 'possuiFoto', label: 'Possui foto', width: 112, pinnable: true },
+  { key: 'principioAtivo', label: 'Princípio ativo', width: 220, pinnable: true },
+  {
+    key: 'precoNacionalConsumidor',
+    label: 'Preço nac. consumidor',
+    width: 190,
+    pinnable: true,
+  },
+  { key: 'precoFabrica', label: 'Preço fábrica', width: 146, pinnable: true },
+  {
+    key: 'descricaoComplementar',
+    label: 'Descrição complementar',
+    width: 300,
+    pinnable: true,
+  },
+  { key: 'codigoSiteB2c', label: 'Código site B2C', width: 210, pinnable: true },
+  { key: 'lancamento', label: 'Lançamento', width: 112, pinnable: true },
+  { key: 'inativo', label: 'Inativo', width: 90, pinnable: true },
+  { key: 'acoes', label: 'Ações', width: 112, pinnable: false },
+] as const;
+
+type ProductsGridColumnKey = (typeof PRODUCTS_GRID_COLUMNS)[number]['key'];
+const PINNABLE_PRODUCT_COLUMNS = PRODUCTS_GRID_COLUMNS.filter(
+  (column) => column.pinnable,
+);
+
 const parseEmpresasAutorizadas = (value?: string | null) =>
   Array.from(
     new Set(
@@ -298,6 +347,23 @@ function mapProductKitToFormItems(product?: Product | null): ProductKitFormItem[
 
 const toFixedNumber = (value: number, decimals = 3) =>
   Number.isFinite(value) ? value.toFixed(decimals) : '0.000';
+const formatBooleanCell = (value?: boolean | null) => (value ? 'Sim' : 'Não');
+const formatNullableInteger = (value?: number | null) =>
+  value === null || value === undefined ? '-' : Number(value).toLocaleString('pt-BR');
+const formatNullableDecimal = (value?: number | null, fractionDigits = 3) =>
+  value === null || value === undefined
+    ? '-'
+    : Number(value).toLocaleString('pt-BR', {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      });
+const formatNullableCurrency = (value?: number | null) =>
+  value === null || value === undefined
+    ? '-'
+    : Number(value).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
 
 function mapFormToPayload(
   form: ProductFormState,
@@ -386,6 +452,34 @@ export function ProdutosTab() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [pinnedColumns, setPinnedColumns] = useState<ProductsGridColumnKey[]>(
+    () => {
+      try {
+        if (typeof window === 'undefined') return [];
+        const saved = window.localStorage.getItem(
+          PRODUTOS_PINNED_COLUMNS_STORAGE_KEY,
+        );
+        if (!saved) return [];
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((value) =>
+          PINNABLE_PRODUCT_COLUMNS.some((column) => column.key === value),
+        );
+      } catch {
+        return [];
+      }
+    },
+  );
+  const [fixActionsColumn, setFixActionsColumn] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return true;
+      const saved = window.localStorage.getItem(PRODUTOS_FIX_ACTIONS_STORAGE_KEY);
+      if (saved === null) return true;
+      return saved === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormState>(initialFormData);
@@ -494,6 +588,110 @@ export function ProdutosTab() {
     void loadProdutos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(
+        PRODUTOS_PINNED_COLUMNS_STORAGE_KEY,
+        JSON.stringify(pinnedColumns),
+      );
+    } catch {
+      // Ignore localStorage errors.
+    }
+  }, [pinnedColumns]);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(
+        PRODUTOS_FIX_ACTIONS_STORAGE_KEY,
+        String(fixActionsColumn),
+      );
+    } catch {
+      // Ignore localStorage errors.
+    }
+  }, [fixActionsColumn]);
+
+  const togglePinnedColumn = (
+    columnKey: ProductsGridColumnKey,
+    checked: boolean,
+  ) => {
+    if (!PINNABLE_PRODUCT_COLUMNS.some((column) => column.key === columnKey)) return;
+    setPinnedColumns((prev) => {
+      if (checked) {
+        if (prev.includes(columnKey)) return prev;
+        return [...prev, columnKey];
+      }
+      return prev.filter((key) => key !== columnKey);
+    });
+  };
+
+  const columnWidthMap = useMemo(() => {
+    const map = new Map<ProductsGridColumnKey, number>();
+    PRODUCTS_GRID_COLUMNS.forEach((column) => map.set(column.key, column.width));
+    return map;
+  }, []);
+
+  const pinnedLeftColumnsInOrder = useMemo(
+    () =>
+      PRODUCTS_GRID_COLUMNS.filter(
+        (column) => column.key !== 'acoes' && pinnedColumns.includes(column.key),
+      ).map((column) => column.key),
+    [pinnedColumns],
+  );
+
+  const pinnedLeftOffsets = useMemo(() => {
+    const offsets = new Map<ProductsGridColumnKey, number>();
+    let left = 0;
+    for (const key of pinnedLeftColumnsInOrder) {
+      offsets.set(key, left);
+      left += columnWidthMap.get(key) ?? 0;
+    }
+    return offsets;
+  }, [columnWidthMap, pinnedLeftColumnsInOrder]);
+
+  const getStickyHeadClass = (key: ProductsGridColumnKey) => {
+    if (key === 'acoes') {
+      return fixActionsColumn
+        ? 'sticky right-0 z-30 bg-background shadow-[-1px_0_0_hsl(var(--border))]'
+        : '';
+    }
+    return pinnedLeftOffsets.has(key)
+      ? 'sticky z-30 bg-background shadow-[1px_0_0_hsl(var(--border))]'
+      : '';
+  };
+
+  const getStickyCellClass = (key: ProductsGridColumnKey) => {
+    if (key === 'acoes') {
+      return fixActionsColumn
+        ? 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50'
+        : '';
+    }
+    return pinnedLeftOffsets.has(key)
+      ? 'sticky z-20 bg-background shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50'
+      : '';
+  };
+
+  const getColumnStyle = (key: ProductsGridColumnKey): CSSProperties => {
+    const width = columnWidthMap.get(key) ?? 120;
+    const style: CSSProperties = {
+      width,
+      minWidth: width,
+      maxWidth: width,
+    };
+    if (key === 'acoes') {
+      if (!fixActionsColumn) return style;
+      return { ...style, right: 0 };
+    }
+    if (!pinnedLeftOffsets.has(key)) return style;
+    return { ...style, left: pinnedLeftOffsets.get(key) ?? 0 };
+  };
+
+  const tableMinWidth = useMemo(
+    () => PRODUCTS_GRID_COLUMNS.reduce((total, column) => total + column.width, 0),
+    [],
+  );
 
   const handleSearch = async () => {
     await loadProdutos();
@@ -691,6 +889,162 @@ export function ProdutosTab() {
     );
   };
 
+  const getHeadClassName = (key: ProductsGridColumnKey) => {
+    switch (key) {
+      case 'fornecedorId':
+      case 'divisaoId':
+      case 'pesoBruto':
+      case 'pesoLiquido':
+      case 'precoNacionalConsumidor':
+      case 'precoFabrica':
+        return 'text-right';
+      case 'controlaLote':
+      case 'permiteVendaB2b':
+      case 'permiteVendaB2c':
+      case 'possuiFoto':
+      case 'lancamento':
+      case 'inativo':
+        return 'text-center';
+      case 'acoes':
+        return 'text-center';
+      default:
+        return '';
+    }
+  };
+
+  const getCellClassName = (key: ProductsGridColumnKey) => {
+    switch (key) {
+      case 'fornecedorId':
+      case 'divisaoId':
+      case 'pesoBruto':
+      case 'pesoLiquido':
+      case 'precoNacionalConsumidor':
+      case 'precoFabrica':
+        return 'text-xs text-right';
+      case 'controlaLote':
+      case 'permiteVendaB2b':
+      case 'permiteVendaB2c':
+      case 'possuiFoto':
+      case 'lancamento':
+      case 'inativo':
+        return 'text-xs text-center';
+      case 'acoes':
+        return 'text-right';
+      case 'codigoProduto':
+        return 'text-xs font-mono';
+      default:
+        return 'text-xs';
+    }
+  };
+
+  const renderProductCell = (
+    product: Product,
+    key: ProductsGridColumnKey,
+    fornecedorNome: string,
+    divisaoNome: string,
+  ) => {
+    switch (key) {
+      case 'codigoProduto':
+        return product.codigoProduto || product.id;
+      case 'descricao':
+        return (
+          <div className="truncate whitespace-nowrap" title={product.descricao}>
+            {product.descricao}
+          </div>
+        );
+      case 'apresentacao':
+        return product.apresentacao || '-';
+      case 'un':
+        return product.un || '-';
+      case 'marca':
+        return product.marca || '-';
+      case 'codigoFabrica':
+        return product.codigoFabrica || '-';
+      case 'ean13':
+        return product.ean13 || '-';
+      case 'dun14':
+        return product.dun14 || '-';
+      case 'fornecedorId':
+        return formatNullableInteger(product.fornecedorId);
+      case 'fornecedor':
+        return (
+          <div className="truncate whitespace-nowrap" title={fornecedorNome}>
+            {fornecedorNome}
+          </div>
+        );
+      case 'divisaoId':
+        return formatNullableInteger(product.divisaoId);
+      case 'divisao':
+        return (
+          <div className="truncate whitespace-nowrap" title={divisaoNome}>
+            {divisaoNome}
+          </div>
+        );
+      case 'pesoBruto':
+        return formatNullableDecimal(product.pesoBruto, 3);
+      case 'pesoLiquido':
+        return formatNullableDecimal(product.pesoLiquido, 3);
+      case 'controlaLote':
+        return formatBooleanCell(product.controlaLote);
+      case 'permiteVendaB2b':
+        return formatBooleanCell(product.permiteVendaB2b);
+      case 'permiteVendaB2c':
+        return formatBooleanCell(product.permiteVendaB2c);
+      case 'possuiFoto':
+        return formatBooleanCell(product.possuiFoto);
+      case 'principioAtivo':
+        return product.principioAtivo || '-';
+      case 'precoNacionalConsumidor':
+        return formatNullableCurrency(product.precoNacionalConsumidor);
+      case 'precoFabrica':
+        return formatNullableCurrency(product.precoFabrica);
+      case 'descricaoComplementar':
+        return (
+          <div
+            className="truncate whitespace-nowrap"
+            title={product.descricaoComplementar || '-'}
+          >
+            {product.descricaoComplementar || '-'}
+          </div>
+        );
+      case 'codigoSiteB2c':
+        return product.codigoSiteB2c || '-';
+      case 'lancamento':
+        return formatBooleanCell(product.lancamento);
+      case 'inativo':
+        return formatBooleanCell(product.inativo);
+      case 'acoes':
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                void openEdit(product);
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-red-600 hover:text-red-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteProduct(product);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        );
+      default:
+        return '-';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -829,117 +1183,141 @@ export function ProdutosTab() {
       </Collapsible>
 
       <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Produtos ({totalProdutos})</CardTitle>
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-1" /> Novo Produto
-            </Button>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-base sm:text-lg">Produtos ({totalProdutos})</CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                    <Columns3 className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Fixar colunas</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-3">
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Colunas fixas</div>
+                    <div className="flex items-center justify-between rounded-md border p-2">
+                      <span className="text-sm">Fixar ações à direita</span>
+                      <Checkbox
+                        checked={fixActionsColumn}
+                        onCheckedChange={(checked) =>
+                          setFixActionsColumn(checked === true)
+                        }
+                      />
+                    </div>
+                    <ScrollArea className="h-56 pr-2">
+                      <div className="space-y-2">
+                        {PINNABLE_PRODUCT_COLUMNS.map((column) => (
+                          <label
+                            key={column.key}
+                            className="flex items-center justify-between rounded-md border p-2 text-sm"
+                          >
+                            <span>{column.label}</span>
+                            <Checkbox
+                              checked={pinnedColumns.includes(column.key)}
+                              onCheckedChange={(checked) =>
+                                togglePinnedColumn(column.key, checked === true)
+                              }
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button size="sm" onClick={openCreate} className="flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Produto</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-460px)]">
-            <Table>
+        <CardContent>
+          <div className="max-h-[60vh] overflow-auto scrollbar-thin">
+            <Table style={{ minWidth: tableMinWidth }}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-24">Código</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="w-14">UN</TableHead>
-                  <TableHead className="w-28">Marca</TableHead>
-                  <TableHead className="w-44">Fornecedor</TableHead>
-                  <TableHead className="w-40">Divisão</TableHead>
-                  <TableHead className="w-16 text-center">B2B</TableHead>
-                  <TableHead className="w-16 text-center">Inativo</TableHead>
-                  <TableHead className="w-24" />
+                  {PRODUCTS_GRID_COLUMNS.map((column) => (
+                    <TableHead
+                      key={column.key}
+                      style={getColumnStyle(column.key)}
+                      className={cn(
+                        getStickyHeadClass(column.key),
+                        getHeadClassName(column.key),
+                      )}
+                    >
+                      {column.label}
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell
+                      colSpan={PRODUCTS_GRID_COLUMNS.length}
+                      className="text-center py-8"
+                    >
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : produtos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell
+                      colSpan={PRODUCTS_GRID_COLUMNS.length}
+                      className="text-center py-8 text-muted-foreground"
+                    >
                       Nenhum produto encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
-                  produtos.map((p) => {
+                  produtos.map((product) => {
                     const fornecedorNome =
-                      p.fornecedor?.trim() ||
-                      fornecedoresMap.get(Number(p.fornecedorId ?? 0)) ||
+                      product.fornecedor?.trim() ||
+                      fornecedoresMap.get(Number(product.fornecedorId ?? 0)) ||
                       '-';
                     const divisaoNome =
-                      p.divisaoDescricao?.trim() ||
-                      divisoesMap.get(Number(p.divisaoId ?? 0)) ||
+                      product.divisaoDescricao?.trim() ||
+                      divisoesMap.get(Number(product.divisaoId ?? 0)) ||
                       '-';
+
                     return (
                       <TableRow
-                        key={p.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onDoubleClick={() => void openEdit(p)}
+                        key={product.id}
+                        className="group cursor-pointer hover:bg-muted/50"
+                        onDoubleClick={() => void openEdit(product)}
                       >
-                        <TableCell className="text-xs font-mono">
-                          {p.codigoProduto || p.id}
-                        </TableCell>
-                        <TableCell className="text-xs truncate max-w-[340px]">
-                          {p.descricao}
-                        </TableCell>
-                        <TableCell className="text-xs">{p.un}</TableCell>
-                        <TableCell className="text-xs">{p.marca || '-'}</TableCell>
-                        <TableCell className="text-xs truncate max-w-[220px]">
-                          {fornecedorNome}
-                        </TableCell>
-                        <TableCell className="text-xs truncate max-w-[220px]">
-                          {divisaoNome}
-                        </TableCell>
-                        <TableCell className="text-xs text-center">
-                          {p.permiteVendaB2b ? 'Sim' : 'Não'}
-                        </TableCell>
-                        <TableCell className="text-xs text-center">
-                          {p.inativo ? 'Sim' : 'Não'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void openEdit(p);
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-red-600 hover:text-red-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteProduct(p);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {PRODUCTS_GRID_COLUMNS.map((column) => (
+                          <TableCell
+                            key={column.key}
+                            style={getColumnStyle(column.key)}
+                            className={cn(
+                              getStickyCellClass(column.key),
+                              getCellClassName(column.key),
+                            )}
+                          >
+                            {renderProductCell(
+                              product,
+                              column.key,
+                              fornecedorNome,
+                              divisaoNome,
+                            )}
+                          </TableCell>
+                        ))}
                       </TableRow>
                     );
                   })
                 )}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[95vw] max-w-5xl max-h-[90dvh] overflow-hidden !flex !flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
@@ -947,7 +1325,7 @@ export function ProdutosTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="caracteristicas" className="flex-1 overflow-hidden flex flex-col">
+          <Tabs defaultValue="caracteristicas" className="flex-1 min-h-0 flex flex-col">
             <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="caracteristicas">Características</TabsTrigger>
               <TabsTrigger value="complementar">Dados complementares</TabsTrigger>
@@ -957,8 +1335,8 @@ export function ProdutosTab() {
               <TabsTrigger value="kit">Kit</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1 mt-2">
-              <TabsContent value="caracteristicas" className="mt-0 space-y-4 px-1">
+            <div className="flex-1 min-h-0 mt-2 overflow-y-scroll pr-1">
+              <TabsContent value="caracteristicas" className="mt-0 space-y-4 px-1 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Código produto</Label>
@@ -1355,7 +1733,7 @@ export function ProdutosTab() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="kit" className="mt-0 px-1 space-y-4">
+              <TabsContent value="kit" className="mt-0 px-1 space-y-4 pb-4">
                 <div className="rounded-md border p-3 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="col-span-1 md:col-span-8">
@@ -1478,7 +1856,7 @@ export function ProdutosTab() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="estoque" className="mt-0 px-1 space-y-4">
+              <TabsContent value="estoque" className="mt-0 px-1 space-y-4 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                   <div className="md:col-span-2">
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Código</Label>
@@ -1733,7 +2111,7 @@ export function ProdutosTab() {
                 </Tabs>
               </TabsContent>
 
-              <TabsContent value="complementar" className="mt-0 px-1 space-y-3">
+              <TabsContent value="complementar" className="mt-0 px-1 space-y-3 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs">Princípio ativo</Label>
@@ -1788,7 +2166,7 @@ export function ProdutosTab() {
                   />
                 </div>
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
 
           <DialogFooter className="pt-2">
