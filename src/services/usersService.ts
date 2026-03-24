@@ -7,6 +7,17 @@ export interface UsuarioCadastro {
   usuario: string;
   nome: string;
   email?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade_id?: number | null;
+  uf?: string | null;
+  cep?: string | null;
+  cnpj_cpf?: string | null;
+  fantasia?: string | null;
+  fone?: string | null;
+  whatsapp?: string | null;
   ativo?: boolean;
   admin?: boolean;
   forca_de_vendas?: boolean;
@@ -21,11 +32,24 @@ export interface UsuarioCadastroFormData {
   nome: string;
   senha?: string;
   email?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade_id?: number | null;
+  uf?: string | null;
+  cep?: string | null;
+  cnpj_cpf?: string | null;
+  fantasia?: string | null;
+  fone?: string | null;
+  whatsapp?: string | null;
   ativo?: boolean;
   admin?: boolean;
   forca_de_vendas?: boolean;
   empresa_master_id?: number | null;
   empresa_ids?: number[];
+  criado_em?: string | null;
+  atualizado_em?: string | null;
 }
 
 function toBoolean(value: any, fallback = false): boolean {
@@ -46,12 +70,41 @@ function toNumberArray(value: any): number[] {
   );
 }
 
+function toNullableText(value: any): string | null {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  return normalized.length ? normalized : null;
+}
+
+function onlyDigits(value: any): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  const digits = String(value).replace(/\D+/g, '');
+  return digits.length ? digits : null;
+}
+
+function toNullableNumber(value: any): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function normalizeUsuario(raw: any): UsuarioCadastro {
   return {
     usuario_id: Number(raw?.usuario_id ?? raw?.id ?? 0),
     usuario: String(raw?.usuario ?? '').trim(),
     nome: String(raw?.nome ?? '').trim(),
     email: raw?.email != null ? String(raw.email).trim() : null,
+    endereco: toNullableText(raw?.endereco),
+    numero: toNullableText(raw?.numero),
+    complemento: toNullableText(raw?.complemento),
+    bairro: toNullableText(raw?.bairro),
+    cidade_id: toNullableNumber(raw?.cidade_id ?? raw?.cidadeId),
+    uf: toNullableText(raw?.uf),
+    cep: onlyDigits(raw?.cep),
+    cnpj_cpf: onlyDigits(raw?.cnpj_cpf ?? raw?.cnpjCpf),
+    fantasia: toNullableText(raw?.fantasia),
+    fone: onlyDigits(raw?.fone),
+    whatsapp: onlyDigits(raw?.whatsapp),
     ativo: toBoolean(raw?.ativo, true),
     admin: toBoolean(raw?.admin, false),
     forca_de_vendas: toBoolean(
@@ -165,7 +218,18 @@ export const usersService = {
         usuario: data.usuario,
         nome: data.nome,
         senha: data.senha,
-        email: data.email || undefined,
+        email: toNullableText(data.email) || undefined,
+        endereco: toNullableText(data.endereco) || undefined,
+        numero: toNullableText(data.numero) || undefined,
+        complemento: toNullableText(data.complemento) || undefined,
+        bairro: toNullableText(data.bairro) || undefined,
+        cidade_id: toNullableNumber(data.cidade_id),
+        uf: toNullableText(data.uf)?.toUpperCase() || undefined,
+        cep: onlyDigits(data.cep) || undefined,
+        cnpj_cpf: onlyDigits(data.cnpj_cpf) || undefined,
+        fantasia: toNullableText(data.fantasia) || undefined,
+        fone: onlyDigits(data.fone) || undefined,
+        whatsapp: onlyDigits(data.whatsapp) || undefined,
         ativo: data.ativo ?? true,
         admin: data.admin ?? false,
         forca_de_vendas: data.forca_de_vendas ?? false,
@@ -196,7 +260,18 @@ export const usersService = {
 
     if (data.usuario !== undefined) payloadData.usuario = data.usuario;
     if (data.nome !== undefined) payloadData.nome = data.nome;
-    if (data.email !== undefined) payloadData.email = data.email;
+    if (data.email !== undefined) payloadData.email = toNullableText(data.email);
+    if (data.endereco !== undefined) payloadData.endereco = toNullableText(data.endereco);
+    if (data.numero !== undefined) payloadData.numero = toNullableText(data.numero);
+    if (data.complemento !== undefined) payloadData.complemento = toNullableText(data.complemento);
+    if (data.bairro !== undefined) payloadData.bairro = toNullableText(data.bairro);
+    if (data.cidade_id !== undefined) payloadData.cidade_id = toNullableNumber(data.cidade_id);
+    if (data.uf !== undefined) payloadData.uf = toNullableText(data.uf)?.toUpperCase() ?? null;
+    if (data.cep !== undefined) payloadData.cep = onlyDigits(data.cep);
+    if (data.cnpj_cpf !== undefined) payloadData.cnpj_cpf = onlyDigits(data.cnpj_cpf);
+    if (data.fantasia !== undefined) payloadData.fantasia = toNullableText(data.fantasia);
+    if (data.fone !== undefined) payloadData.fone = onlyDigits(data.fone);
+    if (data.whatsapp !== undefined) payloadData.whatsapp = onlyDigits(data.whatsapp);
     if (data.senha !== undefined && data.senha.trim()) {
       payloadData.senha = data.senha.trim();
     }

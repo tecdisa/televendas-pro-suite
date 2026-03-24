@@ -13,15 +13,58 @@ import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from
 
 const PAGE_LIMIT = 100;
 
+const onlyDigits = (value: string | null | undefined) =>
+  String(value ?? '').replace(/\D+/g, '');
+
+const maskCep = (value: string | null | undefined) => {
+  const digits = onlyDigits(value).slice(0, 8);
+  return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2').replace(/-$/, '');
+};
+
+const maskCnpjCpf = (value: string | null | undefined) => {
+  const digits = onlyDigits(value);
+  if (digits.length <= 11) {
+    return digits
+      .slice(0, 11)
+      .replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4')
+      .replace(/-$/, '');
+  }
+  return digits
+    .slice(0, 14)
+    .replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5')
+    .replace(/-$/, '');
+};
+
+const maskPhone = (value: string | null | undefined) => {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 10) {
+    return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
+  }
+  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
+};
+
 const initialFormData: UsuarioCadastroFormData = {
   usuario: '',
   nome: '',
   senha: '',
   email: '',
+  endereco: '',
+  numero: '',
+  complemento: '',
+  bairro: '',
+  cidade_id: null,
+  uf: '',
+  cep: '',
+  cnpj_cpf: '',
+  fantasia: '',
+  fone: '',
+  whatsapp: '',
   ativo: true,
   admin: false,
   forca_de_vendas: false,
   empresa_master_id: null,
+  criado_em: null,
+  atualizado_em: null,
 };
 
 const statusLabel = (ativo?: boolean) => (ativo ? 'Ativo' : 'Inativo');
@@ -33,7 +76,7 @@ export function UsuariosTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
+  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('todos');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -103,11 +146,24 @@ export function UsuariosTab() {
         nome: detail.nome || '',
         senha: '',
         email: detail.email || '',
+        endereco: detail.endereco || '',
+        numero: detail.numero || '',
+        complemento: detail.complemento || '',
+        bairro: detail.bairro || '',
+        cidade_id: detail.cidade_id ?? null,
+        uf: detail.uf || '',
+        cep: maskCep(detail.cep || ''),
+        cnpj_cpf: maskCnpjCpf(detail.cnpj_cpf || ''),
+        fantasia: detail.fantasia || '',
+        fone: maskPhone(detail.fone || ''),
+        whatsapp: maskPhone(detail.whatsapp || ''),
         ativo: detail.ativo ?? true,
         admin: detail.admin ?? false,
         forca_de_vendas: detail.forca_de_vendas ?? false,
         empresa_master_id: detail.empresa_master_id ?? null,
         empresa_ids: detail.empresa_ids ?? [],
+        criado_em: detail.criado_em ?? null,
+        atualizado_em: detail.atualizado_em ?? null,
       });
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao carregar usuario');
@@ -143,6 +199,17 @@ export function UsuariosTab() {
         nome: formData.nome.trim(),
         senha: formData.senha?.trim(),
         email: formData.email?.trim().toLowerCase() || null,
+        endereco: formData.endereco?.trim() || null,
+        numero: formData.numero?.trim() || null,
+        complemento: formData.complemento?.trim() || null,
+        bairro: formData.bairro?.trim() || null,
+        cidade_id: formData.cidade_id ?? null,
+        uf: formData.uf?.trim().toUpperCase() || null,
+        cep: formData.cep || null,
+        cnpj_cpf: formData.cnpj_cpf || null,
+        fantasia: formData.fantasia?.trim() || null,
+        fone: formData.fone || null,
+        whatsapp: formData.whatsapp || null,
         ativo: formData.ativo ?? true,
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
@@ -169,6 +236,17 @@ export function UsuariosTab() {
         nome: formData.nome.trim(),
         senha: formData.senha?.trim() || undefined,
         email: formData.email?.trim().toLowerCase() || null,
+        endereco: formData.endereco?.trim() || null,
+        numero: formData.numero?.trim() || null,
+        complemento: formData.complemento?.trim() || null,
+        bairro: formData.bairro?.trim() || null,
+        cidade_id: formData.cidade_id ?? null,
+        uf: formData.uf?.trim().toUpperCase() || null,
+        cep: formData.cep || null,
+        cnpj_cpf: formData.cnpj_cpf || null,
+        fantasia: formData.fantasia?.trim() || null,
+        fone: formData.fone || null,
+        whatsapp: formData.whatsapp || null,
         ativo: formData.ativo ?? true,
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
@@ -262,7 +340,146 @@ export function UsuariosTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.fantasia ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, fantasia: event.target.value }))
+            }
+          />
+        </div>
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            CNPJ/CPF
+          </label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.cnpj_cpf ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                cnpj_cpf: maskCnpjCpf(event.target.value),
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Fone</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.fone ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, fone: maskPhone(event.target.value) }))
+            }
+          />
+        </div>
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Whatsapp</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.whatsapp ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                whatsapp: maskPhone(event.target.value),
+              }))
+            }
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-8">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereco</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.endereco ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, endereco: event.target.value }))
+            }
+          />
+        </div>
         <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Numero</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.numero ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, numero: event.target.value }))
+            }
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.complemento ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, complemento: event.target.value }))
+            }
+          />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.bairro ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, bairro: event.target.value }))
+            }
+          />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.cep ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, cep: maskCep(event.target.value) }))
+            }
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade ID</label>
+          <Input
+            className="h-8 text-sm"
+            inputMode="numeric"
+            value={formData.cidade_id ?? ''}
+            onChange={(event) => {
+              const digits = event.target.value.replace(/\D+/g, '');
+              setFormData((prev) => ({
+                ...prev,
+                cidade_id: digits ? Number(digits) : null,
+              }));
+            }}
+          />
+        </div>
+        <div className="col-span-1 md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
+          <Input
+            className="h-8 text-sm uppercase"
+            maxLength={2}
+            value={formData.uf ?? ''}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                uf: event.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase(),
+              }))
+            }
+          />
+        </div>
+        <div className="col-span-1 md:col-span-6">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
             Empresa Master ID
           </label>
@@ -279,8 +496,32 @@ export function UsuariosTab() {
             }}
           />
         </div>
+      </div>
 
-        <div className="col-span-1 md:col-span-8 flex items-end pb-1 gap-6">
+      {(formData.criado_em || formData.atualizado_em) && (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Criado em</label>
+            <Input
+              className="h-8 text-sm bg-muted"
+              value={formData.criado_em ? new Date(formData.criado_em).toLocaleString('pt-BR') : ''}
+              readOnly
+            />
+          </div>
+          <div className="col-span-1 md:col-span-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              Atualizado em
+            </label>
+            <Input
+              className="h-8 text-sm bg-muted"
+              value={formData.atualizado_em ? new Date(formData.atualizado_em).toLocaleString('pt-BR') : ''}
+              readOnly
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-end pb-1 gap-6">
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={formData.ativo ?? true}
@@ -308,7 +549,6 @@ export function UsuariosTab() {
             />
             Forca de vendas
           </label>
-        </div>
       </div>
     </div>
   );

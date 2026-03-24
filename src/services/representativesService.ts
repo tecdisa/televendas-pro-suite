@@ -20,7 +20,9 @@ export interface Representante {
   email?: string;
   data_nascimento?: string | null;
   supervisor?: string;
+  supervisor_id?: number | null;
   gerente?: string;
+  gerente_id?: number | null;
   comissao?: number;
   objetivo_de_venda?: number;
   limite_de_troca?: number;
@@ -30,6 +32,8 @@ export interface Representante {
   bloqueia_alteracao_agenda?: boolean;
   quantidade_maxima_pedidos_retidos_para_sincronizar?: number;
   observacao?: string;
+  empresa_id?: number | null;
+  usuario_id?: number | null;
   inativo?: boolean;
 }
 
@@ -57,7 +61,9 @@ export interface RepresentanteFormData {
   email?: string;
   data_nascimento?: string | null;
   supervisor?: string;
+  supervisor_id?: number | null;
   gerente?: string;
+  gerente_id?: number | null;
   comissao?: number;
   objetivo_de_venda?: number;
   limite_de_troca?: number;
@@ -67,6 +73,8 @@ export interface RepresentanteFormData {
   bloqueia_alteracao_agenda?: boolean;
   quantidade_maxima_pedidos_retidos_para_sincronizar?: number;
   observacao?: string;
+  empresa_id?: number | null;
+  usuario_id?: number | null;
   inativo?: boolean;
 }
 
@@ -133,7 +141,9 @@ function normalizeRepresentante(raw: any): Representante {
     email: raw.email ?? '',
     data_nascimento: raw.data_nascimento ?? raw.dataNascimento ?? null,
     supervisor: raw.supervisor ?? '',
+    supervisor_id: raw.supervisor_id ?? raw.supervisorId ?? null,
     gerente: raw.gerente ?? '',
+    gerente_id: raw.gerente_id ?? raw.gerenteId ?? null,
     comissao: parseNumber(raw.comissao, 0),
     objetivo_de_venda: parseNumber(
       raw.objetivo_de_venda ?? raw.objetivoDeVenda,
@@ -149,6 +159,8 @@ function normalizeRepresentante(raw: any): Representante {
     bloqueia_alteracao_agenda: raw.bloqueia_alteracao_agenda ?? raw.bloqueiaAlteracaoAgenda ?? false,
     quantidade_maxima_pedidos_retidos_para_sincronizar: raw.quantidade_maxima_pedidos_retidos_para_sincronizar ?? raw.quantidadeMaximaPedidosRetidosParaSincronizar ?? 0,
     observacao: raw.observacao ?? raw.obs ?? '',
+    empresa_id: raw.empresa_id ?? raw.empresaId ?? null,
+    usuario_id: raw.usuario_id ?? raw.usuarioId ?? null,
     inativo: raw.inativo ?? false,
   };
 }
@@ -265,7 +277,9 @@ export const representativesService = {
         email: data.email || undefined,
         data_nascimento: data.data_nascimento || null,
         supervisor: data.supervisor || undefined,
+        supervisor_id: data.supervisor_id ?? undefined,
         gerente: data.gerente || undefined,
+        gerente_id: data.gerente_id ?? undefined,
         comissao: data.comissao ?? undefined,
         objetivo_de_venda: data.objetivo_de_venda ?? undefined,
         limite_de_troca: data.limite_de_troca ?? undefined,
@@ -275,6 +289,7 @@ export const representativesService = {
         bloqueia_alteracao_agenda: data.bloqueia_alteracao_agenda ?? false,
         quantidade_maxima_pedidos_retidos_para_sincronizar: data.quantidade_maxima_pedidos_retidos_para_sincronizar ?? undefined,
         observacao: data.observacao || undefined,
+        empresa_id: data.empresa_id ?? undefined,
         inativo: data.inativo ?? false,
       },
     };
@@ -310,6 +325,10 @@ export const representativesService = {
     if (data.limite_de_troca !== undefined)
       payload.limite_de_troca = data.limite_de_troca;
     if (data.setor_id !== undefined) payload.setor_id = data.setor_id;
+    if (data.gerente !== undefined) payload.gerente = data.gerente;
+    if (data.gerente_id !== undefined) payload.gerente_id = data.gerente_id;
+    if (data.supervisor_id !== undefined) payload.supervisor_id = data.supervisor_id;
+    if (data.empresa_id !== undefined) payload.empresa_id = data.empresa_id;
     if (data.rotas_liberadas !== undefined)
       payload.rotas_liberadas = data.rotas_liberadas;
     if (data.liberado_debito_credito !== undefined)

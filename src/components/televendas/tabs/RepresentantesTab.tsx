@@ -82,7 +82,9 @@ const initialFormData: RepresentanteFormData = {
   email: '',
   data_nascimento: null,
   supervisor: '',
+  supervisor_id: null,
   gerente: '',
+  gerente_id: null,
   comissao: 0,
   objetivo_de_venda: 0,
   limite_de_troca: 0,
@@ -92,6 +94,8 @@ const initialFormData: RepresentanteFormData = {
   bloqueia_alteracao_agenda: false,
   quantidade_maxima_pedidos_retidos_para_sincronizar: 0,
   observacao: '',
+  empresa_id: null,
+  usuario_id: null,
   inativo: false,
 };
 
@@ -405,7 +409,9 @@ export function RepresentantesTab() {
           email: detail.email || '',
           data_nascimento: detail.data_nascimento || null,
           supervisor: detail.supervisor || '',
+          supervisor_id: detail.supervisor_id ?? null,
           gerente: detail.gerente || '',
+          gerente_id: detail.gerente_id ?? null,
           comissao: detail.comissao ?? 0,
           objetivo_de_venda: detail.objetivo_de_venda ?? 0,
           limite_de_troca: detail.limite_de_troca ?? 0,
@@ -415,6 +421,8 @@ export function RepresentantesTab() {
           bloqueia_alteracao_agenda: detail.bloqueia_alteracao_agenda ?? false,
           quantidade_maxima_pedidos_retidos_para_sincronizar: detail.quantidade_maxima_pedidos_retidos_para_sincronizar ?? 0,
           observacao: detail.observacao || '',
+          empresa_id: detail.empresa_id ?? null,
+          usuario_id: detail.usuario_id ?? null,
           inativo: detail.inativo ?? false,
         };
         setFormData(nextData);
@@ -636,18 +644,47 @@ export function RepresentantesTab() {
       <TabsContent value="config" className="space-y-4 mt-4">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
             <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.supervisor}
-              readOnly
+              className="h-8 text-sm"
+              value={formData.gerente}
+              onChange={(e) => setFormData({ ...formData, gerente: e.target.value })}
+            />
+          </div>
+          <div className="col-span-1 md:col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente ID</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.gerente_id ?? ''}
+              onChange={(e) => setFormData({ ...formData, gerente_id: e.target.value ? Number(e.target.value) : null })}
+            />
+          </div>
+          <div className="col-span-1 md:col-span-3">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor ID</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.supervisor_id ?? ''}
+              onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value ? Number(e.target.value) : null })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="col-span-1 md:col-span-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresa ID</label>
+            <Input
+              type="number"
+              className="h-8 text-sm"
+              value={formData.empresa_id ?? ''}
+              onChange={(e) => setFormData({ ...formData, empresa_id: e.target.value ? Number(e.target.value) : null })}
             />
           </div>
           <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario ID</label>
             <Input
               className="h-8 text-sm bg-muted"
-              value={formData.gerente}
+              value={formData.usuario_id ?? ''}
               readOnly
             />
           </div>
