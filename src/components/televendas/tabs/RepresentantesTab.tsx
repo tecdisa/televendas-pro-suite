@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, UserCheck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Search, UserCheck, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
@@ -104,41 +104,35 @@ export function RepresentantesTab() {
   const [search, setSearch] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [sectionTab, setSectionTab] = useState<'pesquisa' | 'pastas'>('pesquisa');
-  const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RepresentanteFormData>(initialFormData);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
-  const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
+  const [pendingClose, setPendingClose] = useState<'edit' | null>(null);
   const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
   const setFormSnapshot = (data: RepresentanteFormData) => {
     formSnapshotRef.current = JSON.stringify(data);
   };
   const isFormDirty = () => JSON.stringify(formData) !== formSnapshotRef.current;
-  const closeDialog = (type: 'create' | 'edit') => {
-    if (type === 'create') setCreateOpen(false);
-    else setEditOpen(false);
+  const closeDialog = () => {
+    setEditOpen(false);
   };
-  const requestCloseDialog = (type: 'create' | 'edit') => {
+  const requestCloseDialog = () => {
     if (isFormDirty()) {
-      setPendingClose(type);
+      setPendingClose('edit');
       setShowConfirmClose(true);
       return;
     }
-    closeDialog(type);
+    closeDialog();
   };
-  const handleDialogOpenChange = (type: 'create' | 'edit') => (nextOpen: boolean) => {
-    if (!nextOpen) {
-      requestCloseDialog(type);
-      return;
-    }
-    if (type === 'create') setCreateOpen(true);
-    else setEditOpen(true);
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) return requestCloseDialog();
+    setEditOpen(true);
   };
   const handleConfirmClose = () => {
-    if (pendingClose) closeDialog(pendingClose);
+    if (pendingClose) closeDialog();
     setPendingClose(null);
     setShowConfirmClose(false);
   };
@@ -330,19 +324,19 @@ export function RepresentantesTab() {
 
   // Carregar UFs quando abrir os dialogs de criação/edição
   useEffect(() => {
-    if (createOpen || editOpen) {
+    if (editOpen) {
       loadUfs();
     }
-  }, [createOpen, editOpen]);
+  }, [editOpen]);
 
   // Carregar cidades quando UF mudar
   useEffect(() => {
-    if (formData.uf && (createOpen || editOpen)) {
+    if (formData.uf && editOpen) {
       loadCidades(formData.uf);
     } else {
       setCidadesApi([]);
     }
-  }, [formData.uf, createOpen, editOpen]);
+  }, [formData.uf, editOpen]);
 
   // Auto-seleciona cidade pelo nome quando as cidades são carregadas (após CNPJ lookup)
   useEffect(() => {
@@ -383,11 +377,6 @@ export function RepresentantesTab() {
     setEditId(null);
     setPendingCidadeNome('');
     if (updateSnapshot) setFormSnapshot(nextData);
-  };
-
-  const openCreate = () => {
-    resetForm(true);
-    setCreateOpen(true);
   };
 
   const openEdit = async (r: Representante) => {
@@ -439,31 +428,8 @@ export function RepresentantesTab() {
     }
   };
 
-  const handleCreate = async () => {
-    if (!formData.nome_representante.trim()) {
-      toast.error('Preencha o campo obrigatório: Nome');
-      return;
-    }
-    setFormLoading(true);
-    try {
-      await representativesService.create(formData);
-      toast.success('Força de vendas criada com sucesso');
-      setCreateOpen(false);
-      resetForm();
-      loadRepresentantes(true);
-    } catch (e: any) {
-      toast.error(e?.message || 'Erro ao criar força de vendas');
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
   const handleUpdate = async () => {
     if (!editId) return;
-    if (!formData.nome_representante.trim()) {
-      toast.error('Preencha o campo obrigatório: Nome');
-      return;
-    }
     setFormLoading(true);
     try {
       await representativesService.update(editId, formData);
@@ -516,50 +482,35 @@ export function RepresentantesTab() {
           <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
             <Input
-              className="h-8 text-sm bg-muted"
+              className="h-8 text-sm"
               value={formData.codigo_representante}
-              readOnly
+              onChange={(e) => setFormData({ ...formData, codigo_representante: toUpperValue(e.target.value) })}
             />
           </div>
           <div className="col-span-1 md:col-span-9">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.nome_representante}
-              onChange={(e) => setFormData({ ...formData, nome_representante: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF/CNPJ</label>
-            <div className="flex gap-1">
-              <Input
-                className="h-8 text-sm flex-1"
-                value={formData.cnpj_cpf}
-                onChange={(e) => {
-                  const next = maskCnpjCpf(e.target.value);
-                  setFormData({ ...formData, cnpj_cpf: next });
-                  cnpjLookupRef.current?.(next);
-                }}
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => cnpjLookupRef.current?.(formData.cnpj_cpf || '')}
-                disabled={cnpjLookupLoading}
-              >
-                {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
+            <Input
+              className="h-8 text-sm bg-muted"
+              value={formData.cnpj_cpf}
+              readOnly
+            />
           </div>
           <div className="col-span-1 md:col-span-8">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.fantasia}
-              onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
         </div>
@@ -567,26 +518,26 @@ export function RepresentantesTab() {
           <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.fone}
-              onChange={(e) => setFormData({ ...formData, fone: maskPhone(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.whatsapp}
-              onChange={(e) => setFormData({ ...formData, whatsapp: maskPhone(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Data Nascimento</label>
             <Input
               type="date"
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.data_nascimento || ''}
-              onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value || null })}
+              readOnly
             />
           </div>
         </div>
@@ -595,9 +546,9 @@ export function RepresentantesTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
             <Input
               type="email"
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })}
+              readOnly
             />
           </div>
         </div>
@@ -607,41 +558,26 @@ export function RepresentantesTab() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           <div className="col-span-1 md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-            <div className="flex gap-1">
-              <Input
-                className="h-8 text-sm flex-1"
-                value={formData.cep}
-                onChange={(e) => {
-                  const next = maskCep(e.target.value);
-                  setFormData({ ...formData, cep: next });
-                  cepLookupRef.current?.(next);
-                }}
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => cepLookupRef.current?.(formData.cep || '')}
-                disabled={cepLookupLoading}
-              >
-                {cepLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
+            <Input
+              className="h-8 text-sm bg-muted"
+              value={formData.cep}
+              readOnly
+            />
           </div>
           <div className="col-span-1 md:col-span-7">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.endereco}
-              onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.numero}
-              onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+              readOnly
             />
           </div>
         </div>
@@ -649,28 +585,24 @@ export function RepresentantesTab() {
           <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.complemento}
-              onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-1 md:col-span-4">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.bairro}
-              onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-1 md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
             <Select
               value={formData.uf || ''}
-              onValueChange={(v) => {
-                setFormData({ ...formData, uf: v, cidade_id: null });
-                setPendingCidadeNome('');
-              }}
-              disabled={ufsLoading}
+              disabled
             >
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
@@ -686,8 +618,7 @@ export function RepresentantesTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
             <Select
               value={formData.cidade_id ? String(formData.cidade_id) : ''}
-              onValueChange={(v) => setFormData({ ...formData, cidade_id: parseInt(v) || null })}
-              disabled={cidadesLoading || !formData.uf}
+              disabled
             >
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={cidadesLoading ? '...' : (formData.uf ? 'Sel.' : 'UF')} />
@@ -707,17 +638,17 @@ export function RepresentantesTab() {
           <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.supervisor}
-              onChange={(e) => setFormData({ ...formData, supervisor: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
           <div className="col-span-1 md:col-span-6">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
             <Input
-              className="h-8 text-sm"
+              className="h-8 text-sm bg-muted"
               value={formData.gerente}
-              onChange={(e) => setFormData({ ...formData, gerente: toUpperValue(e.target.value) })}
+              readOnly
             />
           </div>
         </div>
@@ -827,16 +758,10 @@ export function RepresentantesTab() {
         <TabsContent value="pesquisa" className="mt-0">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <UserCheck className="h-5 w-5" />
-                  Força de Vendas ({representantes.length})
-                </CardTitle>
-                <Button onClick={openCreate} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Força de Vendas
-                </Button>
-              </div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <UserCheck className="h-5 w-5" />
+                Força de Vendas ({representantes.length})
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row gap-2 mb-4">
@@ -973,25 +898,8 @@ export function RepresentantesTab() {
         </TabsContent>
       </Tabs>
 
-      {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={handleDialogOpenChange('create')}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nova Força de Vendas</DialogTitle>
-          </DialogHeader>
-          {formContent}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => requestCloseDialog('create')}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={formLoading}>
-              {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={handleDialogOpenChange('edit')}>
+      <Dialog open={editOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Força de Vendas</DialogTitle>
@@ -1004,7 +912,7 @@ export function RepresentantesTab() {
             formContent
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => requestCloseDialog('edit')}>Cancelar</Button>
+            <Button variant="outline" onClick={requestCloseDialog}>Cancelar</Button>
             <Button onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar

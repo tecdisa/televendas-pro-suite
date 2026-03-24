@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2 } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
@@ -13,6 +13,7 @@ import {
   ClientesTab,
   FornecedoresTab,
   RepresentantesTab,
+  UsuariosTab,
   CidadesTab,
   GruposTab,
   DivisoesTab,
@@ -42,6 +43,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   clientes: { title: 'Cadastro de Clientes', icon: Users },
   fornecedores: { title: 'Cadastro de Fornecedores', icon: Truck },
   representantes: { title: 'Cadastro de Força de Vendas', icon: UserCheck },
+  usuarios: { title: 'Cadastro de Usuarios', icon: UserRoundCog },
   cidades: { title: 'Cadastro de Cidades', icon: MapPinned },
   grupos: { title: 'Grupos de Produtos', icon: Layers },
   divisoes: { title: 'Divisões de Produtos', icon: Grid3X3 },
@@ -52,7 +54,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   rotas: { title: 'Rotas de Clientes', icon: Route },
   produtos: { title: 'Cadastro de Produtos', icon: Layers },
   estoques: { title: 'Cadastro de Estoques', icon: Package },
-  'clientes-representante': { title: 'Clientes por Força de Vendas', icon: Users },
+  'clientes-representante': { title: 'Clientes por Fornecedor', icon: Users },
 };
 
 const Televendas = () => {
@@ -95,6 +97,8 @@ const Televendas = () => {
         return <ErrorBoundary><FornecedoresTab /></ErrorBoundary>;
       case 'representantes':
         return <ErrorBoundary><RepresentantesTab /></ErrorBoundary>;
+      case 'usuarios':
+        return <ErrorBoundary><UsuariosTab /></ErrorBoundary>;
       case 'cidades':
         return <ErrorBoundary><CidadesTab /></ErrorBoundary>;
       case 'grupos':

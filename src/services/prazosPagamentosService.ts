@@ -86,9 +86,9 @@ export const prazosPagamentosService = {
     params.set('limit', String(limit));
     params.set('status', status);
     if (status === 'todos') params.set('incluirInativos', 'true');
-    if (filters?.cartao !== undefined) params.set('cartao', String(filters.cartao));
-    if (filters?.mobile !== undefined) params.set('mobile', String(filters.mobile));
-    if (filters?.b2b !== undefined) params.set('b2b', String(filters.b2b));
+    if (filters?.cartao === true) params.set('cartao', 'true');
+    if (filters?.mobile === true) params.set('mobile', 'true');
+    if (filters?.b2b === true) params.set('b2b', 'true');
 
     const url = `${API_BASE}/api/prazos-pagamentos?${params.toString()}`;
     const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });

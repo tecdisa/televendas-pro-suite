@@ -182,6 +182,23 @@ export function PrazosPagamentosTab() {
     }
   };
 
+  const matchesCurrentFilters = (prazo: PrazoPagamento) => {
+    const term = search.trim().toUpperCase();
+    if (term) {
+      const codigo = toUpperValue(prazo.codigo_prazopagto);
+      const descricao = toUpperValue(prazo.descricao_prazo_pagto);
+      if (!codigo.includes(term) && !descricao.includes(term)) return false;
+    }
+
+    if (filtroStatus === 'ativos' && prazo.inativo === true) return false;
+    if (filtroStatus === 'inativos' && prazo.inativo !== true) return false;
+    if (filterCartao && prazo.somente_cartao !== true) return false;
+    if (filterMobile && prazo.liberado_app_mobile !== true) return false;
+    if (filterB2b && prazo.liberado_b2b !== true) return false;
+
+    return true;
+  };
+
   const handleUpdate = async () => {
     if (!editId) return;
     if (!formData.descricao_prazo_pagto.trim()) {
@@ -207,11 +224,25 @@ export function PrazosPagamentosTab() {
         ...formData,
         prazos_em_dias: prazosEmDiasValue,
       };
-      await prazosPagamentosService.update(editId, dataToSend);
+      const updated = await prazosPagamentosService.update(editId, dataToSend);
       toast.success('Prazo de pagamento atualizado com sucesso');
       setEditOpen(false);
       resetForm();
-      loadPrazos(true);
+      setPrazos((prev) => {
+        const existsInCurrentList = prev.some((p) => p.prazo_pagto_id === editId);
+        if (!existsInCurrentList) return prev;
+        if (!matchesCurrentFilters(updated))
+          return prev.filter((p) => p.prazo_pagto_id !== editId);
+
+        return prev
+          .map((p) => (p.prazo_pagto_id === editId ? updated : p))
+          .sort((a, b) =>
+            (a.descricao_prazo_pagto || '').localeCompare(
+              b.descricao_prazo_pagto || '',
+              'pt-BR',
+            ),
+          );
+      });
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao atualizar prazo de pagamento');
     } finally {

@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   LayoutDashboard,
+  UserRoundCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,15 +51,18 @@ export const navGroups: NavGroup[] = [
         icon: Users,
         children: [
           { title: 'Todos', tab: 'clientes', icon: Users },
-          { title: 'Por Força de Vendas', tab: 'clientes-representante', icon: UserCheck },
+          { title: 'Por Fornecedor', tab: 'clientes-representante', icon: UserCheck },
           { title: 'Redes', tab: 'redes', icon: Network },
+          { title: 'Cidades', tab: 'cidades', icon: MapPinned },
           { title: 'Segmentos Venda', tab: 'segmentos', icon: Target },
           { title: 'Rotas Clientes', tab: 'rotas', icon: Route },
+          { title: 'Prazos', tab: 'prazos', icon: Clock },
+          { title: 'Formas Pagamento', tab: 'formas-pagamento', icon: CreditCard },
         ],
       },
       { title: 'Fornecedores', tab: 'fornecedores', icon: Truck },
       { title: 'Força de Vendas', tab: 'representantes', icon: UserCheck },
-      { title: 'Cidades', tab: 'cidades', icon: MapPinned },
+      { title: 'Usuarios', tab: 'usuarios', icon: UserRoundCog },
       {
         title: 'Produtos',
         icon: Package,
@@ -67,14 +71,6 @@ export const navGroups: NavGroup[] = [
           { title: 'Grupos', tab: 'grupos', icon: Layers },
           { title: 'Divisões', tab: 'divisoes', icon: Grid3X3 },
           { title: 'Estoques', tab: 'estoques', icon: Package },
-        ],
-      },
-      {
-        title: 'Financeiro',
-        icon: CreditCard,
-        children: [
-          { title: 'Prazos', tab: 'prazos', icon: Clock },
-          { title: 'Formas Pagamento', tab: 'formas-pagamento', icon: CreditCard },
         ],
       },
     ],

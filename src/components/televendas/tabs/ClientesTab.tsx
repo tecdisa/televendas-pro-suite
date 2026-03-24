@@ -1379,7 +1379,7 @@ const validateFormData = (data: ClientFormData): string[] => {
   if (!isValidId(data.formaPagtoId)) errors.push('Selecione a forma de pagamento.');
   if (!isValidId(data.prazoPagtoId)) errors.push('Selecione o prazo de pagamento.');
   if (!Array.isArray(data.tabelaIds) || data.tabelaIds.length === 0) errors.push('Selecione ao menos uma tabela de preços.');
-  if (!Array.isArray(data.representantes) || data.representantes.length === 0) errors.push('Selecione a força de vendas.');
+  if (!Array.isArray(data.representantes) || data.representantes.length === 0) errors.push('Selecione o representante.');
 
   const emailValue = String(data.email ?? '').trim();
   if (emailValue && !isValidEmail(emailValue)) errors.push('Email inválido.');
@@ -3727,10 +3727,10 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                {/* Força de Vendas */}
+                {/* Representante */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-6">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Força de Vendas *</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
                     <Dialog open={repSearchOpen && createOpen} onOpenChange={setRepSearchOpen}>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="w-full justify-start h-8 text-sm">
@@ -3739,7 +3739,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </DialogTrigger>
                       <DialogContent className="w-[95vw] sm:max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Buscar Força de Vendas</DialogTitle>
+                          <DialogTitle>Buscar representante</DialogTitle>
                         </DialogHeader>
                         <Input
                           placeholder="Digite nome ou código..."
@@ -3754,11 +3754,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                           }
                         }}>
                           {loadingReps ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">Carregando força de vendas...</div>
+                            <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
                           ) : repsError ? (
                             <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
                           ) : representatives.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma força de vendas encontrada</div>
+                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
                           ) : (
                             <div className="space-y-1">
                               {representatives.map((r) => {
@@ -4581,7 +4581,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </Dialog>
                     </div>
                     <div className="col-span-1 md:col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Força de Vendas *</label>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
                       <Dialog open={repSearchOpen && editOpen} onOpenChange={setRepSearchOpen}>
                         <DialogTrigger asChild>
                           <Button variant="outline" className="w-full justify-start h-8 text-sm">
@@ -4590,7 +4590,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </DialogTrigger>
                         <DialogContent className="w-[95vw] sm:max-w-md">
                           <DialogHeader>
-                            <DialogTitle>Buscar Força de Vendas</DialogTitle>
+                            <DialogTitle>Buscar representante</DialogTitle>
                           </DialogHeader>
                           <Input
                             placeholder="Digite nome ou código..."
@@ -4605,11 +4605,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                             }
                           }}>
                             {loadingReps ? (
-                              <div className="py-6 text-center text-sm text-muted-foreground">Carregando força de vendas...</div>
+                              <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
                             ) : repsError ? (
                               <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
                           ) : representatives.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma força de vendas encontrada</div>
+                            <div className="py-6 text-center text-sm text-muted-foreground">Nenhum representante encontrado</div>
                           ) : (
                             <div className="space-y-1">
                               {representatives.map((r) => {

@@ -4,6 +4,7 @@ import { apiClient } from '@/utils/apiClient';
 
 export interface Product {
   id: number;
+  empresaId?: number;
   codigoProduto?: string;
   descricao: string;
   un: string;
@@ -215,6 +216,7 @@ function normalizeProduct(raw: any): Product {
 
   return {
     id: Number(id) || 0,
+    empresaId: numberOrUndefined(raw?.empresa_id ?? raw?.empresaId),
     codigoProduto: codigoProduto ? String(codigoProduto).trim() : undefined,
     descricao: String(descricao || '').trim(),
     un: String(un || '').trim() || 'UN',

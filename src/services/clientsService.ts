@@ -1005,7 +1005,7 @@ export const clientsService = {
       const url = `${API_BASE}/api/clientes/por-forca-de-vendas?${qs.toString()}`;
       const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
       if (!res.ok) {
-        let message = 'Falha ao buscar clientes por força de vendas';
+        let message = 'Falha ao buscar clientes por fornecedor';
         try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
         return Promise.reject(message);
       }

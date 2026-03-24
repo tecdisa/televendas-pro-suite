@@ -301,7 +301,28 @@ export const representativesService = {
   async update(id: number, data: Partial<RepresentanteFormData>): Promise<Representante> {
     const empresaId = await getEmpresaId();
     const url = `${API_BASE}/api/forca-de-vendas/${id}?empresaId=${empresaId}`;
-    const body = { data };
+    const payload: Partial<RepresentanteFormData> = {};
+    if (data.codigo_representante !== undefined)
+      payload.codigo_representante = data.codigo_representante;
+    if (data.comissao !== undefined) payload.comissao = data.comissao;
+    if (data.objetivo_de_venda !== undefined)
+      payload.objetivo_de_venda = data.objetivo_de_venda;
+    if (data.limite_de_troca !== undefined)
+      payload.limite_de_troca = data.limite_de_troca;
+    if (data.setor_id !== undefined) payload.setor_id = data.setor_id;
+    if (data.rotas_liberadas !== undefined)
+      payload.rotas_liberadas = data.rotas_liberadas;
+    if (data.liberado_debito_credito !== undefined)
+      payload.liberado_debito_credito = data.liberado_debito_credito;
+    if (data.bloqueia_alteracao_agenda !== undefined)
+      payload.bloqueia_alteracao_agenda = data.bloqueia_alteracao_agenda;
+    if (data.quantidade_maxima_pedidos_retidos_para_sincronizar !== undefined)
+      payload.quantidade_maxima_pedidos_retidos_para_sincronizar =
+        data.quantidade_maxima_pedidos_retidos_para_sincronizar;
+    if (data.observacao !== undefined) payload.observacao = data.observacao;
+    if (data.inativo !== undefined) payload.inativo = data.inativo;
+
+    const body = { data: payload };
 
     const res = await apiClient.fetch(url, {
       method: 'PUT',
