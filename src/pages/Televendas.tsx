@@ -54,7 +54,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   rotas: { title: 'Rotas de Clientes', icon: Route },
   produtos: { title: 'Cadastro de Produtos', icon: Layers },
   estoques: { title: 'Cadastro de Estoques', icon: Package },
-  'clientes-representante': { title: 'Clientes por Fornecedor', icon: Users },
+  'clientes-representante': { title: 'Clientes por Representante', icon: Users },
 };
 
 const Televendas = () => {

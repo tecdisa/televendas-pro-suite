@@ -68,7 +68,7 @@ const menuItems: MenuItem[] = [
       { title: 'Formas Pagamento', path: '/televendas?tab=formas-pagamento', icon: CreditCard },
       { title: 'Segmentos Venda', path: '/televendas?tab=segmentos', icon: Target },
       { title: 'Rotas Clientes', path: '/televendas?tab=rotas', icon: Route },
-      { title: 'Clientes por Fornecedor', path: '/televendas?tab=clientes-representante', icon: Users },
+      { title: 'Clientes por Representante', path: '/televendas?tab=clientes-representante', icon: Users },
     ],
   },
 ];

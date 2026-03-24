@@ -68,7 +68,7 @@ export function ClientesPorRepresentanteTab() {
       const result = await representativesService.getAll(query, 1, 200);
       setRepresentantes(result.data);
     } catch (e: any) {
-      toast.error('Erro ao carregar fornecedor');
+      toast.error('Erro ao carregar representante');
     } finally {
       setRepLoading(false);
     }
@@ -118,7 +118,7 @@ export function ClientesPorRepresentanteTab() {
       });
       setClients(result);
     } catch (e: any) {
-      toast.error('Erro ao carregar clientes do fornecedor');
+      toast.error('Erro ao carregar clientes do representante');
     } finally {
       setClientsLoading(false);
     }
@@ -268,7 +268,7 @@ export function ClientesPorRepresentanteTab() {
 
   const handleCopyConfirm = async () => {
     if (!selectedRep || !copyFromRep) {
-      toast.error('Selecione um fornecedor de origem');
+      toast.error('Selecione um representante de origem');
       return;
     }
     setCopyLoading(true);
@@ -293,7 +293,7 @@ export function ClientesPorRepresentanteTab() {
   // Remove client from representative
   const handleRemoveClients = async () => {
     if (!selectedRep || selectedClientIds.size === 0) return;
-    if (!confirm(`Deseja remover ${selectedClientIds.size} cliente(s) deste fornecedor?`)) return;
+    if (!confirm(`Deseja remover ${selectedClientIds.size} cliente(s) deste representante?`)) return;
     try {
       const promises = Array.from(selectedClientIds).map(clientId =>
         representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id)
@@ -324,9 +324,9 @@ export function ClientesPorRepresentanteTab() {
 
   return (
     <div className="space-y-4">
-      {/* Fornecedor - seleção */}
+      {/* Representante - seleção */}
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Fornecedor:</label>
+        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Representante:</label>
         <Select
           value={selectedRep ? String(selectedRep.representante_id) : ''}
           onValueChange={(val) => {
@@ -335,7 +335,7 @@ export function ClientesPorRepresentanteTab() {
           }}
         >
           <SelectTrigger className="h-9 text-sm w-full sm:w-[360px]">
-            <SelectValue placeholder={repLoading ? 'Carregando...' : 'Selecione um fornecedor'} />
+            <SelectValue placeholder={repLoading ? 'Carregando...' : 'Selecione um representante'} />
           </SelectTrigger>
           <SelectContent>
             <div className="px-2 py-1.5">
@@ -584,14 +584,14 @@ export function ClientesPorRepresentanteTab() {
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
         <DialogContent className="w-[95vw] max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Copiar clientes de outro fornecedor</DialogTitle>
+            <DialogTitle>Copiar clientes de outro representante</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 flex-1 overflow-auto">
             {!copyFromRep ? (
               <>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Buscar fornecedor..."
+                    placeholder="Buscar representante..."
                     value={copyRepSearch}
                     onChange={e => setCopyRepSearch(e.target.value)}
                     className="h-8 text-sm max-w-md"
@@ -601,7 +601,7 @@ export function ClientesPorRepresentanteTab() {
                   {copyRepLoading ? (
                     <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                   ) : filteredCopyReps.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum fornecedor encontrado</p>
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum representante encontrado</p>
                   ) : (
                     <Table>
                       <TableHeader>
