@@ -325,7 +325,6 @@ export const representativesService = {
     if (data.limite_de_troca !== undefined)
       payload.limite_de_troca = data.limite_de_troca;
     if (data.setor_id !== undefined) payload.setor_id = data.setor_id;
-    if (data.gerente !== undefined) payload.gerente = data.gerente;
     if (data.gerente_id !== undefined) payload.gerente_id = data.gerente_id;
     if (data.supervisor_id !== undefined) payload.supervisor_id = data.supervisor_id;
     if (data.empresa_id !== undefined) payload.empresa_id = data.empresa_id;

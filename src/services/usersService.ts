@@ -152,18 +152,27 @@ async function getEmpresaId(): Promise<number> {
 }
 
 export const usersService = {
-  async getAll(
-    query?: string,
-    page = 1,
-    limit = 100,
-    status: 'ativos' | 'inativos' | 'todos' = 'ativos',
+  async getByEmpresa(
+    empresaId: number,
+    options?: {
+      query?: string;
+      page?: number;
+      limit?: number;
+      status?: 'ativos' | 'inativos' | 'todos';
+    },
   ): Promise<{ data: UsuarioCadastro[]; page: number; limit: number; total: number }> {
-    const empresaId = await getEmpresaId();
+    if (!empresaId) {
+      return { data: [], page: 1, limit: options?.limit ?? 100, total: 0 };
+    }
+
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 100;
+    const status = options?.status ?? 'ativos';
     const params = new URLSearchParams();
     params.set('page', String(page));
     params.set('limit', String(limit));
     params.set('status', status);
-    if (query?.trim()) params.set('q', query.trim());
+    if (options?.query?.trim()) params.set('q', options.query.trim());
     if (status === 'todos') params.set('incluirInativos', 'true');
 
     const url = `${API_BASE}/api/usuarios/empresa/${empresaId}?${params.toString()}`;
@@ -188,6 +197,16 @@ export const usersService = {
       limit: Number(json?.limit ?? limit),
       total: Number(json?.total ?? arr.length),
     };
+  },
+
+  async getAll(
+    query?: string,
+    page = 1,
+    limit = 100,
+    status: 'ativos' | 'inativos' | 'todos' = 'ativos',
+  ): Promise<{ data: UsuarioCadastro[]; page: number; limit: number; total: number }> {
+    const empresaId = await getEmpresaId();
+    return this.getByEmpresa(empresaId, { query, page, limit, status });
   },
 
   async getById(id: number): Promise<UsuarioCadastro | null> {

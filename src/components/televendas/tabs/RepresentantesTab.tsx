@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -17,47 +18,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, UserCheck, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Search, UserCheck, Pencil, Trash2, Loader2, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { representativesService, Representante, RepresentanteFormData } from '@/services/representativesService';
-import { metadataService, Uf, Cidade } from '@/services/metadataService';
-import { clientsService } from '@/services/clientsService';
+import { representativesService, Representante } from '@/services/representativesService';
+import { usersService, UsuarioCadastro } from '@/services/usersService';
+import { metadataService, Rota } from '@/services/metadataService';
 import { RepresentantesPastasTab } from './RepresentantesPastasTab';
-
-const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), wait);
-  };
-};
-
-const normalizeCnpj = (value: string) => value.replace(/\D/g, '').slice(0, 14);
-const normalizeCep = (value: string) => value.replace(/\D/g, '').slice(0, 8);
-
-const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
-
-const maskPhone = (v: string) => {
-  const digits = v.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 10) {
-    return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
-  }
-  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
-};
-
-const maskCep = (v: string) => {
-  const digits = v.replace(/\D/g, '').slice(0, 8);
-  return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2').trim();
-};
-
-const maskCnpjCpf = (v: string) => {
-  const digits = v.replace(/\D/g, '');
-  if (digits.length <= 11) {
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/-$/, '');
-  }
-  return digits.slice(0, 14).replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5').replace(/-$/, '');
-};
 
 const formatObjetivo = (value: number | null | undefined) =>
   Number(value ?? 0).toLocaleString('pt-BR', {
@@ -65,25 +32,43 @@ const formatObjetivo = (value: number | null | undefined) =>
     maximumFractionDigits: 2,
   });
 
-const initialFormData: RepresentanteFormData = {
+const parseRotasLiberadas = (value?: string | null): number[] =>
+  Array.from(
+    new Set(
+      String(value ?? '')
+        .split(',')
+        .map((item) => Number(item.trim()))
+        .filter((item) => Number.isInteger(item) && item > 0),
+    ),
+  );
+
+const buildRotasLiberadas = (ids: number[]): string =>
+  [...ids]
+    .sort((a, b) => a - b)
+    .join(',');
+
+type RepresentanteEditFormData = Pick<
+  Representante,
+  | 'codigo_representante'
+  | 'supervisor_id'
+  | 'gerente_id'
+  | 'comissao'
+  | 'objetivo_de_venda'
+  | 'limite_de_troca'
+  | 'setor_id'
+  | 'rotas_liberadas'
+  | 'liberado_debito_credito'
+  | 'bloqueia_alteracao_agenda'
+  | 'quantidade_maxima_pedidos_retidos_para_sincronizar'
+  | 'observacao'
+  | 'empresa_id'
+  | 'usuario_id'
+  | 'inativo'
+>;
+
+const initialFormData: RepresentanteEditFormData = {
   codigo_representante: '',
-  nome_representante: '',
-  cnpj_cpf: '',
-  fantasia: '',
-  endereco: '',
-  numero: '',
-  complemento: '',
-  bairro: '',
-  cidade_id: null,
-  uf: '',
-  cep: '',
-  fone: '',
-  whatsapp: '',
-  email: '',
-  data_nascimento: null,
-  supervisor: '',
   supervisor_id: null,
-  gerente: '',
   gerente_id: null,
   comissao: 0,
   objetivo_de_venda: 0,
@@ -112,11 +97,15 @@ export function RepresentantesTab() {
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [formData, setFormData] = useState<RepresentanteFormData>(initialFormData);
+  const [formData, setFormData] = useState<RepresentanteEditFormData>(initialFormData);
+  const [usuariosEmpresa, setUsuariosEmpresa] = useState<UsuarioCadastro[]>([]);
+  const [usuariosEmpresaLoading, setUsuariosEmpresaLoading] = useState(false);
+  const [rotas, setRotas] = useState<Rota[]>([]);
+  const [rotasLoading, setRotasLoading] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pendingClose, setPendingClose] = useState<'edit' | null>(null);
   const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
-  const setFormSnapshot = (data: RepresentanteFormData) => {
+  const setFormSnapshot = (data: RepresentanteEditFormData) => {
     formSnapshotRef.current = JSON.stringify(data);
   };
   const isFormDirty = () => JSON.stringify(formData) !== formSnapshotRef.current;
@@ -143,159 +132,6 @@ export function RepresentantesTab() {
   const handleCancelClose = () => {
     setPendingClose(null);
     setShowConfirmClose(false);
-  };
-
-  // UFs e Cidades
-  const [ufsApi, setUfsApi] = useState<Uf[]>([]);
-  const [ufsLoading, setUfsLoading] = useState(false);
-  const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
-  const [cidadesLoading, setCidadesLoading] = useState(false);
-  const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
-  const [cepLookupLoading, setCepLookupLoading] = useState(false);
-  const [pendingCidadeNome, setPendingCidadeNome] = useState<string>(''); // Para auto-match após carregar cidades
-
-  const normalizeCityKey = (value: string | null | undefined) =>
-    String(value ?? '')
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .toUpperCase();
-
-  // CNPJ Lookup
-  const cnpjLookupRef = useRef<(v: string) => void>();
-  if (!cnpjLookupRef.current) {
-    cnpjLookupRef.current = debounce(async (value: string) => {
-      const cleaned = normalizeCnpj(value);
-      if (cleaned.length !== 14) {
-        setCnpjLookupLoading(false);
-        return;
-      }
-      setCnpjLookupLoading(true);
-      try {
-        const result = await clientsService.lookupCnpj(cleaned);
-        if (!result || !result.data) return;
-        const d = result.data;
-        const estab = d.estabelecimento ?? {};
-        const cidadeObj = estab.cidade ?? {};
-        const estadoObj = estab.estado ?? {};
-        const nextUf = toUpperValue(estadoObj.sigla || estab.uf || d.uf || '');
-        const cidadeNome = toUpperValue(cidadeObj.nome || estab.municipio || d.municipio || '');
-        const cidadeIdRaw = (cidadeObj as any)?.id ?? (cidadeObj as any)?.cidade_id ?? (cidadeObj as any)?.cidadeId;
-        const cidadeIdFromCnpj = Number(cidadeIdRaw);
-        const cidadeId = Number.isFinite(cidadeIdFromCnpj) && cidadeIdFromCnpj > 0 ? cidadeIdFromCnpj : null;
-        const tipoLogradouro = estab.tipo_logradouro ? String(estab.tipo_logradouro).trim() : '';
-        const logradouro = estab.logradouro ? String(estab.logradouro).trim() : '';
-        const cepFromCnpj = estab.cep ?? d.cep;
-        const cepValue = cepFromCnpj ? normalizeCep(String(cepFromCnpj)) : '';
-        const hasCep = cepValue.length === 8;
-        setFormData((prev) => {
-          const enderecoFmt = [tipoLogradouro, logradouro].filter(Boolean).join(' ') || d.logradouro || prev.endereco;
-          const complemento = estab.complemento ? String(estab.complemento).trim() : prev.complemento;
-          const telefone1 = estab.telefone1 ? String(estab.telefone1).trim() : '';
-          const ddd1 = estab.ddd1 ? String(estab.ddd1).trim() : '';
-          const telefoneFmt = [ddd1, telefone1].filter(Boolean).join('');
-          const nextCep = cepValue || normalizeCep(String(prev.cep || ''));
-          return {
-            ...prev,
-            cnpj_cpf: maskCnpjCpf(cleaned),
-            nome_representante: toUpperValue(d.razao_social || prev.nome_representante),
-            fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
-            endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
-            numero: toUpperValue(estab.numero || d.numero || prev.numero || ''),
-            bairro: toUpperValue(estab.bairro || d.bairro || prev.bairro),
-            uf: nextUf || prev.uf,
-            cep: maskCep(nextCep),
-            complemento: toUpperValue(complemento),
-            fone: maskPhone(telefoneFmt || prev.fone || ''),
-            email: estab.email || prev.email,
-            // Igual ao cadastro de clientes: já seta o cidade_id vindo da consulta
-            cidade_id: cidadeId,
-          };
-        });
-        // Sempre tenta casar por nome quando as cidades carregarem (cidade_id externo pode não bater)
-        if (cidadeNome) {
-          setPendingCidadeNome(cidadeNome);
-        } else {
-          setPendingCidadeNome('');
-        }
-        if (hasCep) {
-          cepLookupRef.current?.(cepValue);
-        }
-        toast.success('Dados preenchidos pela consulta de CNPJ');
-      } catch (e: any) {
-        toast.error(String(e));
-      } finally {
-        setCnpjLookupLoading(false);
-      }
-    }, 600);
-  }
-
-  // CEP Lookup
-  const cepLookupRef = useRef<(v: string) => void>();
-  if (!cepLookupRef.current) {
-    cepLookupRef.current = debounce(async (value: string) => {
-      const cleaned = normalizeCep(value);
-      if (cleaned.length !== 8) {
-        setCepLookupLoading(false);
-        return;
-      }
-      setCepLookupLoading(true);
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
-        if (!res.ok) {
-          toast.error('Falha ao consultar CEP');
-          return;
-        }
-        const data = await res.json();
-        if (!data || data.erro) {
-          toast.error('CEP não encontrado');
-          return;
-        }
-        const cidadeNomeCep = data.localidade ? toUpperValue(data.localidade) : '';
-        setFormData((prev) => ({
-          ...prev,
-          cep: maskCep(cleaned),
-          endereco: toUpperValue(data.logradouro || prev.endereco),
-          complemento: toUpperValue(data.complemento || prev.complemento),
-          bairro: toUpperValue(data.bairro || prev.bairro),
-          uf: data.uf ? toUpperValue(data.uf) : prev.uf,
-          cidade_id: data.localidade || data.uf ? null : prev.cidade_id,
-        }));
-        if (cidadeNomeCep) {
-          setPendingCidadeNome(cidadeNomeCep);
-        }
-        toast.success('Endereço preenchido pelo CEP');
-      } catch (e: any) {
-        toast.error('Erro na consulta de CEP');
-      } finally {
-        setCepLookupLoading(false);
-      }
-    }, 600);
-  }
-
-  const loadUfs = async () => {
-    setUfsLoading(true);
-    try {
-      const data = await metadataService.getUfs();
-      setUfsApi(data);
-    } catch (e) {
-      console.error('Erro ao carregar UFs:', e);
-    } finally {
-      setUfsLoading(false);
-    }
-  };
-
-  const loadCidades = async (uf: string) => {
-    setCidadesLoading(true);
-    try {
-      const data = await metadataService.getCidadesPorUf(uf);
-      setCidadesApi(data);
-    } catch (e) {
-      console.error('Erro ao carregar cidades:', e);
-    } finally {
-      setCidadesLoading(false);
-    }
   };
 
   const loadRepresentantes = async (reset = false) => {
@@ -326,49 +162,87 @@ export function RepresentantesTab() {
     loadRepresentantes(true);
   }, [filtroStatus]);
 
-  // Carregar UFs quando abrir os dialogs de criação/edição
   useEffect(() => {
-    if (editOpen) {
-      loadUfs();
-    }
-  }, [editOpen]);
+    if (!editOpen) return;
 
-  // Carregar cidades quando UF mudar
-  useEffect(() => {
-    if (formData.uf && editOpen) {
-      loadCidades(formData.uf);
-    } else {
-      setCidadesApi([]);
+    const empresaId = formData.empresa_id;
+    if (!empresaId) {
+      setUsuariosEmpresa([]);
+      return;
     }
-  }, [formData.uf, editOpen]);
 
-  // Auto-seleciona cidade pelo nome quando as cidades são carregadas (após CNPJ lookup)
+    let ativo = true;
+    setUsuariosEmpresaLoading(true);
+
+    usersService
+      .getByEmpresa(empresaId, { limit: 500, status: 'todos' })
+      .then((result) => {
+        if (!ativo) return;
+        const usuarios = [...result.data].sort((a, b) =>
+          a.nome.localeCompare(b.nome) || a.usuario.localeCompare(b.usuario),
+        );
+        setUsuariosEmpresa(usuarios);
+        setFormData((prev) => ({
+          ...prev,
+          gerente_id: usuarios.some((user) => user.usuario_id === prev.gerente_id)
+            ? prev.gerente_id
+            : null,
+          supervisor_id: usuarios.some(
+            (user) => user.usuario_id === prev.supervisor_id,
+          )
+            ? prev.supervisor_id
+            : null,
+        }));
+      })
+      .catch((error) => {
+        if (!ativo) return;
+        setUsuariosEmpresa([]);
+        toast.error(String(error) || 'Erro ao carregar usuários da empresa');
+      })
+      .finally(() => {
+        if (ativo) setUsuariosEmpresaLoading(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [editOpen, formData.empresa_id]);
+
   useEffect(() => {
-    if (cidadesApi.length === 0) return;
-    
-    // Se já tem cidade_id válida e está na lista, não precisa fazer nada
-    if (formData.cidade_id) {
-      const idMatch = cidadesApi.some(c => c.cidade_id === formData.cidade_id);
-      if (idMatch) {
-        setPendingCidadeNome('');
-        return;
-      }
+    if (!editOpen) return;
+
+    const empresaId = formData.empresa_id;
+    if (!empresaId) {
+      setRotas([]);
+      return;
     }
-    
-    // Tenta match pelo nome da cidade pendente
-    if (!pendingCidadeNome) return;
-    const target = normalizeCityKey(pendingCidadeNome);
-    if (!target) return;
-    
-    const match = cidadesApi.find(c => normalizeCityKey(c.nome_cidade) === target);
-    if (match) {
-      setFormData(prev => ({
-        ...prev,
-        cidade_id: match.cidade_id,
-      }));
-      setPendingCidadeNome('');
-    }
-  }, [cidadesApi, formData.cidade_id, pendingCidadeNome]);
+
+    let ativo = true;
+    setRotasLoading(true);
+
+    metadataService
+      .getRotasByEmpresa(empresaId, undefined, true)
+      .then((result) => {
+        if (!ativo) return;
+        setRotas(
+          [...result].sort((a, b) =>
+            (a.label || '').localeCompare(b.label || ''),
+          ),
+        );
+      })
+      .catch((error) => {
+        if (!ativo) return;
+        setRotas([]);
+        toast.error(String(error) || 'Erro ao carregar rotas');
+      })
+      .finally(() => {
+        if (ativo) setRotasLoading(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [editOpen, formData.empresa_id]);
 
   const handleSearch = () => loadRepresentantes(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -379,38 +253,20 @@ export function RepresentantesTab() {
     const nextData = { ...initialFormData };
     setFormData(nextData);
     setEditId(null);
-    setPendingCidadeNome('');
     if (updateSnapshot) setFormSnapshot(nextData);
   };
 
   const openEdit = async (r: Representante) => {
     setEditId(r.representante_id);
-    setPendingCidadeNome('');
     setFormSnapshot(formData);
     setFormLoading(true);
     setEditOpen(true);
     try {
       const detail = await representativesService.getById(r.representante_id);
       if (detail) {
-        const nextData: RepresentanteFormData = {
+        const nextData: RepresentanteEditFormData = {
           codigo_representante: detail.codigo_representante || '',
-          nome_representante: detail.nome_representante || '',
-          cnpj_cpf: detail.cnpj_cpf || '',
-          fantasia: detail.fantasia || '',
-          endereco: detail.endereco || '',
-          numero: detail.numero || '',
-          complemento: detail.complemento || '',
-          bairro: detail.bairro || '',
-          cidade_id: detail.cidade_id ?? null,
-          uf: detail.uf || '',
-          cep: detail.cep || '',
-          fone: detail.fone || '',
-          whatsapp: detail.whatsapp || '',
-          email: detail.email || '',
-          data_nascimento: detail.data_nascimento || null,
-          supervisor: detail.supervisor || '',
           supervisor_id: detail.supervisor_id ?? null,
-          gerente: detail.gerente || '',
           gerente_id: detail.gerente_id ?? null,
           comissao: detail.comissao ?? 0,
           objetivo_de_venda: detail.objetivo_de_venda ?? 0,
@@ -477,311 +333,269 @@ export function RepresentantesTab() {
     }
   };
 
+  const selectedRotaIds = parseRotasLiberadas(formData.rotas_liberadas);
+  const selectedRotasLabel =
+    selectedRotaIds.length === 0
+      ? 'Selecionar rotas'
+      : selectedRotaIds.length <= 2
+      ? selectedRotaIds
+          .map((id) => rotas.find((rota) => rota.id === id)?.label || `Rota ${id}`)
+          .join(', ')
+      : `${selectedRotaIds.length} rotas selecionadas`;
+
+  const toggleRota = (rotaId: number, checked: boolean) => {
+    const nextIds = checked
+      ? [...selectedRotaIds, rotaId]
+      : selectedRotaIds.filter((id) => id !== rotaId);
+
+    setFormData({
+      ...formData,
+      rotas_liberadas: buildRotasLiberadas(nextIds),
+    });
+  };
+
   const formContent = (
-    <Tabs defaultValue="identificacao" className="w-full">
-      <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-3">
-        <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-        <TabsTrigger value="endereco">Endereço</TabsTrigger>
-        <TabsTrigger value="config">Configurações</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="identificacao" className="space-y-4 mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.codigo_representante}
-              onChange={(e) => setFormData({ ...formData, codigo_representante: toUpperValue(e.target.value) })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-9">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.nome_representante}
-              readOnly
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF/CNPJ</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.cnpj_cpf}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-8">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.fantasia}
-              readOnly
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.fone}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.whatsapp}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Data Nascimento</label>
-            <Input
-              type="date"
-              className="h-8 text-sm bg-muted"
-              value={formData.data_nascimento || ''}
-              readOnly
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-12">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
-            <Input
-              type="email"
-              className="h-8 text-sm bg-muted"
-              value={formData.email}
-              readOnly
-            />
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="endereco" className="space-y-4 mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.cep}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-7">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.endereco}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.numero}
-              readOnly
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.complemento}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.bairro}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-            <Select
-              value={formData.uf || ''}
-              disabled
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                {ufsApi.map(u => (
-                  <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="col-span-1 md:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
-            <Select
-              value={formData.cidade_id ? String(formData.cidade_id) : ''}
-              disabled
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder={cidadesLoading ? '...' : (formData.uf ? 'Sel.' : 'UF')} />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50 max-h-60">
-                {cidadesApi.map(c => (
-                  <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="config" className="space-y-4 mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.gerente}
-              onChange={(e) => setFormData({ ...formData, gerente: e.target.value })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente ID</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.gerente_id ?? ''}
-              onChange={(e) => setFormData({ ...formData, gerente_id: e.target.value ? Number(e.target.value) : null })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor ID</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.supervisor_id ?? ''}
-              onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value ? Number(e.target.value) : null })}
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresa ID</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.empresa_id ?? ''}
-              onChange={(e) => setFormData({ ...formData, empresa_id: e.target.value ? Number(e.target.value) : null })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario ID</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.usuario_id ?? ''}
-              readOnly
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.comissao ?? ''}
-              onChange={(e) => setFormData({ ...formData, comissao: e.target.value ? Number(e.target.value) : 0 })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo de Venda</label>
-            <Input
-              type="number"
-              step="0.01"
-              className="h-8 text-sm"
-              value={formData.objetivo_de_venda ?? ''}
-              onChange={(e) => setFormData({ ...formData, objetivo_de_venda: e.target.value ? Number(e.target.value) : 0 })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Limite de Troca</label>
-            <Input
-              type="number"
-              step="0.01"
-              className="h-8 text-sm"
-              value={formData.limite_de_troca ?? ''}
-              onChange={(e) => setFormData({ ...formData, limite_de_troca: e.target.value ? Number(e.target.value) : 0 })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-3">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Setor ID</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.setor_id ?? ''}
-              onChange={(e) => setFormData({ ...formData, setor_id: e.target.value ? Number(e.target.value) : null })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Rotas Liberadas</label>
-            <Input
-              className="h-8 text-sm"
-              value={formData.rotas_liberadas}
-              onChange={(e) => setFormData({ ...formData, rotas_liberadas: e.target.value })}
-              placeholder="Ex: 1,2,3"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-4">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Máx. Pedidos Retidos</label>
-            <Input
-              type="number"
-              className="h-8 text-sm"
-              value={formData.quantidade_maxima_pedidos_retidos_para_sincronizar ?? ''}
-              onChange={(e) => setFormData({ ...formData, quantidade_maxima_pedidos_retidos_para_sincronizar: e.target.value ? Number(e.target.value) : 0 })}
-            />
-          </div>
-          <div className="col-span-1 md:col-span-8 flex flex-wrap gap-4 items-end pb-1">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.liberado_debito_credito}
-                onCheckedChange={(c) => setFormData({ ...formData, liberado_debito_credito: c as boolean })}
-              />
-              <label className="text-sm">Liberado Déb/Créd</label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.bloqueia_alteracao_agenda}
-                onCheckedChange={(c) => setFormData({ ...formData, bloqueia_alteracao_agenda: c as boolean })}
-              />
-              <label className="text-sm">Bloqueia Agenda</label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.inativo}
-                onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
-              />
-              <label className="text-sm">Inativo</label>
-            </div>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação</label>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
           <Input
-            className="h-8 text-sm"
-            value={formData.observacao}
-            onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+            className="h-8 text-sm bg-muted"
+            value={formData.codigo_representante}
+            readOnly
           />
         </div>
-      </TabsContent>
-    </Tabs>
+        <div className="col-span-1 md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Setor ID</label>
+          <Input
+            type="number"
+            className="h-8 text-sm"
+            value={formData.setor_id ?? ''}
+            onChange={(e) => setFormData({ ...formData, setor_id: e.target.value ? Number(e.target.value) : null })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
+          <Select
+            value={formData.gerente_id != null ? String(formData.gerente_id) : undefined}
+            onValueChange={(value) =>
+              setFormData({
+                ...formData,
+                gerente_id: value ? Number(value) : null,
+              })
+            }
+            disabled={!formData.empresa_id || usuariosEmpresaLoading}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue
+                placeholder={
+                  !formData.empresa_id
+                    ? 'Selecione a empresa'
+                    : usuariosEmpresaLoading
+                    ? 'Carregando...'
+                    : 'Selecione'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {usuariosEmpresa.map((usuario) => (
+                <SelectItem key={`gerente-${usuario.usuario_id}`} value={String(usuario.usuario_id)}>
+                  {`${usuario.nome} (${usuario.usuario})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor</label>
+          <Select
+            value={formData.supervisor_id != null ? String(formData.supervisor_id) : undefined}
+            onValueChange={(value) =>
+              setFormData({
+                ...formData,
+                supervisor_id: value ? Number(value) : null,
+              })
+            }
+            disabled={!formData.empresa_id || usuariosEmpresaLoading}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue
+                placeholder={
+                  !formData.empresa_id
+                    ? 'Selecione a empresa'
+                    : usuariosEmpresaLoading
+                    ? 'Carregando...'
+                    : 'Selecione'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {usuariosEmpresa.map((usuario) => (
+                <SelectItem key={`supervisor-${usuario.usuario_id}`} value={String(usuario.usuario_id)}>
+                  {`${usuario.nome} (${usuario.usuario})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-1 md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Comissão (%)</label>
+          <Input
+            type="number"
+            className="h-8 text-sm"
+            value={formData.comissao ?? ''}
+            onChange={(e) => setFormData({ ...formData, comissao: e.target.value ? Number(e.target.value) : 0 })}
+          />
+        </div>
+        <div className="col-span-1 md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Máx. Pedidos Retidos</label>
+          <Input
+            type="number"
+            className="h-8 text-sm"
+            value={formData.quantidade_maxima_pedidos_retidos_para_sincronizar ?? ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                quantidade_maxima_pedidos_retidos_para_sincronizar: e.target.value ? Number(e.target.value) : 0,
+              })
+            }
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Objetivo de Venda</label>
+          <Input
+            type="number"
+            step="0.01"
+            className="h-8 text-sm"
+            value={formData.objetivo_de_venda ?? ''}
+            onChange={(e) => setFormData({ ...formData, objetivo_de_venda: e.target.value ? Number(e.target.value) : 0 })}
+          />
+        </div>
+        <div className="col-span-1 md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Limite de Troca</label>
+          <Input
+            type="number"
+            step="0.01"
+            className="h-8 text-sm"
+            value={formData.limite_de_troca ?? ''}
+            onChange={(e) => setFormData({ ...formData, limite_de_troca: e.target.value ? Number(e.target.value) : 0 })}
+          />
+        </div>
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Rotas Liberadas</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full justify-between text-sm font-normal"
+                disabled={rotasLoading || !formData.empresa_id}
+              >
+                <span className="truncate">
+                  {!formData.empresa_id
+                    ? 'Empresa não definida'
+                    : rotasLoading
+                    ? 'Carregando...'
+                    : selectedRotasLabel}
+                </span>
+                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 p-3">
+              <div className="space-y-3">
+                <div className="text-sm font-medium">Rotas liberadas</div>
+                {!formData.empresa_id ? (
+                  <div className="text-sm text-muted-foreground">
+                    Empresa não definida para este cadastro.
+                  </div>
+                ) : rotasLoading ? (
+                  <div className="text-sm text-muted-foreground">Carregando rotas...</div>
+                ) : rotas.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Nenhuma rota disponível.</div>
+                ) : (
+                  <>
+                    <div className="max-h-56 space-y-2 overflow-auto pr-1">
+                      {rotas.map((rota) => {
+                        const checked = selectedRotaIds.includes(rota.id);
+                        return (
+                          <label
+                            key={rota.id}
+                            className="flex cursor-pointer items-center gap-2 text-sm"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(value) => toggleRota(rota.id, Boolean(value))}
+                            />
+                            <span className="truncate">
+                              {rota.label}
+                              {rota.codigo_rota ? ` (${rota.codigo_rota})` : ''}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            rotas_liberadas: '',
+                          })
+                        }
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-4 items-end pb-1">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.liberado_debito_credito}
+            onCheckedChange={(c) => setFormData({ ...formData, liberado_debito_credito: c as boolean })}
+          />
+          <label className="text-sm">Liberado Déb/Créd</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.bloqueia_alteracao_agenda}
+            onCheckedChange={(c) => setFormData({ ...formData, bloqueia_alteracao_agenda: c as boolean })}
+          />
+          <label className="text-sm">Bloqueia Agenda</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={formData.inativo}
+            onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
+          />
+          <label className="text-sm">Inativo</label>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação</label>
+        <Input
+          className="h-8 text-sm"
+          value={formData.observacao}
+          onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+        />
+      </div>
+    </div>
   );
 
   return (
@@ -941,7 +755,7 @@ export function RepresentantesTab() {
           <DialogHeader>
             <DialogTitle>Editar Força de Vendas</DialogTitle>
           </DialogHeader>
-          {formLoading && !formData.nome_representante ? (
+          {formLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>

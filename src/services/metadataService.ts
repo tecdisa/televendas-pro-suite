@@ -549,15 +549,18 @@ export const metadataService = {
   },
 
   // Rotas disponíveis - GET /api/rotas?empresaId=...
-  getRotas: async (query?: string, incluirInativos = false): Promise<Rota[]> => {
-    const empresa = authService.getEmpresa();
-    if (!empresa) return Promise.reject('Empresa não selecionada');
+  getRotasByEmpresa: async (
+    empresaId: number,
+    query?: string,
+    incluirInativos = false,
+  ): Promise<Rota[]> => {
+    if (!empresaId) return Promise.reject('Empresa não selecionada');
     const token = authService.getToken();
     if (!token) return Promise.reject('Token ausente');
 
     try {
       const params = new URLSearchParams();
-      params.set('empresaId', String(empresa.empresa_id));
+      params.set('empresaId', String(empresaId));
       if (query) params.set('q', query);
       if (incluirInativos) params.set('incluirInativos', 'true');
 
@@ -586,5 +589,15 @@ export const metadataService = {
     } catch (e) {
       return Promise.reject('Erro de conexão com o servidor');
     }
+  },
+
+  getRotas: async (query?: string, incluirInativos = false): Promise<Rota[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    return metadataService.getRotasByEmpresa(
+      empresa.empresa_id,
+      query,
+      incluirInativos,
+    );
   },
 };
