@@ -369,15 +369,6 @@ export function RepresentantesTab() {
             readOnly
           />
         </div>
-        <div className="col-span-1 md:col-span-3">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Setor ID</label>
-          <Input
-            type="number"
-            className="h-8 text-sm"
-            value={formData.setor_id ?? ''}
-            onChange={(e) => setFormData({ ...formData, setor_id: e.target.value ? Number(e.target.value) : null })}
-          />
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
