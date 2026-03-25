@@ -9,14 +9,14 @@ export const getApiBase = (): string => {
     return 'https://adsvendas.adsapi.com.br';
   }
 
+  // Front homologado em VPS: preferir same-origin e deixar o container encaminhar /api.
+  if (protocol === 'https:' && host.endsWith('adsvendas-f.adsapi.com.br')) {
+    return '';
+  }
+
   // Prefer build-time Vite env when it is present and non-empty
   if (envBase) {
     return envBase;
-  }
-
-  // Homologação/produção em HTTPS
-  if (protocol === 'https:' && host.endsWith('adsvendas-f.adsapi.com.br')) {
-    return 'https://adsvendas-b.adsapi.com.br';
   }
 
   // Local default

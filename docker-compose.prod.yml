@@ -5,8 +5,10 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE: ${VITE_API_BASE:-https://adsvendas-b.adsapi.com.br}
+        VITE_API_BASE: ${VITE_API_BASE:-}
         VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${FRONTEND_PORT:-8081}:80"
     restart: unless-stopped
