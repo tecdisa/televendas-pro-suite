@@ -19,14 +19,13 @@ export interface Representante {
   whatsapp?: string;
   email?: string;
   data_nascimento?: string | null;
-  supervisor?: string;
+  supervisor?: boolean;
   supervisor_id?: number | null;
-  gerente?: string;
+  gerente?: boolean;
   gerente_id?: number | null;
   comissao?: number;
   objetivo_de_venda?: number;
   limite_de_troca?: number;
-  setor_id?: number | null;
   rotas_liberadas?: string;
   liberado_debito_credito?: boolean;
   bloqueia_alteracao_agenda?: boolean;
@@ -60,14 +59,13 @@ export interface RepresentanteFormData {
   whatsapp?: string;
   email?: string;
   data_nascimento?: string | null;
-  supervisor?: string;
+  supervisor?: boolean;
   supervisor_id?: number | null;
-  gerente?: string;
+  gerente?: boolean;
   gerente_id?: number | null;
   comissao?: number;
   objetivo_de_venda?: number;
   limite_de_troca?: number;
-  setor_id?: number | null;
   rotas_liberadas?: string;
   liberado_debito_credito?: boolean;
   bloqueia_alteracao_agenda?: boolean;
@@ -140,9 +138,9 @@ function normalizeRepresentante(raw: any): Representante {
     whatsapp: raw.whatsapp ?? '',
     email: raw.email ?? '',
     data_nascimento: raw.data_nascimento ?? raw.dataNascimento ?? null,
-    supervisor: raw.supervisor ?? '',
+    supervisor: Boolean(raw.supervisor ?? false),
     supervisor_id: raw.supervisor_id ?? raw.supervisorId ?? null,
-    gerente: raw.gerente ?? '',
+    gerente: Boolean(raw.gerente ?? false),
     gerente_id: raw.gerente_id ?? raw.gerenteId ?? null,
     comissao: parseNumber(raw.comissao, 0),
     objetivo_de_venda: parseNumber(
@@ -153,7 +151,6 @@ function normalizeRepresentante(raw: any): Representante {
       raw.limite_de_troca ?? raw.limiteDeTroca,
       0,
     ),
-    setor_id: raw.setor_id ?? raw.setorId ?? null,
     rotas_liberadas: raw.rotas_liberadas ?? raw.rotasLiberadas ?? '',
     liberado_debito_credito: raw.liberado_debito_credito ?? raw.liberadoDebitoCredito ?? false,
     bloqueia_alteracao_agenda: raw.bloqueia_alteracao_agenda ?? raw.bloqueiaAlteracaoAgenda ?? false,
@@ -199,14 +196,13 @@ async function getEmpresaId(): Promise<number> {
 }
 
 export const representativesService = {
-  async getAll(
+  async getByEmpresaId(
+    empresaId: number,
     query?: string,
     page = 1,
     limit = 100,
     status: 'ativos' | 'inativos' | 'todos' = 'ativos'
   ): Promise<{ data: Representante[]; page: number; limit: number; total: number }> {
-    const empresaId = await getEmpresaId();
-
     const params = new URLSearchParams();
     if (query) params.set('q', query);
     params.set('page', String(page));
@@ -234,6 +230,16 @@ export const representativesService = {
       limit: json?.limit ?? limit,
       total: json?.total ?? arr.length,
     };
+  },
+
+  async getAll(
+    query?: string,
+    page = 1,
+    limit = 100,
+    status: 'ativos' | 'inativos' | 'todos' = 'ativos'
+  ): Promise<{ data: Representante[]; page: number; limit: number; total: number }> {
+    const empresaId = await getEmpresaId();
+    return this.getByEmpresaId(empresaId, query, page, limit, status);
   },
 
   async getById(id: number): Promise<Representante | null> {
@@ -276,14 +282,13 @@ export const representativesService = {
         whatsapp: data.whatsapp || undefined,
         email: data.email || undefined,
         data_nascimento: data.data_nascimento || null,
-        supervisor: data.supervisor || undefined,
+        supervisor: data.supervisor ?? false,
         supervisor_id: data.supervisor_id ?? undefined,
-        gerente: data.gerente || undefined,
+        gerente: data.gerente ?? false,
         gerente_id: data.gerente_id ?? undefined,
         comissao: data.comissao ?? undefined,
         objetivo_de_venda: data.objetivo_de_venda ?? undefined,
         limite_de_troca: data.limite_de_troca ?? undefined,
-        setor_id: data.setor_id ?? null,
         rotas_liberadas: data.rotas_liberadas || undefined,
         liberado_debito_credito: data.liberado_debito_credito ?? false,
         bloqueia_alteracao_agenda: data.bloqueia_alteracao_agenda ?? false,
@@ -324,9 +329,10 @@ export const representativesService = {
       payload.objetivo_de_venda = data.objetivo_de_venda;
     if (data.limite_de_troca !== undefined)
       payload.limite_de_troca = data.limite_de_troca;
-    if (data.setor_id !== undefined) payload.setor_id = data.setor_id;
     if (data.gerente_id !== undefined) payload.gerente_id = data.gerente_id;
     if (data.supervisor_id !== undefined) payload.supervisor_id = data.supervisor_id;
+    if (data.gerente !== undefined) payload.gerente = data.gerente;
+    if (data.supervisor !== undefined) payload.supervisor = data.supervisor;
     if (data.empresa_id !== undefined) payload.empresa_id = data.empresa_id;
     if (data.rotas_liberadas !== undefined)
       payload.rotas_liberadas = data.rotas_liberadas;

@@ -18,11 +18,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Search, UserCheck, Pencil, Trash2, Loader2, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { representativesService, Representante } from '@/services/representativesService';
-import { usersService, UsuarioCadastro } from '@/services/usersService';
 import { metadataService, Rota } from '@/services/metadataService';
 import { RepresentantesPastasTab } from './RepresentantesPastasTab';
 
@@ -50,12 +50,13 @@ const buildRotasLiberadas = (ids: number[]): string =>
 type RepresentanteEditFormData = Pick<
   Representante,
   | 'codigo_representante'
+  | 'supervisor'
   | 'supervisor_id'
+  | 'gerente'
   | 'gerente_id'
   | 'comissao'
   | 'objetivo_de_venda'
   | 'limite_de_troca'
-  | 'setor_id'
   | 'rotas_liberadas'
   | 'liberado_debito_credito'
   | 'bloqueia_alteracao_agenda'
@@ -68,12 +69,13 @@ type RepresentanteEditFormData = Pick<
 
 const initialFormData: RepresentanteEditFormData = {
   codigo_representante: '',
+  supervisor: false,
   supervisor_id: null,
+  gerente: false,
   gerente_id: null,
   comissao: 0,
   objetivo_de_venda: 0,
   limite_de_troca: 0,
-  setor_id: null,
   rotas_liberadas: '',
   liberado_debito_credito: false,
   bloqueia_alteracao_agenda: false,
@@ -82,6 +84,12 @@ const initialFormData: RepresentanteEditFormData = {
   empresa_id: null,
   usuario_id: null,
   inativo: false,
+};
+
+type VinculoUsuarioOption = {
+  usuario_id: number;
+  nome: string;
+  descricao: string;
 };
 
 export function RepresentantesTab() {
@@ -98,7 +106,7 @@ export function RepresentantesTab() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RepresentanteEditFormData>(initialFormData);
-  const [usuariosEmpresa, setUsuariosEmpresa] = useState<UsuarioCadastro[]>([]);
+  const [usuariosEmpresa, setUsuariosEmpresa] = useState<VinculoUsuarioOption[]>([]);
   const [usuariosEmpresaLoading, setUsuariosEmpresaLoading] = useState(false);
   const [rotas, setRotas] = useState<Rota[]>([]);
   const [rotasLoading, setRotasLoading] = useState(false);
@@ -174,17 +182,28 @@ export function RepresentantesTab() {
     let ativo = true;
     setUsuariosEmpresaLoading(true);
 
-    usersService
-      .getByEmpresa(empresaId, {
-        limit: 500,
-        status: 'todos',
-        onlyForcaDeVendas: true,
-      })
+    representativesService
+      .getByEmpresaId(empresaId, undefined, 1, 500, 'todos')
       .then((result) => {
         if (!ativo) return;
-        const usuarios = [...result.data].sort((a, b) =>
-          a.nome.localeCompare(b.nome) || a.usuario.localeCompare(b.usuario),
-        );
+        const usuarios = Array.from(
+          new Map(
+            result.data
+              .filter(
+                (representante) =>
+                  Number.isInteger(representante.usuario_id) &&
+                  Number(representante.usuario_id) > 0,
+              )
+              .map((representante) => [
+                Number(representante.usuario_id),
+                {
+                  usuario_id: Number(representante.usuario_id),
+                  nome: representante.nome_representante,
+                  descricao: `${representante.nome_representante} (${representante.codigo_representante || representante.representante_id})`,
+                },
+              ]),
+          ).values(),
+        ).sort((a, b) => a.nome.localeCompare(b.nome));
         setUsuariosEmpresa(usuarios);
         setFormData((prev) => ({
           ...prev,
@@ -201,7 +220,7 @@ export function RepresentantesTab() {
       .catch((error) => {
         if (!ativo) return;
         setUsuariosEmpresa([]);
-        toast.error(String(error) || 'Erro ao carregar usuários da empresa');
+        toast.error(String(error) || 'Erro ao carregar vínculos da força de vendas');
       })
       .finally(() => {
         if (ativo) setUsuariosEmpresaLoading(false);
@@ -270,12 +289,13 @@ export function RepresentantesTab() {
       if (detail) {
         const nextData: RepresentanteEditFormData = {
           codigo_representante: detail.codigo_representante || '',
+          supervisor: detail.supervisor ?? false,
           supervisor_id: detail.supervisor_id ?? null,
+          gerente: detail.gerente ?? false,
           gerente_id: detail.gerente_id ?? null,
           comissao: detail.comissao ?? 0,
           objetivo_de_venda: detail.objetivo_de_venda ?? 0,
           limite_de_troca: detail.limite_de_troca ?? 0,
-          setor_id: detail.setor_id ?? null,
           rotas_liberadas: detail.rotas_liberadas || '',
           liberado_debito_credito: detail.liberado_debito_credito ?? false,
           bloqueia_alteracao_agenda: detail.bloqueia_alteracao_agenda ?? false,
@@ -364,16 +384,50 @@ export function RepresentantesTab() {
         <div className="col-span-1 md:col-span-3">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
           <Input
-            className="h-8 text-sm bg-muted"
+            className="h-8 text-sm"
             value={formData.codigo_representante}
-            readOnly
+            onChange={(e) =>
+              setFormData({ ...formData, codigo_representante: e.target.value })
+            }
           />
         </div>
       </div>
 
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+          Cargo
+        </label>
+        <RadioGroup
+          value={formData.gerente ? 'gerente' : formData.supervisor ? 'supervisor' : 'nenhum'}
+          onValueChange={(value) =>
+            setFormData({
+              ...formData,
+              gerente: value === 'gerente',
+              supervisor: value === 'supervisor',
+            })
+          }
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        >
+          <label className="flex items-center gap-2 text-sm border rounded-md px-3 py-2">
+            <RadioGroupItem value="nenhum" />
+            <span>Nenhum</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm border rounded-md px-3 py-2">
+            <RadioGroupItem value="gerente" />
+            <span>Gerente</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm border rounded-md px-3 py-2">
+            <RadioGroupItem value="supervisor" />
+            <span>Supervisor</span>
+          </label>
+        </RadioGroup>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Gerente</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            Associar a gerente
+          </label>
           <Select
             value={formData.gerente_id != null ? String(formData.gerente_id) : undefined}
             onValueChange={(value) =>
@@ -398,14 +452,16 @@ export function RepresentantesTab() {
             <SelectContent>
               {usuariosEmpresa.map((usuario) => (
                 <SelectItem key={`gerente-${usuario.usuario_id}`} value={String(usuario.usuario_id)}>
-                  {`${usuario.nome} (${usuario.usuario})`}
+                  {usuario.descricao}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Supervisor</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            Associar a supervisor
+          </label>
           <Select
             value={formData.supervisor_id != null ? String(formData.supervisor_id) : undefined}
             onValueChange={(value) =>
@@ -430,7 +486,7 @@ export function RepresentantesTab() {
             <SelectContent>
               {usuariosEmpresa.map((usuario) => (
                 <SelectItem key={`supervisor-${usuario.usuario_id}`} value={String(usuario.usuario_id)}>
-                  {`${usuario.nome} (${usuario.usuario})`}
+                  {usuario.descricao}
                 </SelectItem>
               ))}
             </SelectContent>
