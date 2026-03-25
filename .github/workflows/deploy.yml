@@ -14,9 +14,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # Env de produção/homologação
       VITE_API_BASE: http://adsvendas-b.adsapi.com.br:3001
       VITE_BASE_PATH: /
+      FRONTEND_PORT: 8081
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,14 +53,76 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload dist to VPS (rsync)
+      - name: Preflight SSH check
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" -o StrictHostKeyChecking=yes \
+            "${SSH_USER}@${SSH_HOST}" 'echo ok'
+
+      - name: Copy project to VPS (rsync)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
         run: |
-          TARGET_DIR="${DEPLOY_DIR:-/var/www/adsvendas/frontend}"
+          TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "mkdir -p ${TARGET_DIR}"
           rsync -az --delete \
+            --exclude '.git/' \
+            --exclude 'node_modules/' \
+            --exclude 'dist/' \
+            --exclude '.env' \
+            --exclude '.env.*' \
             -e "ssh -i ~/.ssh/id_deploy -p ${SSH_PORT:-22}" \
-            ./dist/ "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}/"
+            ./ "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}/"
+
+      - name: Upload deploy env file
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+        run: |
+          TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
+          {
+            printf 'VITE_API_BASE=%s\n' "$VITE_API_BASE"
+            printf 'VITE_BASE_PATH=%s\n' "$VITE_BASE_PATH"
+            printf 'FRONTEND_PORT=%s\n' "$FRONTEND_PORT"
+          } > .env.deploy
+          scp -i ~/.ssh/id_deploy -P "${SSH_PORT:-22}" .env.deploy "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}/.env"
+          rm -f .env.deploy
+
+      - name: Deploy on VPS (Docker Compose up)
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" \
+            "${SSH_USER}@${SSH_HOST}" \
+            DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+            'bash -se' <<'EOF'
+          set -euo pipefail
+
+          if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
+            DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
+          fi
+
+          cd "$DEPLOY_DIR"
+
+          if docker compose version >/dev/null 2>&1; then
+            COMPOSE="docker compose"
+          elif docker-compose --version >/dev/null 2>&1; then
+            COMPOSE="docker-compose"
+          else
+            echo "Docker Compose not found on VPS."
+            exit 1
+          fi
+
+          $COMPOSE -f docker-compose.prod.yml up -d --build --remove-orphans
+          EOF

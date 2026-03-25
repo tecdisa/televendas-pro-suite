@@ -1,0 +1,12 @@
+services:
+  frontend:
+    container_name: tecdisa-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://adsvendas-b.adsapi.com.br:3001}
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+    restart: unless-stopped
