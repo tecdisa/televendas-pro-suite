@@ -34,7 +34,7 @@ export interface NavGroup {
   children: NavChild[];
 }
 
-export const navGroups: NavGroup[] = [
+const baseNavGroups: NavGroup[] = [
   {
     title: 'Dashboard',
     icon: LayoutDashboard,
@@ -84,12 +84,42 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
+export function getNavGroups(canManageUsers = true): NavGroup[] {
+  if (canManageUsers) return baseNavGroups;
+
+  return baseNavGroups
+    .map((group) => ({
+      ...group,
+      children: group.children
+        .map((child) => {
+          if (child.tab === 'usuarios') return null;
+          if (!child.children) return child;
+
+          const filteredChildren = child.children.filter(
+            (subChild) => subChild.tab !== 'usuarios',
+          );
+          return filteredChildren.length
+            ? { ...child, children: filteredChildren }
+            : null;
+        })
+        .filter((child): child is NavChild => child !== null),
+    }))
+    .filter((group) => group.children.length > 0);
+}
+
+export const navGroups: NavGroup[] = getNavGroups(true);
+
 interface TopNavbarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  groups?: NavGroup[];
 }
 
-export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
+export function TopNavbar({
+  activeTab,
+  onTabChange,
+  groups = navGroups,
+}: TopNavbarProps) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -116,7 +146,7 @@ export function TopNavbar({ activeTab, onTabChange }: TopNavbarProps) {
 
   return (
     <nav ref={navRef} className="hidden md:flex items-center gap-1">
-      {navGroups.map((group) => {
+      {groups.map((group) => {
         const isSingleChild = group.children.length === 1 && !group.children[0].children;
         return (
           <div key={group.title} className="relative">

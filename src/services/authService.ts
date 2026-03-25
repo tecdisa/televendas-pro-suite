@@ -25,6 +25,17 @@ export interface EmpresaMasterGroup {
   empresas: Empresa[];
 }
 
+export interface SessionUser {
+  usuario: string;
+  nome: string;
+  token: string;
+  admin?: boolean;
+  payload?: any;
+  empresa?: Empresa | null;
+  parametros_app_mobile?: ParametrosAppMobile | null;
+  timestamp: string;
+}
+
 export function getEmpresaMasterId(empresa: Empresa): number {
   const masterId = Number(empresa.empresa_master_id ?? empresa.empresa_id);
   return Number.isInteger(masterId) && masterId > 0 ? masterId : Number(empresa.empresa_id);
@@ -126,10 +137,11 @@ export const authService = {
         return { success: false, error: 'Token não recebido do servidor' } as const;
       }
 
-      const session = {
+      const session: SessionUser = {
         usuario: data?.user?.usuario ?? data?.usuario ?? usuario,
         nome: data?.user?.nome ?? data?.nome ?? data?.name ?? data?.username ?? usuario,
         token,
+        admin: Boolean(data?.user?.admin ?? data?.admin ?? false),
         // Keep full payload for potential future use
         payload: data,
         parametros_app_mobile: data?.parametros_app_mobile ?? null,
@@ -149,7 +161,7 @@ export const authService = {
 
   getSession: () => {
     const session = localStorage.getItem('session');
-    return session ? JSON.parse(session) : null;
+    return session ? (JSON.parse(session) as SessionUser) : null;
   },
 
   isAuthenticated: () => {
@@ -159,6 +171,11 @@ export const authService = {
   getToken: () => {
     const session = authService.getSession();
     return session?.token;
+  },
+
+  isAdmin: () => {
+    const session = authService.getSession();
+    return Boolean(session?.admin ?? session?.payload?.user?.admin ?? session?.payload?.admin);
   },
 
   getEmpresas: async (): Promise<Empresa[]> => {

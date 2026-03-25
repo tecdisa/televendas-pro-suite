@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import {
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { toast } from 'sonner';
-import { TopNavbar, navGroups, type NavChild } from '@/components/layout/TopNavbar';
+import { TopNavbar, getNavGroups, type NavChild } from '@/components/layout/TopNavbar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
@@ -64,6 +64,19 @@ const Televendas = () => {
   const [digitacaoOpen, setDigitacaoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const canManageUsers = authService.isAdmin();
+  const availableNavGroups = useMemo(
+    () => getNavGroups(canManageUsers),
+    [canManageUsers],
+  );
+  const effectiveTab = activeTab === 'usuarios' && !canManageUsers ? 'dashboard' : activeTab;
+
+  useEffect(() => {
+    if (activeTab === 'usuarios' && !canManageUsers) {
+      toast.error('Acesso permitido somente para administradores');
+      setSearchParams({ tab: 'dashboard' });
+    }
+  }, [activeTab, canManageUsers, setSearchParams]);
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
@@ -80,7 +93,7 @@ const Televendas = () => {
   const empresa = authService.getEmpresa();
 
   const renderContent = () => {
-    switch (activeTab) {
+    switch (effectiveTab) {
       case 'dashboard':
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
       case 'pesquisa':
@@ -141,7 +154,7 @@ const Televendas = () => {
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-72">
                 <nav className="pt-12 px-2">
-                  {navGroups.map((group) => (
+                  {availableNavGroups.map((group) => (
                     <div key={group.title} className="mb-4">
                       <p className="px-3 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {group.title}
@@ -215,7 +228,11 @@ const Televendas = () => {
             </div>
 
             {/* Desktop top navbar */}
-            <TopNavbar activeTab={activeTab} onTabChange={handleTabChange} />
+            <TopNavbar
+              activeTab={effectiveTab}
+              onTabChange={handleTabChange}
+              groups={availableNavGroups}
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -238,14 +255,14 @@ const Televendas = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-4 sm:p-6 overflow-auto">
-        {pageTitles[activeTab] && (
+        {pageTitles[effectiveTab] && (
           <div className="flex items-center gap-2 mb-4">
             {(() => {
-              const IconComponent = pageTitles[activeTab].icon;
+              const IconComponent = pageTitles[effectiveTab].icon;
               return <IconComponent className="h-5 w-5 text-primary" />;
             })()}
             <h2 className="text-lg font-semibold text-foreground">
-              {pageTitles[activeTab].title}
+              {pageTitles[effectiveTab].title}
             </h2>
           </div>
         )}

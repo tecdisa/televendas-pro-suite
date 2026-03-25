@@ -28,6 +28,7 @@ export interface UsuarioCadastro {
 }
 
 export interface UsuarioCadastroFormData {
+  usuario_id?: number;
   usuario: string;
   nome: string;
   senha?: string;

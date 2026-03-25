@@ -9,12 +9,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  authService,
+  getEmpresaDisplayName,
+  getMasterDisplayName,
+  groupEmpresasByMaster,
+  type Empresa,
+  type EmpresaMasterGroup,
+} from '@/services/authService';
+import { metadataService, type Cidade, type Uf } from '@/services/metadataService';
 import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from '@/services/usersService';
 
 const PAGE_LIMIT = 100;
 
 const onlyDigits = (value: string | null | undefined) =>
   String(value ?? '').replace(/\D+/g, '');
+
+const toUpperValue = (value: string | null | undefined) =>
+  String(value ?? '').toUpperCase();
 
 const maskCep = (value: string | null | undefined) => {
   const digits = onlyDigits(value).slice(0, 8);
@@ -65,12 +77,14 @@ const initialFormData: UsuarioCadastroFormData = {
   empresa_master_id: null,
   criado_em: null,
   atualizado_em: null,
+  empresa_ids: [],
 };
 
 const statusLabel = (ativo?: boolean) => (ativo ? 'Ativo' : 'Inativo');
 const perfilLabel = (admin?: boolean) => (admin ? 'Administrador' : 'Usuario');
 
 export function UsuariosTab() {
+  const empresaAtual = authService.getEmpresa();
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioCadastro[]>([]);
   const [page, setPage] = useState(1);
@@ -82,7 +96,75 @@ export function UsuariosTab() {
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [formData, setFormData] = useState<UsuarioCadastroFormData>(initialFormData);
+  const [formData, setFormData] = useState<UsuarioCadastroFormData>(() => ({
+    ...initialFormData,
+    empresa_master_id:
+      empresaAtual?.empresa_master_id != null
+        ? Number(empresaAtual.empresa_master_id)
+        : empresaAtual?.empresa_id ?? null,
+    empresa_ids: empresaAtual?.empresa_id ? [empresaAtual.empresa_id] : [],
+  }));
+  const [ufsApi, setUfsApi] = useState<Uf[]>([]);
+  const [ufsLoading, setUfsLoading] = useState(false);
+  const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
+  const [cidadesLoading, setCidadesLoading] = useState(false);
+  const [empresasDisponiveis, setEmpresasDisponiveis] = useState<Empresa[]>([]);
+  const [empresasLoading, setEmpresasLoading] = useState(false);
+
+  const empresasMaster: EmpresaMasterGroup[] = groupEmpresasByMaster(empresasDisponiveis);
+
+  const buildInitialFormData = (): UsuarioCadastroFormData => ({
+    ...initialFormData,
+    empresa_master_id:
+      empresaAtual?.empresa_master_id != null
+        ? Number(empresaAtual.empresa_master_id)
+        : empresaAtual?.empresa_id ?? null,
+    empresa_ids: empresaAtual?.empresa_id ? [empresaAtual.empresa_id] : [],
+  });
+
+  const loadUfs = async () => {
+    setUfsLoading(true);
+    try {
+      const data = await metadataService.getUfs();
+      setUfsApi(data);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao carregar UFs');
+    } finally {
+      setUfsLoading(false);
+    }
+  };
+
+  const loadEmpresas = async () => {
+    setEmpresasLoading(true);
+    try {
+      const data = await authService.getEmpresas();
+      const sorted = [...data].sort((a, b) =>
+        getEmpresaDisplayName(a).localeCompare(getEmpresaDisplayName(b)),
+      );
+      setEmpresasDisponiveis(sorted);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao carregar empresas');
+    } finally {
+      setEmpresasLoading(false);
+    }
+  };
+
+  const loadCidades = async (uf: string) => {
+    if (!uf?.trim()) {
+      setCidadesApi([]);
+      return;
+    }
+
+    setCidadesLoading(true);
+    try {
+      const data = await metadataService.getCidadesPorUf(uf);
+      setCidadesApi(data);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao carregar cidades');
+    } finally {
+      setCidadesLoading(false);
+    }
+  };
 
   const loadUsuarios = async (reset = false) => {
     if (loading) return;
@@ -116,6 +198,31 @@ export function UsuariosTab() {
     loadUsuarios(true);
   }, [filtroStatus]);
 
+  useEffect(() => {
+    loadUfs();
+    loadEmpresas();
+  }, []);
+
+  useEffect(() => {
+    if (!createOpen && !editOpen) return;
+    if (!formData.uf?.trim()) {
+      setCidadesApi([]);
+      return;
+    }
+
+    loadCidades(formData.uf);
+  }, [createOpen, editOpen, formData.uf]);
+
+  useEffect(() => {
+    if (!formData.cidade_id || !cidadesApi.length) return;
+    const stillExists = cidadesApi.some(
+      (cidade) => Number(cidade.cidade_id) === Number(formData.cidade_id),
+    );
+    if (!stillExists) {
+      setFormData((prev) => ({ ...prev, cidade_id: null }));
+    }
+  }, [cidadesApi, formData.cidade_id]);
+
   const handleSearch = () => loadUsuarios(true);
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -123,7 +230,7 @@ export function UsuariosTab() {
   };
 
   const resetForm = () => {
-    setFormData(initialFormData);
+    setFormData(buildInitialFormData());
     setEditId(null);
   };
 
@@ -142,6 +249,7 @@ export function UsuariosTab() {
       if (!detail) throw new Error('Usuario nao encontrado');
 
       setFormData({
+        usuario_id: detail.usuario_id,
         usuario: detail.usuario || '',
         nome: detail.nome || '',
         senha: '',
@@ -186,6 +294,14 @@ export function UsuariosTab() {
       toast.error('Preencha a senha');
       return false;
     }
+    if (!formData.empresa_ids?.length) {
+      toast.error('Selecione ao menos uma empresa vinculada');
+      return false;
+    }
+    if (!formData.empresa_master_id) {
+      toast.error('Selecione a empresa master');
+      return false;
+    }
     return true;
   };
 
@@ -214,6 +330,7 @@ export function UsuariosTab() {
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
         empresa_master_id: formData.empresa_master_id ?? null,
+        empresa_ids: formData.empresa_ids,
       });
       toast.success('Usuario criado com sucesso');
       setCreateOpen(false);
@@ -287,9 +404,35 @@ export function UsuariosTab() {
     }
   };
 
+  const toggleEmpresa = (empresaId: number, checked: boolean) => {
+    setFormData((prev) => {
+      const current = Array.isArray(prev.empresa_ids) ? prev.empresa_ids : [];
+      const nextEmpresaIds = checked
+        ? Array.from(new Set([...current, empresaId]))
+        : current.filter((id) => id !== empresaId);
+
+      return {
+        ...prev,
+        empresa_ids: nextEmpresaIds,
+        empresa_master_id:
+          prev.empresa_master_id && nextEmpresaIds.length
+            ? prev.empresa_master_id
+            : empresaAtual?.empresa_master_id ?? empresaAtual?.empresa_id ?? null,
+      };
+    });
+  };
+
   const formContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">ID</label>
+          <Input
+            className="h-8 text-sm bg-muted"
+            value={editOpen && editId ? String(editId) : ''}
+            readOnly
+          />
+        </div>
         <div className="col-span-1 md:col-span-6">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario *</label>
           <Input
@@ -300,13 +443,13 @@ export function UsuariosTab() {
             }
           />
         </div>
-        <div className="col-span-1 md:col-span-6">
+        <div className="col-span-1 md:col-span-4">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
           <Input
             className="h-8 text-sm"
             value={formData.nome}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, nome: event.target.value }))
+              setFormData((prev) => ({ ...prev, nome: toUpperValue(event.target.value) }))
             }
           />
         </div>
@@ -346,7 +489,7 @@ export function UsuariosTab() {
             className="h-8 text-sm"
             value={formData.fantasia ?? ''}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, fantasia: event.target.value }))
+              setFormData((prev) => ({ ...prev, fantasia: toUpperValue(event.target.value) }))
             }
           />
         </div>
@@ -393,6 +536,78 @@ export function UsuariosTab() {
         </div>
       </div>
 
+      <div className="border-b border-primary/50 pb-1 mt-4">
+        <span className="text-sm font-medium text-primary">Empresas</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            Empresa Master
+          </label>
+          <Select
+            value={formData.empresa_master_id ? String(formData.empresa_master_id) : 'none'}
+            onValueChange={(value) =>
+              setFormData((prev) => ({
+                ...prev,
+                empresa_master_id: value === 'none' ? null : Number(value),
+              }))
+            }
+            disabled={empresasLoading}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder={empresasLoading ? 'Carregando...' : 'Selecione'} />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50 max-h-60">
+              <SelectItem value="none">Selecione</SelectItem>
+              {empresasMaster.map((master) => (
+                <SelectItem
+                  key={master.empresa_master_id}
+                  value={String(master.empresa_master_id)}
+                >
+                  {`${master.empresa_master_id} - ${getMasterDisplayName(master)}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-muted-foreground block">
+          Empresas vinculadas
+        </label>
+        <div className="rounded-md border p-3 max-h-40 overflow-auto space-y-2">
+          {empresasLoading ? (
+            <div className="text-sm text-muted-foreground">Carregando empresas...</div>
+          ) : empresasDisponiveis.length ? (
+            empresasDisponiveis.map((empresa) => {
+              const checked = (formData.empresa_ids ?? []).includes(empresa.empresa_id);
+              return (
+                <label
+                  key={empresa.empresa_id}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={(nextChecked) =>
+                      toggleEmpresa(empresa.empresa_id, Boolean(nextChecked))
+                    }
+                  />
+                  <span>{`${empresa.empresa_id} - ${getEmpresaDisplayName(empresa)}`}</span>
+                </label>
+              );
+            })
+          ) : (
+            <div className="text-sm text-muted-foreground">Nenhuma empresa disponível.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="border-b border-primary/50 pb-1 mt-4">
+        <span className="text-sm font-medium text-primary">Endereço</span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <div className="col-span-1 md:col-span-8">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereco</label>
@@ -400,7 +615,7 @@ export function UsuariosTab() {
             className="h-8 text-sm"
             value={formData.endereco ?? ''}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, endereco: event.target.value }))
+              setFormData((prev) => ({ ...prev, endereco: toUpperValue(event.target.value) }))
             }
           />
         </div>
@@ -410,7 +625,7 @@ export function UsuariosTab() {
             className="h-8 text-sm"
             value={formData.numero ?? ''}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, numero: event.target.value }))
+              setFormData((prev) => ({ ...prev, numero: toUpperValue(event.target.value) }))
             }
           />
         </div>
@@ -423,7 +638,10 @@ export function UsuariosTab() {
             className="h-8 text-sm"
             value={formData.complemento ?? ''}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, complemento: event.target.value }))
+              setFormData((prev) => ({
+                ...prev,
+                complemento: toUpperValue(event.target.value),
+              }))
             }
           />
         </div>
@@ -433,7 +651,7 @@ export function UsuariosTab() {
             className="h-8 text-sm"
             value={formData.bairro ?? ''}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, bairro: event.target.value }))
+              setFormData((prev) => ({ ...prev, bairro: toUpperValue(event.target.value) }))
             }
           />
         </div>
@@ -450,52 +668,71 @@ export function UsuariosTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade ID</label>
-          <Input
-            className="h-8 text-sm"
-            inputMode="numeric"
-            value={formData.cidade_id ?? ''}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D+/g, '');
-              setFormData((prev) => ({
-                ...prev,
-                cidade_id: digits ? Number(digits) : null,
-              }));
-            }}
-          />
-        </div>
         <div className="col-span-1 md:col-span-2">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-          <Input
-            className="h-8 text-sm uppercase"
-            maxLength={2}
+          <Select
             value={formData.uf ?? ''}
-            onChange={(event) =>
+            onValueChange={(value) =>
               setFormData((prev) => ({
                 ...prev,
-                uf: event.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase(),
+                uf: value,
+                cidade_id: null,
               }))
             }
-          />
+            disabled={ufsLoading}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50">
+              {ufsApi.map((uf) => (
+                <SelectItem key={uf.uf} value={uf.uf}>
+                  {uf.uf}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Empresa Master ID
-          </label>
-          <Input
-            className="h-8 text-sm"
-            inputMode="numeric"
-            value={formData.empresa_master_id ?? ''}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D+/g, '');
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
+          <Select
+            value={formData.cidade_id ? String(formData.cidade_id) : 'none'}
+            onValueChange={(value) =>
               setFormData((prev) => ({
                 ...prev,
-                empresa_master_id: digits ? Number(digits) : null,
-              }));
-            }}
-          />
+                cidade_id: value === 'none' ? null : Number(value),
+              }))
+            }
+            disabled={cidadesLoading || !formData.uf}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue
+                placeholder={
+                  cidadesLoading
+                    ? 'Carregando...'
+                    : formData.uf
+                    ? 'Selecione'
+                    : 'Selecione UF'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50 max-h-60">
+              <SelectItem value="none">Selecione</SelectItem>
+              {cidadesApi.map((cidade) => (
+                <SelectItem
+                  key={cidade.cidade_id}
+                  value={String(cidade.cidade_id)}
+                >
+                  {cidade.nome_cidade}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      <div className="border-b border-primary/50 pb-1 mt-4">
+        <span className="text-sm font-medium text-primary">Telefones</span>
       </div>
 
       {(formData.criado_em || formData.atualizado_em) && (
@@ -695,7 +932,7 @@ export function UsuariosTab() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Novo Usuario</DialogTitle>
           </DialogHeader>
@@ -720,7 +957,7 @@ export function UsuariosTab() {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
           </DialogHeader>
