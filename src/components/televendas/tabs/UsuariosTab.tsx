@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Search, UserRoundCog, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +27,22 @@ const onlyDigits = (value: string | null | undefined) =>
 
 const toUpperValue = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase();
+
+const normalizeCityKey = (value: string | null | undefined) =>
+  String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+
+const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), wait);
+  };
+};
 
 const maskCep = (value: string | null | undefined) => {
   const digits = onlyDigits(value).slice(0, 8);
@@ -107,6 +123,7 @@ export function UsuariosTab() {
   const [ufsLoading, setUfsLoading] = useState(false);
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
+  const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [empresasDisponiveis, setEmpresasDisponiveis] = useState<Empresa[]>([]);
   const [empresasLoading, setEmpresasLoading] = useState(false);
 
@@ -165,6 +182,68 @@ export function UsuariosTab() {
     }
   };
 
+  const resolveCidadeId = async (uf: string, nomeCidade?: string) => {
+    if (!uf) return 0;
+    try {
+      const cidades = await metadataService.getCidadesPorUf(uf);
+      setCidadesApi(cidades);
+      if (!nomeCidade) return 0;
+      const target = normalizeCityKey(nomeCidade);
+      if (!target) return 0;
+      const match = cidades.find(
+        (cidade) => normalizeCityKey(cidade.nome_cidade) === target,
+      );
+      return match ? Number(match.cidade_id) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const cepLookupRef = useRef<(value: string) => void>();
+  if (!cepLookupRef.current) {
+    cepLookupRef.current = debounce(async (value: string) => {
+      const cleaned = onlyDigits(value).slice(0, 8);
+      if (cleaned.length !== 8) {
+        setCepLookupLoading(false);
+        return;
+      }
+
+      setCepLookupLoading(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+        if (!response.ok) {
+          toast.error('Falha ao consultar CEP');
+          return;
+        }
+
+        const data = await response.json();
+        if (!data || data.erro) {
+          toast.error('CEP nao encontrado');
+          return;
+        }
+
+        const ufValue = data.uf ? toUpperValue(data.uf) : '';
+        const cidadeNome = data.localidade ? String(data.localidade) : '';
+        const cidadeId = ufValue ? await resolveCidadeId(ufValue, cidadeNome) : 0;
+
+        setFormData((prev) => ({
+          ...prev,
+          cep: maskCep(cleaned),
+          endereco: toUpperValue(data.logradouro || prev.endereco),
+          complemento: toUpperValue(data.complemento || prev.complemento),
+          bairro: toUpperValue(data.bairro || prev.bairro),
+          uf: ufValue || prev.uf,
+          cidade_id: cidadeId || prev.cidade_id,
+        }));
+        toast.success('Endereco preenchido pelo CEP');
+      } catch {
+        toast.error('Erro na consulta de CEP');
+      } finally {
+        setCepLookupLoading(false);
+      }
+    }, 600);
+  }
+
   const loadUsuarios = async (reset = false) => {
     if (loading) return;
     setLoading(true);
@@ -211,16 +290,6 @@ export function UsuariosTab() {
 
     loadCidades(formData.uf);
   }, [createOpen, editOpen, formData.uf]);
-
-  useEffect(() => {
-    if (!formData.cidade_id || !cidadesApi.length) return;
-    const stillExists = cidadesApi.some(
-      (cidade) => Number(cidade.cidade_id) === Number(formData.cidade_id),
-    );
-    if (!stillExists) {
-      setFormData((prev) => ({ ...prev, cidade_id: null }));
-    }
-  }, [cidadesApi, formData.cidade_id]);
 
   const handleSearch = () => loadUsuarios(true);
 
@@ -662,10 +731,17 @@ export function UsuariosTab() {
           <Input
             className="h-8 text-sm"
             value={formData.cep ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, cep: maskCep(event.target.value) }))
-            }
+            onChange={(event) => {
+              const nextCep = maskCep(event.target.value);
+              setFormData((prev) => ({ ...prev, cep: nextCep }));
+              cepLookupRef.current?.(nextCep);
+            }}
           />
+          {cepLookupLoading && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Buscando endereco pelo CEP...
+            </p>
+          )}
         </div>
       </div>
 
@@ -734,31 +810,8 @@ export function UsuariosTab() {
       </div>
 
       <div className="border-b border-primary/50 pb-1 mt-4">
-        <span className="text-sm font-medium text-primary">Telefones</span>
+        <span className="text-sm font-medium text-primary">Funções</span>
       </div>
-
-      {(formData.criado_em || formData.atualizado_em) && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Criado em</label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.criado_em ? new Date(formData.criado_em).toLocaleString('pt-BR') : ''}
-              readOnly
-            />
-          </div>
-          <div className="col-span-1 md:col-span-6">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Atualizado em
-            </label>
-            <Input
-              className="h-8 text-sm bg-muted"
-              value={formData.atualizado_em ? new Date(formData.atualizado_em).toLocaleString('pt-BR') : ''}
-              readOnly
-            />
-          </div>
-        </div>
-      )}
 
       <div className="flex flex-wrap items-end pb-1 gap-6">
           <label className="flex items-center gap-2 text-sm">
@@ -934,11 +987,13 @@ export function UsuariosTab() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Novo Usuario</DialogTitle>
           </DialogHeader>
-          {formContent}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            {formContent}
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -959,11 +1014,13 @@ export function UsuariosTab() {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
           </DialogHeader>
-          {formContent}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            {formContent}
+          </div>
           <DialogFooter>
             <Button
               variant="outline"

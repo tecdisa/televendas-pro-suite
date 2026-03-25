@@ -30,9 +30,16 @@ function normalizeDivisao(raw: any): Divisao {
 }
 
 export const divisionsService = {
-  async getAll(query?: string, grupoId?: number, page = 1, limit = 100, status: 'ativos' | 'inativos' | 'todos' = 'ativos'): Promise<{ data: Divisao[]; total: number }> {
+  async getAll(
+    query?: string,
+    grupoId?: number,
+    page = 1,
+    limit = 100,
+    status: 'ativos' | 'inativos' | 'todos' = 'ativos',
+    empresaIdOverride?: number,
+  ): Promise<{ data: Divisao[]; total: number }> {
     const empresa = authService.getEmpresa();
-    const empresaId = empresa?.empresa_id;
+    const empresaId = empresaIdOverride ?? empresa?.empresa_id;
 
     if (!empresaId) {
       console.warn('divisionsService.getAll: empresaId não encontrado');

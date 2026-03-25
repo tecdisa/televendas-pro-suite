@@ -29,7 +29,6 @@ import {
   Product,
   ProductCadastroFilters,
   ProductCadastroInput,
-  ProductKitItem,
   productsService,
 } from '@/services/productsService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
@@ -37,22 +36,6 @@ import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { cn } from '@/lib/utils';
 
 const UNIDADES = ['UN', 'CX', 'PC', 'KG', 'LT', 'DP', 'FR', 'TB', 'CT'];
-const TIPOS_ITEM = [
-  { value: 'MERCADORIA_REVENDA', label: 'Mercadoria para Revenda' },
-  { value: 'USO_CONSUMO', label: 'Uso e Consumo' },
-  { value: 'ATIVO_IMOBILIZADO', label: 'Ativo Imobilizado' },
-];
-const ORIGENS_PRODUTO = [
-  { value: '0', label: '0 - Nacional' },
-  { value: '1', label: '1 - Estrangeira importação direta' },
-  { value: '2', label: '2 - Estrangeira adquirida no mercado interno' },
-  { value: '3', label: '3 - Nacional conteúdo importação > 40%' },
-  { value: '4', label: '4 - Nacional processos básicos' },
-  { value: '5', label: '5 - Nacional conteúdo importação <= 40%' },
-  { value: '6', label: '6 - Estrangeira importação direta sem similar' },
-  { value: '7', label: '7 - Estrangeira mercado interno sem similar' },
-  { value: '8', label: '8 - Nacional conteúdo importação > 70%' },
-];
 const PRODUTOS_PINNED_COLUMNS_STORAGE_KEY = 'televendas:produtos:pinnedColumns';
 const PRODUTOS_FIX_ACTIONS_STORAGE_KEY = 'televendas:produtos:fixActions';
 
@@ -124,27 +107,13 @@ interface ProductFormState {
   codigoProduto: string;
   descricao: string;
   unidade: string;
-  tipoItem: string;
   codigoFabrica: string;
   ean13: string;
   dun14: string;
-  ncm: string;
-  cest: string;
-  tipi: string;
-  pno: string;
-  inibeEanXmlNfe: boolean;
-  medicamento: boolean;
-  producaoPropria: boolean;
   apresentacao: string;
-  apresentacao2: string;
-  unidade2: string;
   marca: string;
   fornecedorId: number;
   divisaoId: number;
-  dcb: string;
-  dcbDescricao: string;
-  portaria: string;
-  produtoSimilar: number;
   fatorCompra: number;
   fatorVenda: number;
   multiploDeVendas: number;
@@ -159,41 +128,8 @@ interface ProductFormState {
   precoFabrica: number;
   descricaoComplementar: string;
   codigoSiteB2c: string;
-  mensagemNotaFiscal: string;
-  regMs: string;
-  origemProduto: string;
-  validade: string;
-  estoque: number;
-  quantidadeReservada: number;
-  custoMedio: number;
-  custoNota: number;
-  custoCompra: number;
-  cst: string;
-  codigoSituacaoIcms: string;
-  csosn: string;
-  aliquotaIcms: number;
-  pfcp: number;
-  pautaIcms: number;
-  reducaoSt: number;
-  reducaoConvenio: number;
-  repasseIcms: boolean;
-  cstPis: string;
-  cstCofins: string;
-  aliquotaPis: number;
-  aliquotaCofins: number;
-  ibsCbs: string;
-  ibsCbsClassifTrib: string;
   lancamento: boolean;
   inativo: boolean;
-}
-
-interface ProductKitFormItem {
-  produtoItemId: number;
-  codigoProduto: string;
-  descricao: string;
-  un: string;
-  quantidade: number;
-  inativo?: boolean;
 }
 
 const initialFormData: ProductFormState = {
@@ -201,27 +137,13 @@ const initialFormData: ProductFormState = {
   codigoProduto: '',
   descricao: '',
   unidade: 'UN',
-  tipoItem: 'MERCADORIA_REVENDA',
   codigoFabrica: '',
   ean13: '',
   dun14: '',
-  ncm: '',
-  cest: '',
-  tipi: '',
-  pno: '',
-  inibeEanXmlNfe: false,
-  medicamento: false,
-  producaoPropria: false,
   apresentacao: '',
-  apresentacao2: '',
-  unidade2: 'UN',
   marca: '',
   fornecedorId: 0,
   divisaoId: 0,
-  dcb: '',
-  dcbDescricao: '',
-  portaria: '',
-  produtoSimilar: 0,
   fatorCompra: 0,
   fatorVenda: 0,
   multiploDeVendas: 0,
@@ -236,30 +158,6 @@ const initialFormData: ProductFormState = {
   precoFabrica: 0,
   descricaoComplementar: '',
   codigoSiteB2c: '',
-  mensagemNotaFiscal: '',
-  regMs: '',
-  origemProduto: '0',
-  validade: '',
-  estoque: 0,
-  quantidadeReservada: 0,
-  custoMedio: 0,
-  custoNota: 0,
-  custoCompra: 0,
-  cst: '',
-  codigoSituacaoIcms: '',
-  csosn: '',
-  aliquotaIcms: 0,
-  pfcp: 0,
-  pautaIcms: 0,
-  reducaoSt: 0,
-  reducaoConvenio: 0,
-  repasseIcms: false,
-  cstPis: '',
-  cstCofins: '',
-  aliquotaPis: 0,
-  aliquotaCofins: 0,
-  ibsCbs: '',
-  ibsCbsClassifTrib: '',
   lancamento: false,
   inativo: false,
 };
@@ -270,27 +168,13 @@ function mapProductToForm(product: Product): ProductFormState {
     codigoProduto: String(product.codigoProduto ?? '').trim(),
     descricao: String(product.descricao ?? '').trim(),
     unidade: String(product.un ?? 'UN').trim() || 'UN',
-    tipoItem: String(product.tipoItem ?? 'MERCADORIA_REVENDA').trim() || 'MERCADORIA_REVENDA',
     codigoFabrica: String(product.codigoFabrica ?? '').trim(),
     ean13: String(product.ean13 ?? '').trim(),
     dun14: String(product.dun14 ?? '').trim(),
-    ncm: String(product.ncm ?? '').trim(),
-    cest: String(product.cest ?? '').trim(),
-    tipi: String(product.tipi ?? '').trim(),
-    pno: String(product.pno ?? '').trim(),
-    inibeEanXmlNfe: Boolean(product.inibeEanXmlNfe ?? false),
-    medicamento: Boolean(product.medicamento ?? false),
-    producaoPropria: Boolean(product.producaoPropria ?? false),
     apresentacao: String(product.apresentacao ?? '').trim(),
-    apresentacao2: String(product.apresentacao2 ?? '').trim(),
-    unidade2: String(product.unidade2 ?? 'UN').trim() || 'UN',
     marca: String(product.marca ?? '').trim(),
     fornecedorId: Number(product.fornecedorId ?? 0) || 0,
     divisaoId: Number(product.divisaoId ?? 0) || 0,
-    dcb: String(product.dcb ?? '').trim(),
-    dcbDescricao: String(product.dcbDescricao ?? '').trim(),
-    portaria: String(product.portaria ?? '').trim(),
-    produtoSimilar: Number(product.produtoSimilar ?? 0) || 0,
     fatorCompra: Number(product.fatorCompra ?? 0) || 0,
     fatorVenda: Number(product.fatorVenda ?? 0) || 0,
     multiploDeVendas: Number(product.multiploDeVendas ?? 0) || 0,
@@ -305,48 +189,11 @@ function mapProductToForm(product: Product): ProductFormState {
     precoFabrica: Number(product.precoFabrica ?? 0) || 0,
     descricaoComplementar: String(product.descricaoComplementar ?? '').trim(),
     codigoSiteB2c: String(product.codigoSiteB2c ?? '').trim(),
-    mensagemNotaFiscal: String(product.mensagemNotaFiscal ?? '').trim(),
-    regMs: String(product.regMs ?? '').trim(),
-    origemProduto: String(product.origemProduto ?? '0').trim() || '0',
-    validade: String(product.validade ?? '').trim(),
-    estoque: Number(product.estoque ?? 0) || 0,
-    quantidadeReservada: Number(product.quantidadeReservada ?? 0) || 0,
-    custoMedio: Number(product.custoMedio ?? 0) || 0,
-    custoNota: Number(product.custoNota ?? 0) || 0,
-    custoCompra: Number(product.custoCompra ?? 0) || 0,
-    cst: String(product.cst ?? '').trim(),
-    codigoSituacaoIcms: String(product.codigoSituacaoIcms ?? '').trim(),
-    csosn: String(product.csosn ?? '').trim(),
-    aliquotaIcms: Number(product.aliquotaIcms ?? 0) || 0,
-    pfcp: Number(product.pfcp ?? 0) || 0,
-    pautaIcms: Number(product.pautaIcms ?? 0) || 0,
-    reducaoSt: Number(product.reducaoSt ?? 0) || 0,
-    reducaoConvenio: Number(product.reducaoConvenio ?? 0) || 0,
-    repasseIcms: Boolean(product.repasseIcms ?? false),
-    cstPis: String(product.cstPis ?? '').trim(),
-    cstCofins: String(product.cstCofins ?? '').trim(),
-    aliquotaPis: Number(product.aliquotaPis ?? 0) || 0,
-    aliquotaCofins: Number(product.aliquotaCofins ?? 0) || 0,
-    ibsCbs: String(product.ibsCbs ?? '').trim(),
-    ibsCbsClassifTrib: String(product.ibsCbsClassifTrib ?? '').trim(),
     lancamento: Boolean(product.lancamento ?? false),
     inativo: Boolean(product.inativo ?? false),
   };
 }
 
-function mapProductKitToFormItems(product?: Product | null): ProductKitFormItem[] {
-  return (product?.kitItens ?? []).map((item: ProductKitItem) => ({
-    produtoItemId: Number(item.produtoItemId ?? item.produtoId) || 0,
-    codigoProduto: String(item.codigoProduto ?? '').trim(),
-    descricao: String(item.descricao ?? '').trim(),
-    un: String(item.un ?? 'UN').trim() || 'UN',
-    quantidade: Number(item.quantidade ?? 0) || 0,
-    inativo: Boolean(item.inativo ?? false),
-  }));
-}
-
-const toFixedNumber = (value: number, decimals = 3) =>
-  Number.isFinite(value) ? value.toFixed(decimals) : '0.000';
 const formatBooleanCell = (value?: boolean | null) => (value ? 'Sim' : 'Não');
 const formatNullableInteger = (value?: number | null) =>
   value === null || value === undefined ? '-' : Number(value).toLocaleString('pt-BR');
@@ -365,37 +212,18 @@ const formatNullableCurrency = (value?: number | null) =>
         currency: 'BRL',
       });
 
-function mapFormToPayload(
-  form: ProductFormState,
-  options?: { includeStock?: boolean },
-): ProductCadastroInput {
+function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
   const payload: ProductCadastroInput = {
     codigo_produto: form.codigoProduto.trim() || undefined,
     descricao_produto: form.descricao.trim(),
     unidade: form.unidade.trim().toUpperCase(),
-    tipo_item: form.tipoItem.trim() || null,
     codigo_fabrica: form.codigoFabrica.trim() || null,
     ean13: form.ean13.trim() || null,
     dun14: form.dun14.trim() || null,
-    ncm: form.ncm.trim() || null,
-    cest: form.cest.trim() || null,
-    tipi: form.tipi.trim() || null,
-    pno: form.pno.trim() || null,
-    inibe_ean_xml_nfe: Boolean(form.inibeEanXmlNfe),
-    medicamento: Boolean(form.medicamento),
-    producao_propria: Boolean(form.producaoPropria),
     apresentacao: form.apresentacao.trim() || null,
-    apresentacao2: form.apresentacao2.trim() || null,
-    unidade2: form.unidade2.trim().toUpperCase() || null,
     marca: form.marca.trim() || null,
     fornecedor_id: Number(form.fornecedorId) || 0,
     divisao_id: Number(form.divisaoId) || 0,
-    dcb: form.dcb.trim() || null,
-    dcb_descricao: form.dcbDescricao.trim() || null,
-    portaria: form.portaria.trim() || null,
-    produto_similar: Number.isFinite(Number(form.produtoSimilar))
-      ? Number(form.produtoSimilar)
-      : null,
     fator_compra: Number(form.fatorCompra) || 0,
     fator_venda: Number(form.fatorVenda) || 0,
     multiplo_de_vendas: Number(form.multiploDeVendas) || 0,
@@ -410,36 +238,9 @@ function mapFormToPayload(
     preco_fabrica: Number(form.precoFabrica) || 0,
     descricao_complementar: form.descricaoComplementar.trim() || null,
     codigo_site_b2c: form.codigoSiteB2c.trim() || null,
-    mensagem_nota_fiscal: form.mensagemNotaFiscal.trim() || null,
-    reg_ms: form.regMs.trim() || null,
-    origem_produto: form.origemProduto.trim() || null,
-    validade: form.validade.trim() || null,
     lancamento: Boolean(form.lancamento),
     inativo: Boolean(form.inativo),
   };
-
-  if (options?.includeStock !== false) {
-    payload.estoque = Number(form.estoque) || 0;
-    payload.custo_medio = Number(form.custoMedio) || 0;
-    payload.custo_nota = Number(form.custoNota) || 0;
-    payload.custo_compra = Number(form.custoCompra) || 0;
-    payload.cst = form.cst.trim() || null;
-    payload.codigo_situacao_icms = form.codigoSituacaoIcms.trim() || null;
-    payload.csosn = form.csosn.trim() || null;
-    payload.aliquota_icms = Number(form.aliquotaIcms) || 0;
-    payload.pfcp = Number(form.pfcp) || 0;
-    payload.pauta_icms = Number(form.pautaIcms) || 0;
-    payload.reducao_st = Number(form.reducaoSt) || 0;
-    payload.reducao_convenio = Number(form.reducaoConvenio) || 0;
-    payload.repasse_icms = Boolean(form.repasseIcms);
-    payload.cst_pis = form.cstPis.trim() || null;
-    payload.cst_cofins = form.cstCofins.trim() || null;
-    payload.aliquota_pis = Number(form.aliquotaPis) || 0;
-    payload.aliquota_cofins = Number(form.aliquotaCofins) || 0;
-    payload.ibs_cbs = form.ibsCbs.trim() || null;
-    payload.ibs_cbs_classif_trib = form.ibsCbsClassifTrib.trim() || null;
-  }
-
   return payload;
 }
 
@@ -482,16 +283,12 @@ export function ProdutosTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormState>(initialFormData);
-  const [kitItens, setKitItens] = useState<ProductKitFormItem[]>([]);
-  const [kitSearch, setKitSearch] = useState('');
-  const [kitSearchLoading, setKitSearchLoading] = useState(false);
-  const [kitSearchResults, setKitSearchResults] = useState<Product[]>([]);
-  const [selectedKitProductId, setSelectedKitProductId] = useState('none');
-  const [kitQuantity, setKitQuantity] = useState(1);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
+  const empresaCadastroId =
+    Number(empresaAtual?.empresa_master_id ?? empresaAtual?.empresa_id) || 0;
 
   const [filters, setFilters] = useState<{
     status: StatusType;
@@ -538,8 +335,22 @@ export function ProdutosTab() {
   const loadOptions = async () => {
     try {
       const [fornRes, divRes] = await Promise.all([
-        suppliersService.getAll(undefined, 1, 500, 'ativos'),
-        divisionsService.getAll(undefined, undefined, 1, 500, 'ativos'),
+        suppliersService.getAll(
+          undefined,
+          1,
+          500,
+          'ativos',
+          undefined,
+          empresaCadastroId || undefined,
+        ),
+        divisionsService.getAll(
+          undefined,
+          undefined,
+          1,
+          500,
+          'ativos',
+          empresaCadastroId || undefined,
+        ),
       ]);
       setFornecedores(fornRes.data || []);
       setDivisoes(divRes.data || []);
@@ -586,7 +397,7 @@ export function ProdutosTab() {
     void loadOptions();
     void loadProdutos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [empresaCadastroId]);
 
   useEffect(() => {
     try {
@@ -715,11 +526,6 @@ export function ProdutosTab() {
   const openCreate = () => {
     setEditingProduct(null);
     setFormData({ ...initialFormData });
-    setKitItens([]);
-    setKitSearch('');
-    setKitSearchResults([]);
-    setSelectedKitProductId('none');
-    setKitQuantity(1);
     setDialogOpen(true);
   };
 
@@ -733,11 +539,6 @@ export function ProdutosTab() {
       }
       setEditingProduct(detail);
       setFormData(mapProductToForm(detail));
-      setKitItens(mapProductKitToFormItems(detail));
-      setKitSearch('');
-      setKitSearchResults([]);
-      setSelectedKitProductId('none');
-      setKitQuantity(1);
       setDialogOpen(true);
     } catch (error: any) {
       console.error('Erro ao carregar produto:', error);
@@ -767,13 +568,7 @@ export function ProdutosTab() {
 
     setSubmitting(true);
     try {
-      const payload = {
-        ...mapFormToPayload(formData, { includeStock: !editingProduct }),
-        kit_itens: kitItens.map((item) => ({
-          produto_item_id: item.produtoItemId,
-          quantidade: Number(item.quantidade) || 0,
-        })),
-      };
+      const payload = mapFormToPayload(formData);
       if (editingProduct) {
         await productsService.updateCadastro(editingProduct.id, payload);
         toast.success('Produto atualizado com sucesso');
@@ -811,82 +606,6 @@ export function ProdutosTab() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   const updateForm = (key: keyof ProductFormState, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
-
-  const handleSearchKitProducts = async () => {
-    if (!kitSearch.trim()) {
-      toast.error('Digite algo para buscar o componente do kit');
-      return;
-    }
-    setKitSearchLoading(true);
-    try {
-      const result = await productsService.listCadastro(
-        {
-          status: 'todos',
-          search: kitSearch.trim(),
-        },
-        1,
-        20,
-      );
-      setKitSearchResults(
-        (result.data || []).filter((item) => item.id !== formData.id),
-      );
-      setSelectedKitProductId('none');
-    } catch (error: any) {
-      console.error('Erro ao buscar componentes do kit:', error);
-      toast.error(error?.message || 'Erro ao buscar componentes do kit');
-    } finally {
-      setKitSearchLoading(false);
-    }
-  };
-
-  const handleAddKitItem = () => {
-    const produtoId = Number(selectedKitProductId);
-    if (!produtoId || Number.isNaN(produtoId)) {
-      toast.error('Selecione um produto para adicionar ao kit');
-      return;
-    }
-    if (!kitQuantity || Number.isNaN(kitQuantity) || kitQuantity <= 0) {
-      toast.error('Informe uma quantidade válida para o item do kit');
-      return;
-    }
-
-    const selected = kitSearchResults.find((item) => item.id === produtoId);
-    if (!selected) {
-      toast.error('Produto selecionado não encontrado na busca');
-      return;
-    }
-
-    setKitItens((prev) => {
-      const existing = prev.find((item) => item.produtoItemId === produtoId);
-      if (existing) {
-        return prev.map((item) =>
-          item.produtoItemId === produtoId
-            ? { ...item, quantidade: kitQuantity }
-            : item,
-        );
-      }
-      return [
-        ...prev,
-        {
-          produtoItemId: produtoId,
-          codigoProduto: String(selected.codigoProduto ?? '').trim(),
-          descricao: String(selected.descricao ?? '').trim(),
-          un: String(selected.un ?? 'UN').trim() || 'UN',
-          quantidade: kitQuantity,
-          inativo: Boolean(selected.inativo ?? false),
-        },
-      ];
-    });
-
-    setSelectedKitProductId('none');
-    setKitQuantity(1);
-  };
-
-  const handleRemoveKitItem = (produtoItemId: number) => {
-    setKitItens((prev) =>
-      prev.filter((item) => item.produtoItemId !== produtoItemId),
-    );
-  };
 
   const getHeadClassName = (key: ProductsGridColumnKey) => {
     switch (key) {
@@ -1328,16 +1047,20 @@ export function ProdutosTab() {
             <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="caracteristicas">Características</TabsTrigger>
               <TabsTrigger value="complementar">Dados complementares</TabsTrigger>
-              <TabsTrigger value="estoque" disabled={Boolean(editingProduct)}>
-                Estoque
-              </TabsTrigger>
-              <TabsTrigger value="kit">Kit</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 min-h-0 mt-2 overflow-y-scroll pr-1">
               <TabsContent value="caracteristicas" className="mt-0 space-y-4 px-1 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-4">
+                  <div className="col-span-1 md:col-span-2">
+                    <Label className="text-xs">ID</Label>
+                    <Input
+                      className="h-8 text-xs bg-muted"
+                      value={formData.id ? String(formData.id) : ''}
+                      readOnly
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Código produto</Label>
                     <Input
                       className="h-8 text-xs bg-muted"
@@ -1353,82 +1076,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('codigoFabrica', e.target.value.toUpperCase())}
                     />
                   </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs font-semibold">NCM</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.ncm}
-                      onChange={(e) => updateForm('ncm', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">CEST</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.cest}
-                      onChange={(e) => updateForm('cest', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">EAN13</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.ean13}
-                      onChange={(e) => updateForm('ean13', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">DUN14</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.dun14}
-                      onChange={(e) => updateForm('dun14', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">TIPI</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.tipi}
-                      onChange={(e) => updateForm('tipi', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">PNO</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.pno}
-                      onChange={(e) => updateForm('pno', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">Marca</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.marca}
-                      onChange={(e) => updateForm('marca', e.target.value.toUpperCase())}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-4">
-                    <Label className="text-xs font-semibold">Tipo do item</Label>
-                    <Select value={formData.tipoItem} onValueChange={(v) => updateForm('tipoItem', v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {TIPOS_ITEM.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-1 md:col-span-8">
                     <Label className="text-xs font-semibold">Descrição *</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1439,14 +1087,6 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">1ª Apresentação</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.apresentacao}
-                      onChange={(e) => updateForm('apresentacao', e.target.value.toUpperCase())}
-                    />
-                  </div>
                   <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs font-semibold">Unidade *</Label>
                     <Select value={formData.unidade} onValueChange={(v) => updateForm('unidade', v)}>
@@ -1458,26 +1098,42 @@ export function ProdutosTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">2ª Apresentação</Label>
+                  <div className="col-span-1 md:col-span-2">
+                    <Label className="text-xs">EAN13</Label>
                     <Input
                       className="h-8 text-xs"
-                      value={formData.apresentacao2}
-                      onChange={(e) => updateForm('apresentacao2', e.target.value.toUpperCase())}
+                      value={formData.ean13}
+                      onChange={(e) => updateForm('ean13', e.target.value)}
                     />
                   </div>
                   <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">Unidade 2</Label>
-                    <Select value={formData.unidade2} onValueChange={(v) => updateForm('unidade2', v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {UNIDADES.map((u) => (
-                          <SelectItem key={u} value={u}>{u}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs">DUN14</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.dun14}
+                      onChange={(e) => updateForm('dun14', e.target.value)}
+                    />
                   </div>
-                  <div className="col-span-1 md:col-span-2">
+                  <div className="col-span-1 md:col-span-3">
+                    <Label className="text-xs">Apresentação</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.apresentacao}
+                      onChange={(e) => updateForm('apresentacao', e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-3">
+                    <Label className="text-xs">Marca</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.marca}
+                      onChange={(e) => updateForm('marca', e.target.value.toUpperCase())}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Múltiplo de vendas</Label>
                     <Input
                       type="number"
@@ -1526,51 +1182,7 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">DCB</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.dcb}
-                      onChange={(e) => updateForm('dcb', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-5">
-                    <Label className="text-xs">DCB - descrição</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.dcbDescricao}
-                      onChange={(e) => updateForm('dcbDescricao', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">Portaria</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.portaria}
-                      onChange={(e) => updateForm('portaria', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">Produto similar</Label>
-                    <Input
-                      type="number"
-                      className="h-8 text-xs"
-                      value={formData.produtoSimilar}
-                      onChange={(e) => updateForm('produtoSimilar', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-12 flex flex-wrap gap-x-4 gap-y-2 pt-1">
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
-                        checked={formData.inibeEanXmlNfe}
-                        onCheckedChange={(v) => updateForm('inibeEanXmlNfe', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      Inibe EAN XML NFe
-                    </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
                         checked={formData.permiteVendaB2b}
@@ -1586,22 +1198,6 @@ export function ProdutosTab() {
                         className="h-3.5 w-3.5"
                       />
                       B2C
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
-                        checked={formData.medicamento}
-                        onCheckedChange={(v) => updateForm('medicamento', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      Medicamento
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
-                        checked={formData.producaoPropria}
-                        onCheckedChange={(v) => updateForm('producaoPropria', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      Produção própria
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
@@ -1682,432 +1278,6 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-8">
-                    <Label className="text-xs">Mensagem na nota fiscal</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.mensagemNotaFiscal}
-                      onChange={(e) => updateForm('mensagemNotaFiscal', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">Reg. MS</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.regMs}
-                      onChange={(e) => updateForm('regMs', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">Validade</Label>
-                    <Input
-                      type="date"
-                      className="h-8 text-xs"
-                      value={formData.validade}
-                      onChange={(e) => updateForm('validade', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-8">
-                    <Label className="text-xs">Origem do produto</Label>
-                    <Select
-                      value={formData.origemProduto || '0'}
-                      onValueChange={(v) => updateForm('origemProduto', v)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ORIGENS_PRODUTO.map((origem) => (
-                          <SelectItem key={origem.value} value={origem.value}>
-                            {origem.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="kit" className="mt-0 px-1 space-y-4 pb-4">
-                <div className="rounded-md border p-3 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="col-span-1 md:col-span-8">
-                      <Label className="text-xs">Buscar produto componente</Label>
-                      <Input
-                        className="h-8 text-xs"
-                        value={kitSearch}
-                        onChange={(e) => setKitSearch(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === 'Enter' && (e.preventDefault(), void handleSearchKitProducts())
-                        }
-                        placeholder="Descrição, código ou EAN do componente"
-                      />
-                    </div>
-                    <div className="col-span-1 md:col-span-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full h-8 text-xs"
-                        onClick={() => void handleSearchKitProducts()}
-                        disabled={kitSearchLoading}
-                      >
-                        {kitSearchLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
-                        ) : (
-                          <Search className="h-3.5 w-3.5 mr-2" />
-                        )}
-                        Buscar componente
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="col-span-1 md:col-span-8">
-                      <Label className="text-xs">Resultado da busca</Label>
-                      <Select
-                        value={selectedKitProductId}
-                        onValueChange={setSelectedKitProductId}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Selecione o componente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Selecione</SelectItem>
-                          {kitSearchResults.map((item) => (
-                            <SelectItem key={item.id} value={String(item.id)}>
-                              {(item.codigoProduto || item.id) + ' - ' + item.descricao}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-1 md:col-span-2">
-                      <Label className="text-xs">Quantidade</Label>
-                      <Input
-                        type="number"
-                        min="0.001"
-                        step="0.001"
-                        className="h-8 text-xs"
-                        value={kitQuantity}
-                        onChange={(e) => setKitQuantity(Number(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="col-span-1 md:col-span-2">
-                      <Button
-                        type="button"
-                        className="w-full h-8 text-xs"
-                        onClick={handleAddKitItem}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-2" />
-                        Adicionar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-28">Código</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead className="w-16">UN</TableHead>
-                        <TableHead className="w-24 text-right">Quantidade</TableHead>
-                        <TableHead className="w-20 text-center">Inativo</TableHead>
-                        <TableHead className="w-16" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {kitItens.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
-                            Este produto ainda não possui componentes de kit.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        kitItens.map((item) => (
-                          <TableRow key={item.produtoItemId}>
-                            <TableCell className="text-xs">{item.codigoProduto || item.produtoItemId}</TableCell>
-                            <TableCell className="text-xs">{item.descricao}</TableCell>
-                            <TableCell className="text-xs">{item.un}</TableCell>
-                            <TableCell className="text-xs text-right">{item.quantidade}</TableCell>
-                            <TableCell className="text-xs text-center">{item.inativo ? 'Sim' : 'Não'}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-red-600 hover:text-red-700"
-                                onClick={() => handleRemoveKitItem(item.produtoItemId)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="estoque" className="mt-0 px-1 space-y-4 pb-4">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">Código</Label>
-                    <Input className="h-8 text-xs bg-muted" value={formData.codigoProduto} readOnly />
-                  </div>
-                  <div className="md:col-span-8">
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">Produto</Label>
-                    <Input className="h-8 text-xs bg-muted" value={formData.descricao} readOnly />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">UN</Label>
-                    <Input className="h-8 text-xs bg-muted" value={formData.unidade} readOnly />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-4">
-                    <Label className="text-xs">Estoque</Label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      className="h-8 text-xs"
-                      value={formData.estoque}
-                      onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-4">
-                    <Label className="text-xs">Quantidade reservada</Label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      className="h-8 text-xs bg-muted"
-                      value={formData.quantidadeReservada}
-                      readOnly
-                    />
-                  </div>
-                  <div className="md:col-span-4">
-                    <Label className="text-xs">Disponível</Label>
-                    <Input
-                      className="h-8 text-xs bg-muted"
-                      value={toFixedNumber(
-                        Number(formData.estoque || 0) - Number(formData.quantidadeReservada || 0),
-                        3,
-                      )}
-                      readOnly
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-4">
-                    <Label className="text-xs">Custo médio</Label>
-                    <Input
-                      type="number"
-                      step="0.00001"
-                      className="h-8 text-xs"
-                      value={formData.custoMedio}
-                      onChange={(e) => updateForm('custoMedio', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-4">
-                    <Label className="text-xs">Custo nota</Label>
-                    <Input
-                      type="number"
-                      step="0.00001"
-                      className="h-8 text-xs"
-                      value={formData.custoNota}
-                      onChange={(e) => updateForm('custoNota', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-4">
-                    <Label className="text-xs">Custo compra</Label>
-                    <Input
-                      type="number"
-                      step="0.00001"
-                      className="h-8 text-xs"
-                      value={formData.custoCompra}
-                      onChange={(e) => updateForm('custoCompra', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
-
-                <Tabs defaultValue="icms_ipi" className="space-y-3">
-                  <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
-                    <TabsTrigger value="icms_ipi">ICMS/IPI</TabsTrigger>
-                    <TabsTrigger value="pis_cofins">PIS/COFINS</TabsTrigger>
-                    <TabsTrigger value="ibs_cbs">IBS/CBS</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="icms_ipi" className="mt-0 space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                      <div className="md:col-span-3">
-                        <Label className="text-xs">Código situação ICMS</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          value={formData.codigoSituacaoIcms}
-                          onChange={(e) =>
-                            updateForm('codigoSituacaoIcms', e.target.value.toUpperCase())
-                          }
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-xs">CST</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          maxLength={2}
-                          value={formData.cst}
-                          onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-xs">CSOSN</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          maxLength={3}
-                          value={formData.csosn}
-                          onChange={(e) => updateForm('csosn', e.target.value.toUpperCase())}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-xs">Aliq. ICMS</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.aliquotaIcms}
-                          onChange={(e) => updateForm('aliquotaIcms', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-xs">PFCP</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.pfcp}
-                          onChange={(e) => updateForm('pfcp', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="md:col-span-1 flex items-center gap-2 pt-5">
-                        <Checkbox
-                          checked={formData.repasseIcms}
-                          onCheckedChange={(checked) => updateForm('repasseIcms', Boolean(checked))}
-                          className="h-3.5 w-3.5"
-                        />
-                        <label className="text-xs">Repasse</label>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                      <div className="md:col-span-4">
-                        <Label className="text-xs">Pauta ICMS</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.pautaIcms}
-                          onChange={(e) => updateForm('pautaIcms', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="md:col-span-4">
-                        <Label className="text-xs">Redução ST</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.reducaoSt}
-                          onChange={(e) => updateForm('reducaoSt', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="md:col-span-4">
-                        <Label className="text-xs">Redução convênio</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.reducaoConvenio}
-                          onChange={(e) => updateForm('reducaoConvenio', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="pis_cofins" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                      <div className="md:col-span-3">
-                        <Label className="text-xs">CST PIS</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          maxLength={2}
-                          value={formData.cstPis}
-                          onChange={(e) => updateForm('cstPis', e.target.value.toUpperCase())}
-                        />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Label className="text-xs">CST COFINS</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          maxLength={2}
-                          value={formData.cstCofins}
-                          onChange={(e) => updateForm('cstCofins', e.target.value.toUpperCase())}
-                        />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Label className="text-xs">Aliquota PIS</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.aliquotaPis}
-                          onChange={(e) => updateForm('aliquotaPis', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Label className="text-xs">Aliquota COFINS</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-8 text-xs"
-                          value={formData.aliquotaCofins}
-                          onChange={(e) =>
-                            updateForm('aliquotaCofins', Number(e.target.value) || 0)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="ibs_cbs" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                      <div className="md:col-span-4">
-                        <Label className="text-xs">IBS/CBS</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          value={formData.ibsCbs}
-                          maxLength={3}
-                          onChange={(e) => updateForm('ibsCbs', e.target.value.toUpperCase())}
-                        />
-                      </div>
-                      <div className="md:col-span-8">
-                        <Label className="text-xs">Classificação tributária IBS/CBS</Label>
-                        <Input
-                          className="h-8 text-xs"
-                          value={formData.ibsCbsClassifTrib}
-                          onChange={(e) =>
-                            updateForm('ibsCbsClassifTrib', e.target.value.toUpperCase())
-                          }
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
               </TabsContent>
 
               <TabsContent value="complementar" className="mt-0 px-1 space-y-3 pb-4">

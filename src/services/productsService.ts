@@ -370,50 +370,8 @@ export interface ProductCadastroInput {
   preco_fabrica?: number | null;
   descricao_complementar?: string | null;
   codigo_site_b2c?: string | null;
-  ncm?: string | null;
-  cest?: string | null;
-  tipi?: string | null;
-  tipo_item?: string | null;
-  pno?: string | null;
-  inibe_ean_xml_nfe?: boolean;
-  medicamento?: boolean;
-  producao_propria?: boolean;
-  apresentacao2?: string | null;
-  unidade2?: string | null;
-  dcb?: string | null;
-  dcb_descricao?: string | null;
-  portaria?: string | null;
-  produto_similar?: number | null;
-  mensagem_nota_fiscal?: string | null;
-  reg_ms?: string | null;
-  origem_produto?: string | null;
-  validade?: string | null;
-  estoque?: number | null;
-  quantidade_reservada?: number | null;
-  custo_medio?: number | null;
-  custo_nota?: number | null;
-  custo_compra?: number | null;
-  codigo_situacao_icms?: string | null;
-  cst?: string | null;
-  csosn?: string | null;
-  aliquota_icms?: number | null;
-  pfcp?: number | null;
-  pauta_icms?: number | null;
-  reducao_st?: number | null;
-  reducao_convenio?: number | null;
-  repasse_icms?: boolean;
-  cst_pis?: string | null;
-  cst_cofins?: string | null;
-  aliquota_pis?: number | null;
-  aliquota_cofins?: number | null;
-  ibs_cbs?: string | null;
-  ibs_cbs_classif_trib?: string | null;
   lancamento?: boolean;
   inativo?: boolean;
-  kit_itens?: Array<{
-    produto_item_id: number;
-    quantidade: number;
-  }>;
 }
 
 interface ProductListResponse {
@@ -527,52 +485,8 @@ function buildCadastroPayload(data: Partial<ProductCadastroInput>): Record<strin
     preco_fabrica: sanitizeNullableNumber(data.preco_fabrica),
     descricao_complementar: sanitizeNullableText(data.descricao_complementar),
     codigo_site_b2c: sanitizeNullableText(data.codigo_site_b2c),
-    ncm: sanitizeNullableText(data.ncm),
-    cest: sanitizeNullableText(data.cest),
-    tipi: sanitizeNullableText(data.tipi),
-    tipo_item: sanitizeNullableText(data.tipo_item),
-    pno: sanitizeNullableText(data.pno),
-    inibe_ean_xml_nfe: data.inibe_ean_xml_nfe,
-    medicamento: data.medicamento,
-    producao_propria: data.producao_propria,
-    apresentacao2: sanitizeNullableText(data.apresentacao2),
-    unidade2: sanitizeNullableText(data.unidade2),
-    dcb: sanitizeNullableText(data.dcb),
-    dcb_descricao: sanitizeNullableText(data.dcb_descricao),
-    portaria: sanitizeNullableText(data.portaria),
-    produto_similar: sanitizeNullableNumber(data.produto_similar),
-    mensagem_nota_fiscal: sanitizeNullableText(data.mensagem_nota_fiscal),
-    reg_ms: sanitizeNullableText(data.reg_ms),
-    origem_produto: sanitizeNullableText(data.origem_produto),
-    validade: sanitizeNullableText(data.validade),
-    estoque: sanitizeNullableNumber(data.estoque),
-    quantidade_reservada: sanitizeNullableNumber(data.quantidade_reservada),
-    custo_medio: sanitizeNullableNumber(data.custo_medio),
-    custo_nota: sanitizeNullableNumber(data.custo_nota),
-    custo_compra: sanitizeNullableNumber(data.custo_compra),
-    codigo_situacao_icms: sanitizeNullableText(data.codigo_situacao_icms),
-    cst: sanitizeNullableText(data.cst),
-    csosn: sanitizeNullableText(data.csosn),
-    aliquota_icms: sanitizeNullableNumber(data.aliquota_icms),
-    pfcp: sanitizeNullableNumber(data.pfcp),
-    pauta_icms: sanitizeNullableNumber(data.pauta_icms),
-    reducao_st: sanitizeNullableNumber(data.reducao_st),
-    reducao_convenio: sanitizeNullableNumber(data.reducao_convenio),
-    repasse_icms: data.repasse_icms,
-    cst_pis: sanitizeNullableText(data.cst_pis),
-    cst_cofins: sanitizeNullableText(data.cst_cofins),
-    aliquota_pis: sanitizeNullableNumber(data.aliquota_pis),
-    aliquota_cofins: sanitizeNullableNumber(data.aliquota_cofins),
-    ibs_cbs: sanitizeNullableText(data.ibs_cbs),
-    ibs_cbs_classif_trib: sanitizeNullableText(data.ibs_cbs_classif_trib),
     lancamento: data.lancamento,
     inativo: data.inativo,
-    kit_itens: Array.isArray(data.kit_itens)
-      ? data.kit_itens.map((item) => ({
-          produto_item_id: sanitizeNullableNumber(item.produto_item_id),
-          quantidade: sanitizeNullableNumber(item.quantidade),
-        }))
-      : undefined,
   };
 }
 

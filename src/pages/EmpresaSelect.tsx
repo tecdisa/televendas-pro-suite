@@ -100,7 +100,7 @@ const EmpresaSelect = () => {
         setSelectedId(String(fallbackEmpresa.empresa_id));
         if (singleGroup.empresas.length === 1) {
           authService.setEmpresa(fallbackEmpresa);
-          if (forceSwitch) toast.success('Empresa operacional alterada');
+          if (forceSwitch) toast.success('Unidade operacional alterada');
           navigate('/televendas');
         }
       })
@@ -118,7 +118,7 @@ const EmpresaSelect = () => {
       if (selectedMaster.empresas.length === 1) {
         authService.setEmpresa(selectedMaster.empresas[0]);
         toast.success(
-          forceSwitch ? 'Empresa operacional alterada' : 'Empresa selecionada',
+          forceSwitch ? 'Unidade operacional alterada' : 'Empresa selecionada',
         );
         navigate('/televendas');
         return;
@@ -129,12 +129,12 @@ const EmpresaSelect = () => {
     }
 
     if (!selectedEmpresa) {
-      toast.error('Selecione uma empresa operacional');
+      toast.error('Selecione uma unidade operacional');
       return;
     }
     authService.setEmpresa(selectedEmpresa);
     toast.success(
-      forceSwitch ? 'Empresa operacional alterada' : 'Empresa selecionada',
+      forceSwitch ? 'Unidade operacional alterada' : 'Empresa selecionada',
     );
     navigate('/televendas');
   };
@@ -155,12 +155,12 @@ const EmpresaSelect = () => {
           <CardTitle className="text-xl sm:text-2xl font-bold">
             {selectingMaster
               ? 'Selecione a Empresa Master'
-              : 'Selecione a Empresa Operacional'}
+              : 'Selecione a Unidade Operacional'}
           </CardTitle>
           <CardDescription>
             {selectingMaster
               ? 'Escolha a master para continuar'
-              : 'Escolha a empresa em que você vai operar'}
+              : 'Escolha a unidade operacional em que você vai operar'}
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-4">
@@ -208,7 +208,7 @@ const EmpresaSelect = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="empresa-operacional">Empresa operacional</Label>
+                <Label htmlFor="empresa-operacional">Unidade operacional</Label>
                 <Select
                   value={selectedId}
                   onValueChange={(v) => setSelectedId(v)}

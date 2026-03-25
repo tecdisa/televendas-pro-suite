@@ -105,7 +105,7 @@ const Login = () => {
         }
 
         setEmpresaId(String(empresasDaMaster[0]?.empresa_id ?? ''));
-        toast.info('Selecione a empresa operacional para continuar');
+        toast.info('Selecione a unidade operacional para continuar');
         return;
       }
 
@@ -121,7 +121,7 @@ const Login = () => {
         }
 
         setEmpresaId(String(selectedMaster.empresas[0].empresa_id));
-        toast.info('Selecione a empresa operacional para continuar');
+        toast.info('Selecione a unidade operacional para continuar');
         return;
       }
 
@@ -129,7 +129,7 @@ const Login = () => {
         (item) => String(item.empresa_id) === empresaId,
       );
       if (!empresa) {
-        toast.error('Selecione a empresa operacional');
+        toast.error('Selecione a unidade operacional');
         return;
       }
 
@@ -176,7 +176,7 @@ const Login = () => {
               {selectingMaster
                 ? 'Selecione a empresa master para continuar'
                 : selectingEmpresa
-                ? 'Selecione a empresa operacional para continuar'
+                ? 'Selecione a unidade operacional para continuar'
                 : 'Entre com suas credenciais para acessar o sistema'}
             </CardDescription>
           </CardHeader>
@@ -243,10 +243,10 @@ const Login = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="empresa">Empresa operacional</Label>
+                    <Label htmlFor="empresa">Unidade operacional</Label>
                     <Select value={empresaId} onValueChange={setEmpresaId}>
                       <SelectTrigger id="empresa">
-                        <SelectValue placeholder="Selecione a empresa operacional" />
+                        <SelectValue placeholder="Selecione a unidade operacional" />
                       </SelectTrigger>
                       <SelectContent>
                         {empresasDoMaster.map((empresa) => (
