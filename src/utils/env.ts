@@ -1,4 +1,5 @@
 export const getApiBase = (): string => {
+  const protocol = typeof window !== 'undefined' ? window.location.protocol || '' : '';
   const host = typeof window !== 'undefined' ? window.location.hostname || '' : '';
   const envBaseRaw = (import.meta as any)?.env?.VITE_API_BASE;
   const envBase = typeof envBaseRaw === 'string' ? envBaseRaw.trim() : '';
@@ -8,14 +9,14 @@ export const getApiBase = (): string => {
     return 'https://adsvendas.adsapi.com.br';
   }
 
-  // Homologação (domínio atual do frontend)
-  if (host.endsWith('adsvendas-f.adsapi.com.br')) {
-    return 'http://adsvendas-b.adsapi.com.br:3001';
-  }
-
   // Prefer build-time Vite env when it is present and non-empty
   if (envBase) {
     return envBase;
+  }
+
+  // Homologação/produção em HTTPS
+  if (protocol === 'https:' && host.endsWith('adsvendas-f.adsapi.com.br')) {
+    return 'https://adsvendas-b.adsapi.com.br';
   }
 
   // Local default
