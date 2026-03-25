@@ -53,6 +53,16 @@ export interface UsuarioCadastroFormData {
   atualizado_em?: string | null;
 }
 
+export interface UsuarioCreateResult {
+  usuario: UsuarioCadastro;
+  email_delivery?: {
+    status?: 'sent' | 'skipped' | 'failed';
+    reason?: string;
+    message?: string;
+    messageId?: string;
+  };
+}
+
 function toBoolean(value: any, fallback = false): boolean {
   if (value === undefined || value === null || value === '') return fallback;
   if (typeof value === 'boolean') return value;
@@ -160,6 +170,7 @@ export const usersService = {
       page?: number;
       limit?: number;
       status?: 'ativos' | 'inativos' | 'todos';
+      onlyForcaDeVendas?: boolean;
     },
   ): Promise<{ data: UsuarioCadastro[]; page: number; limit: number; total: number }> {
     if (!empresaId) {
@@ -175,6 +186,7 @@ export const usersService = {
     params.set('status', status);
     if (options?.query?.trim()) params.set('q', options.query.trim());
     if (status === 'todos') params.set('incluirInativos', 'true');
+    if (options?.onlyForcaDeVendas) params.set('forcaDeVendas', 'true');
 
     const url = `${API_BASE}/api/usuarios/empresa/${empresaId}?${params.toString()}`;
     const res = await apiClient.fetch(url, {
@@ -226,7 +238,7 @@ export const usersService = {
     return normalizeUsuario(await res.json());
   },
 
-  async create(data: UsuarioCadastroFormData): Promise<UsuarioCadastro> {
+  async create(data: UsuarioCadastroFormData): Promise<UsuarioCreateResult> {
     const empresaId = await getEmpresaId();
     const empresaIds =
       data.empresa_ids && data.empresa_ids.length > 0
@@ -237,7 +249,6 @@ export const usersService = {
       data: {
         usuario: data.usuario,
         nome: data.nome,
-        senha: data.senha,
         email: toNullableText(data.email) || undefined,
         endereco: toNullableText(data.endereco) || undefined,
         numero: toNullableText(data.numero) || undefined,
@@ -269,7 +280,10 @@ export const usersService = {
     }
 
     const json = await res.json();
-    return normalizeUsuario(json?.usuario ?? json);
+    return {
+      usuario: normalizeUsuario(json?.usuario ?? json),
+      email_delivery: json?.email_delivery,
+    };
   },
 
   async update(

@@ -58,7 +58,6 @@ const maskPhone = (value: string | null | undefined) => {
 const initialFormData: UsuarioCadastroFormData = {
   usuario: '',
   nome: '',
-  senha: '',
   email: '',
   endereco: '',
   numero: '',
@@ -252,7 +251,6 @@ export function UsuariosTab() {
         usuario_id: detail.usuario_id,
         usuario: detail.usuario || '',
         nome: detail.nome || '',
-        senha: '',
         email: detail.email || '',
         endereco: detail.endereco || '',
         numero: detail.numero || '',
@@ -290,8 +288,8 @@ export function UsuariosTab() {
       toast.error('Preencha o nome');
       return false;
     }
-    if (mode === 'create' && !formData.senha?.trim()) {
-      toast.error('Preencha a senha');
+    if (mode === 'create' && !formData.email?.trim()) {
+      toast.error('Preencha o e-mail do usuario');
       return false;
     }
     if (!formData.empresa_ids?.length) {
@@ -310,10 +308,9 @@ export function UsuariosTab() {
     setFormLoading(true);
 
     try {
-      await usersService.create({
+      const result = await usersService.create({
         usuario: formData.usuario.trim(),
         nome: formData.nome.trim(),
-        senha: formData.senha?.trim(),
         email: formData.email?.trim().toLowerCase() || null,
         endereco: formData.endereco?.trim() || null,
         numero: formData.numero?.trim() || null,
@@ -332,7 +329,19 @@ export function UsuariosTab() {
         empresa_master_id: formData.empresa_master_id ?? null,
         empresa_ids: formData.empresa_ids,
       });
-      toast.success('Usuario criado com sucesso');
+      if (result.email_delivery?.status === 'sent') {
+        toast.success('Usuario criado e senha enviada por e-mail');
+      } else if (result.email_delivery?.status === 'skipped') {
+        toast(
+          'Usuario criado. O envio da senha por e-mail ficou pendente por falta de configuracao SMTP.',
+        );
+      } else if (result.email_delivery?.status === 'failed') {
+        toast(
+          'Usuario criado, mas houve falha ao enviar a senha por e-mail.',
+        );
+      } else {
+        toast.success('Usuario criado com sucesso');
+      }
       setCreateOpen(false);
       resetForm();
       loadUsuarios(true);
@@ -351,7 +360,6 @@ export function UsuariosTab() {
       await usersService.update(editId, {
         usuario: formData.usuario.trim(),
         nome: formData.nome.trim(),
-        senha: formData.senha?.trim() || undefined,
         email: formData.email?.trim().toLowerCase() || null,
         endereco: formData.endereco?.trim() || null,
         numero: formData.numero?.trim() || null,
@@ -456,8 +464,10 @@ export function UsuariosTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-7">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
+        <div className="col-span-1 md:col-span-12">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            E-mail {createOpen ? '*' : ''}
+          </label>
           <Input
             type="email"
             className="h-8 text-sm"
@@ -466,19 +476,11 @@ export function UsuariosTab() {
               setFormData((prev) => ({ ...prev, email: event.target.value }))
             }
           />
-        </div>
-        <div className="col-span-1 md:col-span-5">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Senha {editOpen ? '(opcional)' : '*'}
-          </label>
-          <Input
-            type="password"
-            className="h-8 text-sm"
-            value={formData.senha ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, senha: event.target.value }))
-            }
-          />
+          {createOpen && (
+            <p className="text-xs text-muted-foreground mt-1">
+              A senha sera gerada automaticamente e enviada para este e-mail.
+            </p>
+          )}
         </div>
       </div>
 

@@ -175,7 +175,11 @@ export function RepresentantesTab() {
     setUsuariosEmpresaLoading(true);
 
     usersService
-      .getByEmpresa(empresaId, { limit: 500, status: 'todos' })
+      .getByEmpresa(empresaId, {
+        limit: 500,
+        status: 'todos',
+        onlyForcaDeVendas: true,
+      })
       .then((result) => {
         if (!ativo) return;
         const usuarios = [...result.data].sort((a, b) =>
