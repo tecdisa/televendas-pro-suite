@@ -12,10 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   authService,
   getEmpresaDisplayName,
-  getMasterDisplayName,
-  groupEmpresasByMaster,
   type Empresa,
-  type EmpresaMasterGroup,
 } from '@/services/authService';
 import { metadataService, type Cidade, type Uf } from '@/services/metadataService';
 import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from '@/services/usersService';
@@ -126,8 +123,6 @@ export function UsuariosTab() {
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [empresasDisponiveis, setEmpresasDisponiveis] = useState<Empresa[]>([]);
   const [empresasLoading, setEmpresasLoading] = useState(false);
-
-  const empresasMaster: EmpresaMasterGroup[] = groupEmpresasByMaster(empresasDisponiveis);
 
   const buildInitialFormData = (): UsuarioCadastroFormData => ({
     ...initialFormData,
@@ -365,10 +360,6 @@ export function UsuariosTab() {
       toast.error('Selecione ao menos uma empresa vinculada');
       return false;
     }
-    if (!formData.empresa_master_id) {
-      toast.error('Selecione a empresa master');
-      return false;
-    }
     return true;
   };
 
@@ -444,7 +435,6 @@ export function UsuariosTab() {
         ativo: formData.ativo ?? true,
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
-        empresa_master_id: formData.empresa_master_id ?? null,
         empresa_ids: formData.empresa_ids,
       });
       toast.success('Usuario atualizado com sucesso');
@@ -491,10 +481,6 @@ export function UsuariosTab() {
       return {
         ...prev,
         empresa_ids: nextEmpresaIds,
-        empresa_master_id:
-          prev.empresa_master_id && nextEmpresaIds.length
-            ? prev.empresa_master_id
-            : empresaAtual?.empresa_master_id ?? empresaAtual?.empresa_id ?? null,
       };
     });
   };
@@ -609,39 +595,6 @@ export function UsuariosTab() {
 
       <div className="border-b border-primary/50 pb-1 mt-4">
         <span className="text-sm font-medium text-primary">Empresas</span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            Empresa Master
-          </label>
-          <Select
-            value={formData.empresa_master_id ? String(formData.empresa_master_id) : 'none'}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                empresa_master_id: value === 'none' ? null : Number(value),
-              }))
-            }
-            disabled={empresasLoading}
-          >
-            <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder={empresasLoading ? 'Carregando...' : 'Selecione'} />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50 max-h-60">
-              <SelectItem value="none">Selecione</SelectItem>
-              {empresasMaster.map((master) => (
-                <SelectItem
-                  key={master.empresa_master_id}
-                  value={String(master.empresa_master_id)}
-                >
-                  {`${master.empresa_master_id} - ${getMasterDisplayName(master)}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <div className="space-y-2">

@@ -90,6 +90,8 @@ type VinculoUsuarioOption = {
   usuario_id: number;
   nome: string;
   descricao: string;
+  gerente: boolean;
+  supervisor: boolean;
 };
 
 export function RepresentantesTab() {
@@ -200,6 +202,8 @@ export function RepresentantesTab() {
                   usuario_id: Number(representante.usuario_id),
                   nome: representante.nome_representante,
                   descricao: `${representante.nome_representante} (${representante.codigo_representante || representante.representante_id})`,
+                  gerente: Boolean(representante.gerente ?? false),
+                  supervisor: Boolean(representante.supervisor ?? false),
                 },
               ]),
           ).values(),
@@ -207,11 +211,13 @@ export function RepresentantesTab() {
         setUsuariosEmpresa(usuarios);
         setFormData((prev) => ({
           ...prev,
-          gerente_id: usuarios.some((user) => user.usuario_id === prev.gerente_id)
+          gerente_id: usuarios.some(
+            (user) => user.gerente && user.usuario_id === prev.gerente_id,
+          )
             ? prev.gerente_id
             : null,
           supervisor_id: usuarios.some(
-            (user) => user.usuario_id === prev.supervisor_id,
+            (user) => user.supervisor && user.usuario_id === prev.supervisor_id,
           )
             ? prev.supervisor_id
             : null,
@@ -429,11 +435,11 @@ export function RepresentantesTab() {
             Associar a gerente
           </label>
           <Select
-            value={formData.gerente_id != null ? String(formData.gerente_id) : undefined}
+            value={formData.gerente_id != null ? String(formData.gerente_id) : 'none'}
             onValueChange={(value) =>
               setFormData({
                 ...formData,
-                gerente_id: value ? Number(value) : null,
+                gerente_id: value === 'none' ? null : Number(value),
               })
             }
             disabled={!formData.empresa_id || usuariosEmpresaLoading}
@@ -450,7 +456,10 @@ export function RepresentantesTab() {
               />
             </SelectTrigger>
             <SelectContent>
-              {usuariosEmpresa.map((usuario) => (
+              <SelectItem value="none">Nenhum</SelectItem>
+              {usuariosEmpresa
+                .filter((usuario) => usuario.gerente)
+                .map((usuario) => (
                 <SelectItem key={`gerente-${usuario.usuario_id}`} value={String(usuario.usuario_id)}>
                   {usuario.descricao}
                 </SelectItem>
@@ -463,11 +472,11 @@ export function RepresentantesTab() {
             Associar a supervisor
           </label>
           <Select
-            value={formData.supervisor_id != null ? String(formData.supervisor_id) : undefined}
+            value={formData.supervisor_id != null ? String(formData.supervisor_id) : 'none'}
             onValueChange={(value) =>
               setFormData({
                 ...formData,
-                supervisor_id: value ? Number(value) : null,
+                supervisor_id: value === 'none' ? null : Number(value),
               })
             }
             disabled={!formData.empresa_id || usuariosEmpresaLoading}
@@ -484,7 +493,10 @@ export function RepresentantesTab() {
               />
             </SelectTrigger>
             <SelectContent>
-              {usuariosEmpresa.map((usuario) => (
+              <SelectItem value="none">Nenhum</SelectItem>
+              {usuariosEmpresa
+                .filter((usuario) => usuario.supervisor)
+                .map((usuario) => (
                 <SelectItem key={`supervisor-${usuario.usuario_id}`} value={String(usuario.usuario_id)}>
                   {usuario.descricao}
                 </SelectItem>

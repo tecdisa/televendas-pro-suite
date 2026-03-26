@@ -29,6 +29,7 @@ import {
   Product,
   ProductCadastroFilters,
   ProductCadastroInput,
+  ProductKitItem,
   productsService,
 } from '@/services/productsService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
@@ -107,6 +108,7 @@ interface ProductFormState {
   codigoProduto: string;
   descricao: string;
   unidade: string;
+  tipoItem: string;
   codigoFabrica: string;
   ean13: string;
   dun14: string;
@@ -114,6 +116,7 @@ interface ProductFormState {
   marca: string;
   fornecedorId: number;
   divisaoId: number;
+  produtoSimilar: number;
   fatorCompra: number;
   fatorVenda: number;
   multiploDeVendas: number;
@@ -128,8 +131,36 @@ interface ProductFormState {
   precoFabrica: number;
   descricaoComplementar: string;
   codigoSiteB2c: string;
+  ncm: string;
+  cest: string;
+  mensagemNotaFiscal: string;
+  regMs: string;
+  origemProduto: string;
+  validade: string;
+  estoque: number;
+  quantidadeReservada: number;
+  custoMedio: number;
+  custoNota: number;
+  custoCompra: number;
+  cst: string;
+  aliquotaIcms: number;
+  aliquotaIcmsCredito: number;
+  pfcp: number;
+  pautaIcms: number;
+  reducaoSt: number;
+  reducaoConvenio: number;
+  repasseIcms: boolean;
   lancamento: boolean;
   inativo: boolean;
+}
+
+interface ProductKitFormItem {
+  produtoItemId: number;
+  codigoProduto: string;
+  descricao: string;
+  un: string;
+  quantidade: number;
+  inativo?: boolean;
 }
 
 const initialFormData: ProductFormState = {
@@ -137,6 +168,7 @@ const initialFormData: ProductFormState = {
   codigoProduto: '',
   descricao: '',
   unidade: 'UN',
+  tipoItem: 'MERCADORIA_REVENDA',
   codigoFabrica: '',
   ean13: '',
   dun14: '',
@@ -144,6 +176,7 @@ const initialFormData: ProductFormState = {
   marca: '',
   fornecedorId: 0,
   divisaoId: 0,
+  produtoSimilar: 0,
   fatorCompra: 0,
   fatorVenda: 0,
   multiploDeVendas: 0,
@@ -158,6 +191,25 @@ const initialFormData: ProductFormState = {
   precoFabrica: 0,
   descricaoComplementar: '',
   codigoSiteB2c: '',
+  ncm: '',
+  cest: '',
+  mensagemNotaFiscal: '',
+  regMs: '',
+  origemProduto: '0',
+  validade: '',
+  estoque: 0,
+  quantidadeReservada: 0,
+  custoMedio: 0,
+  custoNota: 0,
+  custoCompra: 0,
+  cst: '',
+  aliquotaIcms: 0,
+  aliquotaIcmsCredito: 0,
+  pfcp: 0,
+  pautaIcms: 0,
+  reducaoSt: 0,
+  reducaoConvenio: 0,
+  repasseIcms: false,
   lancamento: false,
   inativo: false,
 };
@@ -168,6 +220,7 @@ function mapProductToForm(product: Product): ProductFormState {
     codigoProduto: String(product.codigoProduto ?? '').trim(),
     descricao: String(product.descricao ?? '').trim(),
     unidade: String(product.un ?? 'UN').trim() || 'UN',
+    tipoItem: String(product.tipoItem ?? 'MERCADORIA_REVENDA').trim() || 'MERCADORIA_REVENDA',
     codigoFabrica: String(product.codigoFabrica ?? '').trim(),
     ean13: String(product.ean13 ?? '').trim(),
     dun14: String(product.dun14 ?? '').trim(),
@@ -175,6 +228,7 @@ function mapProductToForm(product: Product): ProductFormState {
     marca: String(product.marca ?? '').trim(),
     fornecedorId: Number(product.fornecedorId ?? 0) || 0,
     divisaoId: Number(product.divisaoId ?? 0) || 0,
+    produtoSimilar: Number(product.produtoSimilar ?? 0) || 0,
     fatorCompra: Number(product.fatorCompra ?? 0) || 0,
     fatorVenda: Number(product.fatorVenda ?? 0) || 0,
     multiploDeVendas: Number(product.multiploDeVendas ?? 0) || 0,
@@ -189,9 +243,39 @@ function mapProductToForm(product: Product): ProductFormState {
     precoFabrica: Number(product.precoFabrica ?? 0) || 0,
     descricaoComplementar: String(product.descricaoComplementar ?? '').trim(),
     codigoSiteB2c: String(product.codigoSiteB2c ?? '').trim(),
+    ncm: String(product.ncm ?? '').trim(),
+    cest: String(product.cest ?? '').trim(),
+    mensagemNotaFiscal: String(product.mensagemNotaFiscal ?? '').trim(),
+    regMs: String(product.regMs ?? '').trim(),
+    origemProduto: String(product.origemProduto ?? '0').trim() || '0',
+    validade: String(product.validade ?? '').trim(),
+    estoque: Number(product.estoque ?? 0) || 0,
+    quantidadeReservada: Number(product.quantidadeReservada ?? 0) || 0,
+    custoMedio: Number(product.custoMedio ?? 0) || 0,
+    custoNota: Number(product.custoNota ?? 0) || 0,
+    custoCompra: Number(product.custoCompra ?? 0) || 0,
+    cst: String(product.cst ?? '').trim(),
+    aliquotaIcms: Number(product.aliquotaIcms ?? 0) || 0,
+    aliquotaIcmsCredito: Number(product.aliquotaIcmsCredito ?? 0) || 0,
+    pfcp: Number(product.pfcp ?? 0) || 0,
+    pautaIcms: Number(product.pautaIcms ?? 0) || 0,
+    reducaoSt: Number(product.reducaoSt ?? 0) || 0,
+    reducaoConvenio: Number(product.reducaoConvenio ?? 0) || 0,
+    repasseIcms: Boolean(product.repasseIcms ?? false),
     lancamento: Boolean(product.lancamento ?? false),
     inativo: Boolean(product.inativo ?? false),
   };
+}
+
+function mapProductKitToFormItems(product?: Product | null): ProductKitFormItem[] {
+  return (product?.kitItens ?? []).map((item: ProductKitItem) => ({
+    produtoItemId: Number(item.produtoItemId ?? item.produtoId) || 0,
+    codigoProduto: String(item.codigoProduto ?? '').trim(),
+    descricao: String(item.descricao ?? '').trim(),
+    un: String(item.un ?? 'UN').trim() || 'UN',
+    quantidade: Number(item.quantidade ?? 0) || 0,
+    inativo: Boolean(item.inativo ?? false),
+  }));
 }
 
 const formatBooleanCell = (value?: boolean | null) => (value ? 'Sim' : 'Não');
@@ -211,6 +295,8 @@ const formatNullableCurrency = (value?: number | null) =>
         style: 'currency',
         currency: 'BRL',
       });
+const toFixedNumber = (value: number, decimals = 3) =>
+  Number.isFinite(value) ? value.toFixed(decimals) : '0.000';
 
 function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
   const payload: ProductCadastroInput = {
@@ -238,6 +324,27 @@ function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
     preco_fabrica: Number(form.precoFabrica) || 0,
     descricao_complementar: form.descricaoComplementar.trim() || null,
     codigo_site_b2c: form.codigoSiteB2c.trim() || null,
+    ncm: form.ncm.trim() || null,
+    cest: form.cest.trim() || null,
+    tipo_item: form.tipoItem.trim() || null,
+    produto_similar: Number(form.produtoSimilar) || 0,
+    mensagem_nota_fiscal: form.mensagemNotaFiscal.trim() || null,
+    reg_ms: form.regMs.trim() || null,
+    origem_produto: form.origemProduto.trim() || null,
+    validade: form.validade.trim() || null,
+    estoque: Number(form.estoque) || 0,
+    quantidade_reservada: Number(form.quantidadeReservada) || 0,
+    custo_medio: Number(form.custoMedio) || 0,
+    custo_nota: Number(form.custoNota) || 0,
+    custo_compra: Number(form.custoCompra) || 0,
+    cst: form.cst.trim() || null,
+    aliquota_icms: Number(form.aliquotaIcms) || 0,
+    aliquota_icms_credito: Number(form.aliquotaIcmsCredito) || 0,
+    pfcp: Number(form.pfcp) || 0,
+    pauta_icms: Number(form.pautaIcms) || 0,
+    reducao_st: Number(form.reducaoSt) || 0,
+    reducao_convenio: Number(form.reducaoConvenio) || 0,
+    repasse_icms: Boolean(form.repasseIcms),
     lancamento: Boolean(form.lancamento),
     inativo: Boolean(form.inativo),
   };
@@ -285,6 +392,12 @@ export function ProdutosTab() {
   const [formData, setFormData] = useState<ProductFormState>(initialFormData);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [kitItens, setKitItens] = useState<ProductKitFormItem[]>([]);
+  const [kitSearch, setKitSearch] = useState('');
+  const [kitSearchLoading, setKitSearchLoading] = useState(false);
+  const [kitSearchResults, setKitSearchResults] = useState<Product[]>([]);
+  const [selectedKitProductId, setSelectedKitProductId] = useState('none');
+  const [kitQuantity, setKitQuantity] = useState(1);
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
   const empresaCadastroId =
@@ -526,6 +639,11 @@ export function ProdutosTab() {
   const openCreate = () => {
     setEditingProduct(null);
     setFormData({ ...initialFormData });
+    setKitItens([]);
+    setKitSearch('');
+    setKitSearchResults([]);
+    setSelectedKitProductId('none');
+    setKitQuantity(1);
     setDialogOpen(true);
   };
 
@@ -539,6 +657,11 @@ export function ProdutosTab() {
       }
       setEditingProduct(detail);
       setFormData(mapProductToForm(detail));
+      setKitItens(mapProductKitToFormItems(detail));
+      setKitSearch('');
+      setKitSearchResults([]);
+      setSelectedKitProductId('none');
+      setKitQuantity(1);
       setDialogOpen(true);
     } catch (error: any) {
       console.error('Erro ao carregar produto:', error);
@@ -569,6 +692,10 @@ export function ProdutosTab() {
     setSubmitting(true);
     try {
       const payload = mapFormToPayload(formData);
+      payload.kit_itens = kitItens.map((item) => ({
+        produto_item_id: item.produtoItemId,
+        quantidade: Number(item.quantidade) || 0,
+      }));
       if (editingProduct) {
         await productsService.updateCadastro(editingProduct.id, payload);
         toast.success('Produto atualizado com sucesso');
@@ -606,6 +733,78 @@ export function ProdutosTab() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   const updateForm = (key: keyof ProductFormState, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
+
+  const handleSearchKitProducts = async () => {
+    const term = kitSearch.trim();
+    if (!term) {
+      setKitSearchResults([]);
+      setSelectedKitProductId('none');
+      return;
+    }
+    setKitSearchLoading(true);
+    try {
+      const result = await productsService.listCadastro(
+        { status: 'todos', search: term },
+        1,
+        20,
+      );
+      setKitSearchResults(
+        (result.data || []).filter((item) => Number(item.id) !== Number(formData.id || 0)),
+      );
+      setSelectedKitProductId('none');
+    } catch (error: any) {
+      console.error('Erro ao buscar componentes do kit:', error);
+      toast.error(error?.message || 'Erro ao buscar componentes do kit');
+    } finally {
+      setKitSearchLoading(false);
+    }
+  };
+
+  const handleAddKitItem = () => {
+    const produtoId = Number(selectedKitProductId);
+    if (!produtoId) {
+      toast.error('Selecione um componente para adicionar');
+      return;
+    }
+    if (!(Number(kitQuantity) > 0)) {
+      toast.error('Informe uma quantidade válida');
+      return;
+    }
+    const selectedProduct = kitSearchResults.find((item) => Number(item.id) === produtoId);
+    if (!selectedProduct) {
+      toast.error('Componente não encontrado');
+      return;
+    }
+    setKitItens((prev) => {
+      const existing = prev.find((item) => Number(item.produtoItemId) === produtoId);
+      if (existing) {
+        return prev.map((item) =>
+          Number(item.produtoItemId) === produtoId
+            ? { ...item, quantidade: Number(item.quantidade) + Number(kitQuantity) }
+            : item,
+        );
+      }
+      return [
+        ...prev,
+        {
+          produtoItemId: produtoId,
+          codigoProduto: String(selectedProduct.codigoProduto ?? '').trim(),
+          descricao: String(selectedProduct.descricao ?? '').trim(),
+          un: String(selectedProduct.un ?? 'UN').trim() || 'UN',
+          quantidade: Number(kitQuantity) || 0,
+          inativo: Boolean(selectedProduct.inativo ?? false),
+        },
+      ];
+    });
+    setSelectedKitProductId('none');
+    setKitQuantity(1);
+  };
+
+  const handleRemoveKitItem = (produtoItemId: number) => {
+    setKitItens((prev) =>
+      prev.filter((item) => Number(item.produtoItemId) !== Number(produtoItemId)),
+    );
+  };
 
   const getHeadClassName = (key: ProductsGridColumnKey) => {
     switch (key) {
@@ -1046,6 +1245,8 @@ export function ProdutosTab() {
           <Tabs defaultValue="caracteristicas" className="flex-1 min-h-0 flex flex-col">
             <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="caracteristicas">Características</TabsTrigger>
+              <TabsTrigger value="kit">Kit</TabsTrigger>
+              <TabsTrigger value="estoques">Estoques</TabsTrigger>
               <TabsTrigger value="complementar">Dados complementares</TabsTrigger>
             </TabsList>
 
@@ -1068,7 +1269,7 @@ export function ProdutosTab() {
                       readOnly
                     />
                   </div>
-                  <div className="col-span-1 md:col-span-4">
+                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Código fábrica</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1076,7 +1277,7 @@ export function ProdutosTab() {
                       onChange={(e) => updateForm('codigoFabrica', e.target.value.toUpperCase())}
                     />
                   </div>
-                  <div className="col-span-1 md:col-span-4">
+                  <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs font-semibold">Descrição *</Label>
                     <Input
                       className="h-8 text-xs"
@@ -1128,18 +1329,6 @@ export function ProdutosTab() {
                       className="h-8 text-xs"
                       value={formData.marca}
                       onChange={(e) => updateForm('marca', e.target.value.toUpperCase())}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-4">
-                    <Label className="text-xs">Múltiplo de vendas</Label>
-                    <Input
-                      type="number"
-                      className="h-8 text-xs"
-                      value={formData.multiploDeVendas}
-                      onChange={(e) => updateForm('multiploDeVendas', Number(e.target.value) || 0)}
                     />
                   </div>
                 </div>
@@ -1278,6 +1467,376 @@ export function ProdutosTab() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="col-span-1 md:col-span-2">
+                    <Label className="text-xs">NCM</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      maxLength={8}
+                      value={formData.ncm}
+                      onChange={(e) => updateForm('ncm', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <Label className="text-xs">CEST</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      maxLength={7}
+                      value={formData.cest}
+                      onChange={(e) => updateForm('cest', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-4">
+                    <Label className="text-xs">Múltiplo de vendas</Label>
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={formData.multiploDeVendas}
+                      onChange={(e) => updateForm('multiploDeVendas', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+              </TabsContent>
+
+              <TabsContent value="kit" className="mt-0 px-1 space-y-4 pb-4">
+                <div className="rounded-md border p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-8">
+                      <Label className="text-xs">Buscar produto componente</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={kitSearch}
+                        onChange={(e) => setKitSearch(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && (e.preventDefault(), void handleSearchKitProducts())
+                        }
+                        placeholder="Descrição, código ou EAN do componente"
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-8 text-xs"
+                        onClick={() => void handleSearchKitProducts()}
+                        disabled={kitSearchLoading}
+                      >
+                        {kitSearchLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+                        ) : (
+                          <Search className="h-3.5 w-3.5 mr-2" />
+                        )}
+                        Buscar componente
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="col-span-1 md:col-span-8">
+                      <Label className="text-xs">Resultado da busca</Label>
+                      <Select value={selectedKitProductId} onValueChange={setSelectedKitProductId}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Selecione o componente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Selecione</SelectItem>
+                          {kitSearchResults.map((item) => (
+                            <SelectItem key={item.id} value={String(item.id)}>
+                              {(item.codigoProduto || item.id) + ' - ' + item.descricao}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-1 md:col-span-2">
+                      <Label className="text-xs">Quantidade</Label>
+                      <Input
+                        type="number"
+                        min="0.001"
+                        step="0.001"
+                        className="h-8 text-xs"
+                        value={kitQuantity}
+                        onChange={(e) => setKitQuantity(Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-2">
+                      <Button
+                        type="button"
+                        className="w-full h-8 text-xs"
+                        onClick={handleAddKitItem}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-2" />
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-28">Código</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="w-16">UN</TableHead>
+                        <TableHead className="w-24 text-right">Quantidade</TableHead>
+                        <TableHead className="w-20 text-center">Inativo</TableHead>
+                        <TableHead className="w-16" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {kitItens.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-6 text-center text-sm text-muted-foreground"
+                          >
+                            Este produto ainda não possui componentes de kit.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        kitItens.map((item) => (
+                          <TableRow key={item.produtoItemId}>
+                            <TableCell className="text-xs">
+                              {item.codigoProduto || item.produtoItemId}
+                            </TableCell>
+                            <TableCell className="text-xs">{item.descricao}</TableCell>
+                            <TableCell className="text-xs">{item.un}</TableCell>
+                            <TableCell className="text-xs text-right">{item.quantidade}</TableCell>
+                            <TableCell className="text-xs text-center">
+                              {item.inativo ? 'Sim' : 'Não'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-red-600 hover:text-red-700"
+                                onClick={() => handleRemoveKitItem(item.produtoItemId)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="estoques" className="mt-0 px-1 space-y-4 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Código
+                    </Label>
+                    <Input className="h-8 text-xs bg-muted" value={formData.codigoProduto} readOnly />
+                  </div>
+                  <div className="md:col-span-8">
+                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Produto
+                    </Label>
+                    <Input className="h-8 text-xs bg-muted" value={formData.descricao} readOnly />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">UN</Label>
+                    <Input className="h-8 text-xs bg-muted" value={formData.unidade} readOnly />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Estoque</Label>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      className="h-8 text-xs"
+                      value={formData.estoque}
+                      onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Quantidade reservada</Label>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      className="h-8 text-xs"
+                      value={formData.quantidadeReservada}
+                      onChange={(e) =>
+                        updateForm('quantidadeReservada', Number(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Disponível</Label>
+                    <Input
+                      className="h-8 text-xs bg-muted"
+                      value={toFixedNumber(
+                        Number(formData.estoque || 0) - Number(formData.quantidadeReservada || 0),
+                        3,
+                      )}
+                      readOnly
+                    />
+                  </div>
+                  <div className="md:col-span-3 flex items-center gap-2 pt-5">
+                    <Checkbox
+                      checked={formData.repasseIcms}
+                      onCheckedChange={(checked) => updateForm('repasseIcms', Boolean(checked))}
+                      className="h-3.5 w-3.5"
+                    />
+                    <label className="text-xs">Repasse ICMS</label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Custo médio</Label>
+                    <Input
+                      type="number"
+                      step="0.00001"
+                      className="h-8 text-xs"
+                      value={formData.custoMedio}
+                      onChange={(e) => updateForm('custoMedio', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Custo nota</Label>
+                    <Input
+                      type="number"
+                      step="0.00001"
+                      className="h-8 text-xs"
+                      value={formData.custoNota}
+                      onChange={(e) => updateForm('custoNota', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Custo compra</Label>
+                    <Input
+                      type="number"
+                      step="0.00001"
+                      className="h-8 text-xs"
+                      value={formData.custoCompra}
+                      onChange={(e) => updateForm('custoCompra', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">CST</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      maxLength={2}
+                      value={formData.cst}
+                      onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-2">
+                    <Label className="text-xs">Aliq. ICMS</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.aliquotaIcms}
+                      onChange={(e) => updateForm('aliquotaIcms', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs">Aliq. ICMS crédito</Label>
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      className="h-8 text-xs"
+                      value={formData.aliquotaIcmsCredito}
+                      onChange={(e) =>
+                        updateForm('aliquotaIcmsCredito', Number(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs">PFCP</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.pfcp}
+                      onChange={(e) => updateForm('pfcp', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Pauta ICMS</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.pautaIcms}
+                      onChange={(e) => updateForm('pautaIcms', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Redução ST</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.reducaoSt}
+                      onChange={(e) => updateForm('reducaoSt', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Redução convênio</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-8 text-xs"
+                      value={formData.reducaoConvenio}
+                      onChange={(e) =>
+                        updateForm('reducaoConvenio', Number(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Origem do produto</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.origemProduto}
+                      onChange={(e) => updateForm('origemProduto', e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Reg. MS</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.regMs}
+                      onChange={(e) => updateForm('regMs', e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-xs">Validade</Label>
+                    <Input
+                      type="date"
+                      className="h-8 text-xs"
+                      value={formData.validade}
+                      onChange={(e) => updateForm('validade', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-12">
+                    <Label className="text-xs">Mensagem na nota fiscal</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formData.mensagemNotaFiscal}
+                      onChange={(e) => updateForm('mensagemNotaFiscal', e.target.value)}
+                    />
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="complementar" className="mt-0 px-1 space-y-3 pb-4">
@@ -1315,7 +1874,7 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-6">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Código site B2C</Label>
                     <Input
                       className="h-8 text-xs"
