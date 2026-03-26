@@ -142,7 +142,9 @@ interface ProductFormState {
   custoMedio: number;
   custoNota: number;
   custoCompra: number;
+  codigoSituacaoIcms: string;
   cst: string;
+  csosn: string;
   aliquotaIcms: number;
   aliquotaIcmsCredito: number;
   pfcp: number;
@@ -150,6 +152,12 @@ interface ProductFormState {
   reducaoSt: number;
   reducaoConvenio: number;
   repasseIcms: boolean;
+  cstPis: string;
+  cstCofins: string;
+  aliquotaPis: number;
+  aliquotaCofins: number;
+  ibsCbs: string;
+  ibsCbsClassifTrib: string;
   lancamento: boolean;
   inativo: boolean;
 }
@@ -202,7 +210,9 @@ const initialFormData: ProductFormState = {
   custoMedio: 0,
   custoNota: 0,
   custoCompra: 0,
+  codigoSituacaoIcms: '',
   cst: '',
+  csosn: '',
   aliquotaIcms: 0,
   aliquotaIcmsCredito: 0,
   pfcp: 0,
@@ -210,6 +220,12 @@ const initialFormData: ProductFormState = {
   reducaoSt: 0,
   reducaoConvenio: 0,
   repasseIcms: false,
+  cstPis: '',
+  cstCofins: '',
+  aliquotaPis: 0,
+  aliquotaCofins: 0,
+  ibsCbs: '',
+  ibsCbsClassifTrib: '',
   lancamento: false,
   inativo: false,
 };
@@ -254,7 +270,9 @@ function mapProductToForm(product: Product): ProductFormState {
     custoMedio: Number(product.custoMedio ?? 0) || 0,
     custoNota: Number(product.custoNota ?? 0) || 0,
     custoCompra: Number(product.custoCompra ?? 0) || 0,
+    codigoSituacaoIcms: String(product.codigoSituacaoIcms ?? '').trim(),
     cst: String(product.cst ?? '').trim(),
+    csosn: String(product.csosn ?? '').trim(),
     aliquotaIcms: Number(product.aliquotaIcms ?? 0) || 0,
     aliquotaIcmsCredito: Number(product.aliquotaIcmsCredito ?? 0) || 0,
     pfcp: Number(product.pfcp ?? 0) || 0,
@@ -262,6 +280,12 @@ function mapProductToForm(product: Product): ProductFormState {
     reducaoSt: Number(product.reducaoSt ?? 0) || 0,
     reducaoConvenio: Number(product.reducaoConvenio ?? 0) || 0,
     repasseIcms: Boolean(product.repasseIcms ?? false),
+    cstPis: String(product.cstPis ?? '').trim(),
+    cstCofins: String(product.cstCofins ?? '').trim(),
+    aliquotaPis: Number(product.aliquotaPis ?? 0) || 0,
+    aliquotaCofins: Number(product.aliquotaCofins ?? 0) || 0,
+    ibsCbs: String(product.ibsCbs ?? '').trim(),
+    ibsCbsClassifTrib: String(product.ibsCbsClassifTrib ?? '').trim(),
     lancamento: Boolean(product.lancamento ?? false),
     inativo: Boolean(product.inativo ?? false),
   };
@@ -337,7 +361,9 @@ function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
     custo_medio: Number(form.custoMedio) || 0,
     custo_nota: Number(form.custoNota) || 0,
     custo_compra: Number(form.custoCompra) || 0,
+    codigo_situacao_icms: form.codigoSituacaoIcms.trim() || null,
     cst: form.cst.trim() || null,
+    csosn: form.csosn.trim() || null,
     aliquota_icms: Number(form.aliquotaIcms) || 0,
     aliquota_icms_credito: Number(form.aliquotaIcmsCredito) || 0,
     pfcp: Number(form.pfcp) || 0,
@@ -345,6 +371,12 @@ function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
     reducao_st: Number(form.reducaoSt) || 0,
     reducao_convenio: Number(form.reducaoConvenio) || 0,
     repasse_icms: Boolean(form.repasseIcms),
+    cst_pis: form.cstPis.trim() || null,
+    cst_cofins: form.cstCofins.trim() || null,
+    aliquota_pis: Number(form.aliquotaPis) || 0,
+    aliquota_cofins: Number(form.aliquotaCofins) || 0,
+    ibs_cbs: form.ibsCbs.trim() || null,
+    ibs_cbs_classif_trib: form.ibsCbsClassifTrib.trim() || null,
     lancamento: Boolean(form.lancamento),
     inativo: Boolean(form.inativo),
   };
@@ -1693,6 +1725,17 @@ export function ProdutosTab() {
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="md:col-span-3">
+                      <Label className="text-xs">Código situação ICMS</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        maxLength={6}
+                        value={formData.codigoSituacaoIcms}
+                        onChange={(e) =>
+                          updateForm('codigoSituacaoIcms', e.target.value.toUpperCase())
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-3">
                       <Label className="text-xs">Custo médio</Label>
                       <Input
                         type="number"
@@ -1729,6 +1772,15 @@ export function ProdutosTab() {
                         maxLength={2}
                         value={formData.cst}
                         onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">CSOSN</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        maxLength={3}
+                        value={formData.csosn}
+                        onChange={(e) => updateForm('csosn', e.target.value.toUpperCase())}
                       />
                     </div>
                   </div>
@@ -1801,40 +1853,67 @@ export function ProdutosTab() {
                         }
                       />
                     </div>
-                    <div className="md:col-span-3">
-                      <Label className="text-xs">Origem do produto</Label>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">CST PIS</Label>
                       <Input
                         className="h-8 text-xs"
-                        value={formData.origemProduto}
-                        onChange={(e) => updateForm('origemProduto', e.target.value)}
+                        maxLength={2}
+                        value={formData.cstPis}
+                        onChange={(e) => updateForm('cstPis', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">CST COFINS</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        maxLength={2}
+                        value={formData.cstCofins}
+                        onChange={(e) => updateForm('cstCofins', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">PIS Alíquota</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={formData.aliquotaPis}
+                        onChange={(e) => updateForm('aliquotaPis', Number(e.target.value) || 0)}
                       />
                     </div>
                     <div className="md:col-span-3">
-                      <Label className="text-xs">Reg. MS</Label>
+                      <Label className="text-xs">COFINS Alíquota</Label>
                       <Input
+                        type="number"
+                        step="0.01"
                         className="h-8 text-xs"
-                        value={formData.regMs}
-                        onChange={(e) => updateForm('regMs', e.target.value)}
-                      />
-                    </div>
-                    <div className="md:col-span-3">
-                      <Label className="text-xs">Validade</Label>
-                      <Input
-                        type="date"
-                        className="h-8 text-xs"
-                        value={formData.validade}
-                        onChange={(e) => updateForm('validade', e.target.value)}
+                        value={formData.aliquotaCofins}
+                        onChange={(e) =>
+                          updateForm('aliquotaCofins', Number(e.target.value) || 0)
+                        }
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="md:col-span-12">
-                      <Label className="text-xs">Mensagem na nota fiscal</Label>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">IBS/CBS</Label>
                       <Input
                         className="h-8 text-xs"
-                        value={formData.mensagemNotaFiscal}
-                        onChange={(e) => updateForm('mensagemNotaFiscal', e.target.value)}
+                        maxLength={3}
+                        value={formData.ibsCbs}
+                        onChange={(e) => updateForm('ibsCbs', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">IBS/CBS Classif. Trib.</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        maxLength={6}
+                        value={formData.ibsCbsClassifTrib}
+                        onChange={(e) =>
+                          updateForm('ibsCbsClassifTrib', e.target.value.toUpperCase())
+                        }
                       />
                     </div>
                   </div>

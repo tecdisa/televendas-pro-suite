@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Search, UserCheck, Pencil, Trash2, Loader2, ChevronDown } from 'lucide-react';
+import { Search, UserCheck, Pencil, Loader2, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { representativesService, Representante } from '@/services/representativesService';
@@ -106,7 +106,6 @@ export function RepresentantesTab() {
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<RepresentanteEditFormData>(initialFormData);
   const [usuariosEmpresa, setUsuariosEmpresa] = useState<VinculoUsuarioOption[]>([]);
   const [usuariosEmpresaLoading, setUsuariosEmpresaLoading] = useState(false);
@@ -335,20 +334,6 @@ export function RepresentantesTab() {
       toast.error(e?.message || 'Erro ao atualizar força de vendas');
     } finally {
       setFormLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir esta força de vendas?')) return;
-    setDeleteLoading(id);
-    try {
-      await representativesService.delete(id);
-      toast.success('Força de vendas excluída com sucesso');
-      loadRepresentantes(true);
-    } catch (e: any) {
-      toast.error(e?.message || 'Erro ao excluir força de vendas');
-    } finally {
-      setDeleteLoading(null);
     }
   };
 
@@ -751,7 +736,7 @@ export function RepresentantesTab() {
                               </TableCell>
                               <TableCell className="text-center">
                                 <TooltipProvider>
-                                  <div className="flex items-center justify-center gap-0.5">
+                                  <div className="flex items-center justify-center">
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
@@ -759,24 +744,6 @@ export function RepresentantesTab() {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>Editar</TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7"
-                                          onClick={() => handleDelete(r.representante_id)}
-                                          disabled={deleteLoading === r.representante_id}
-                                        >
-                                          {deleteLoading === r.representante_id ? (
-                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                          ) : (
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Excluir</TooltipContent>
                                     </Tooltip>
                                   </div>
                                 </TooltipProvider>

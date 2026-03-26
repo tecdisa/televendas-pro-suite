@@ -387,7 +387,9 @@ export interface ProductCadastroInput {
   custo_medio?: number | null;
   custo_nota?: number | null;
   custo_compra?: number | null;
+  codigo_situacao_icms?: string | null;
   cst?: string | null;
+  csosn?: string | null;
   aliquota_icms?: number | null;
   aliquota_icms_credito?: number | null;
   pfcp?: number | null;
@@ -395,6 +397,12 @@ export interface ProductCadastroInput {
   reducao_st?: number | null;
   reducao_convenio?: number | null;
   repasse_icms?: boolean;
+  cst_pis?: string | null;
+  cst_cofins?: string | null;
+  aliquota_pis?: number | null;
+  aliquota_cofins?: number | null;
+  ibs_cbs?: string | null;
+  ibs_cbs_classif_trib?: string | null;
   kit_itens?: Array<{
     produto_item_id: number;
     quantidade: number;
@@ -527,7 +535,9 @@ function buildCadastroPayload(data: Partial<ProductCadastroInput>): Record<strin
     custo_medio: sanitizeNullableNumber(data.custo_medio),
     custo_nota: sanitizeNullableNumber(data.custo_nota),
     custo_compra: sanitizeNullableNumber(data.custo_compra),
+    codigo_situacao_icms: sanitizeNullableText(data.codigo_situacao_icms),
     cst: sanitizeNullableText(data.cst),
+    csosn: sanitizeNullableText(data.csosn),
     aliquota_icms: sanitizeNullableNumber(data.aliquota_icms),
     aliquota_icms_credito: sanitizeNullableNumber(data.aliquota_icms_credito),
     pfcp: sanitizeNullableNumber(data.pfcp),
@@ -535,6 +545,12 @@ function buildCadastroPayload(data: Partial<ProductCadastroInput>): Record<strin
     reducao_st: sanitizeNullableNumber(data.reducao_st),
     reducao_convenio: sanitizeNullableNumber(data.reducao_convenio),
     repasse_icms: data.repasse_icms,
+    cst_pis: sanitizeNullableText(data.cst_pis),
+    cst_cofins: sanitizeNullableText(data.cst_cofins),
+    aliquota_pis: sanitizeNullableNumber(data.aliquota_pis),
+    aliquota_cofins: sanitizeNullableNumber(data.aliquota_cofins),
+    ibs_cbs: sanitizeNullableText(data.ibs_cbs),
+    ibs_cbs_classif_trib: sanitizeNullableText(data.ibs_cbs_classif_trib),
     kit_itens: Array.isArray(data.kit_itens)
       ? data.kit_itens.map((item) => ({
           produto_item_id: sanitizeNullableNumber(item.produto_item_id),

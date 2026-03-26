@@ -16,13 +16,22 @@ export interface StockEntry {
   custo_medio?: number | null;
   custo_nota?: number | null;
   custo_compra?: number | null;
+  codigo_situacao_icms?: string | null;
   cst?: string | null;
+  csosn?: string | null;
   aliquota_icms?: number | null;
+  aliquota_icms_credito?: number | null;
   pfcp?: number | null;
   pauta_icms?: number | null;
   reducao_st?: number | null;
   reducao_convenio?: number | null;
   repasse_icms?: boolean | null;
+  cst_pis?: string | null;
+  cst_cofins?: string | null;
+  aliquota_pis?: number | null;
+  aliquota_cofins?: number | null;
+  ibs_cbs?: string | null;
+  ibs_cbs_classif_trib?: string | null;
 }
 
 interface StockResponse {
@@ -39,13 +48,22 @@ export interface StockInput {
   custo_medio?: number | null;
   custo_nota?: number | null;
   custo_compra?: number | null;
+  codigo_situacao_icms?: string | null;
   cst?: string | null;
+  csosn?: string | null;
   aliquota_icms?: number | null;
+  aliquota_icms_credito?: number | null;
   pfcp?: number | null;
   pauta_icms?: number | null;
   reducao_st?: number | null;
   reducao_convenio?: number | null;
   repasse_icms?: boolean;
+  cst_pis?: string | null;
+  cst_cofins?: string | null;
+  aliquota_pis?: number | null;
+  aliquota_cofins?: number | null;
+  ibs_cbs?: string | null;
+  ibs_cbs_classif_trib?: string | null;
 }
 
 function sanitizeNullableText(value: any): string | null | undefined {
@@ -83,14 +101,36 @@ function normalizeStock(raw: any): StockEntry {
     custo_medio: raw?.custo_medio != null ? Number(raw.custo_medio) : null,
     custo_nota: raw?.custo_nota != null ? Number(raw.custo_nota) : null,
     custo_compra: raw?.custo_compra != null ? Number(raw.custo_compra) : null,
+    codigo_situacao_icms:
+      raw?.codigo_situacao_icms != null ? String(raw.codigo_situacao_icms).trim() : null,
     cst: raw?.cst ? String(raw.cst).trim() : null,
+    csosn: raw?.csosn ? String(raw.csosn).trim() : null,
     aliquota_icms: raw?.aliquota_icms != null ? Number(raw.aliquota_icms) : null,
+    aliquota_icms_credito:
+      raw?.aliquota_icms_credito != null ? Number(raw.aliquota_icms_credito) : null,
     pfcp: raw?.pfcp != null ? Number(raw.pfcp) : null,
     pauta_icms: raw?.pauta_icms != null ? Number(raw.pauta_icms) : null,
     reducao_st: raw?.reducao_st != null ? Number(raw.reducao_st) : null,
     reducao_convenio:
       raw?.reducao_convenio != null ? Number(raw.reducao_convenio) : null,
     repasse_icms: raw?.repasse_icms ?? raw?.repasseIcms ?? false,
+    cst_pis: raw?.cst_pis ? String(raw.cst_pis).trim() : null,
+    cst_cofins: raw?.cst_cofins ? String(raw.cst_cofins).trim() : null,
+    aliquota_pis:
+      raw?.aliquota_pis != null
+        ? Number(raw.aliquota_pis)
+        : raw?.pis_aliquota != null
+        ? Number(raw.pis_aliquota)
+        : null,
+    aliquota_cofins:
+      raw?.aliquota_cofins != null
+        ? Number(raw.aliquota_cofins)
+        : raw?.cofins_aliquota != null
+        ? Number(raw.cofins_aliquota)
+        : null,
+    ibs_cbs: raw?.ibs_cbs ? String(raw.ibs_cbs).trim() : null,
+    ibs_cbs_classif_trib:
+      raw?.ibs_cbs_classif_trib != null ? String(raw.ibs_cbs_classif_trib).trim() : null,
   };
 }
 
@@ -102,13 +142,22 @@ function buildPayload(data: Partial<StockInput>) {
     custo_medio: sanitizeNullableNumber(data.custo_medio),
     custo_nota: sanitizeNullableNumber(data.custo_nota),
     custo_compra: sanitizeNullableNumber(data.custo_compra),
+    codigo_situacao_icms: sanitizeNullableText(data.codigo_situacao_icms),
     cst: sanitizeNullableText(data.cst),
+    csosn: sanitizeNullableText(data.csosn),
     aliquota_icms: sanitizeNullableNumber(data.aliquota_icms),
+    aliquota_icms_credito: sanitizeNullableNumber(data.aliquota_icms_credito),
     pfcp: sanitizeNullableNumber(data.pfcp),
     pauta_icms: sanitizeNullableNumber(data.pauta_icms),
     reducao_st: sanitizeNullableNumber(data.reducao_st),
     reducao_convenio: sanitizeNullableNumber(data.reducao_convenio),
     repasse_icms: data.repasse_icms,
+    cst_pis: sanitizeNullableText(data.cst_pis),
+    cst_cofins: sanitizeNullableText(data.cst_cofins),
+    aliquota_pis: sanitizeNullableNumber(data.aliquota_pis),
+    aliquota_cofins: sanitizeNullableNumber(data.aliquota_cofins),
+    ibs_cbs: sanitizeNullableText(data.ibs_cbs),
+    ibs_cbs_classif_trib: sanitizeNullableText(data.ibs_cbs_classif_trib),
   };
 }
 
