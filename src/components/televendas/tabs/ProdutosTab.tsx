@@ -1245,9 +1245,9 @@ export function ProdutosTab() {
           <Tabs defaultValue="caracteristicas" className="flex-1 min-h-0 flex flex-col">
             <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
               <TabsTrigger value="caracteristicas">Características</TabsTrigger>
-              <TabsTrigger value="kit">Kit</TabsTrigger>
-              <TabsTrigger value="estoques">Estoques</TabsTrigger>
+              {!editingProduct && <TabsTrigger value="estoques">Estoques</TabsTrigger>}
               <TabsTrigger value="complementar">Dados complementares</TabsTrigger>
+              <TabsTrigger value="kit">Kit</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 min-h-0 mt-2 overflow-y-scroll pr-1">
@@ -1626,218 +1626,220 @@ export function ProdutosTab() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="estoques" className="mt-0 px-1 space-y-4 pb-4">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Código
-                    </Label>
-                    <Input className="h-8 text-xs bg-muted" value={formData.codigoProduto} readOnly />
+              {!editingProduct && (
+                <TabsContent value="estoques" className="mt-0 px-1 space-y-4 pb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div className="md:col-span-2">
+                      <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                        Código
+                      </Label>
+                      <Input className="h-8 text-xs bg-muted" value={formData.codigoProduto} readOnly />
+                    </div>
+                    <div className="md:col-span-8">
+                      <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                        Produto
+                      </Label>
+                      <Input className="h-8 text-xs bg-muted" value={formData.descricao} readOnly />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs font-medium text-muted-foreground mb-1 block">UN</Label>
+                      <Input className="h-8 text-xs bg-muted" value={formData.unidade} readOnly />
+                    </div>
                   </div>
-                  <div className="md:col-span-8">
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Produto
-                    </Label>
-                    <Input className="h-8 text-xs bg-muted" value={formData.descricao} readOnly />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">UN</Label>
-                    <Input className="h-8 text-xs bg-muted" value={formData.unidade} readOnly />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Estoque</Label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      className="h-8 text-xs"
-                      value={formData.estoque}
-                      onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Estoque</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        className="h-8 text-xs"
+                        value={formData.estoque}
+                        onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Quantidade reservada</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        className="h-8 text-xs"
+                        value={formData.quantidadeReservada}
+                        onChange={(e) =>
+                          updateForm('quantidadeReservada', Number(e.target.value) || 0)
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Disponível</Label>
+                      <Input
+                        className="h-8 text-xs bg-muted"
+                        value={toFixedNumber(
+                          Number(formData.estoque || 0) - Number(formData.quantidadeReservada || 0),
+                          3,
+                        )}
+                        readOnly
+                      />
+                    </div>
+                    <div className="md:col-span-3 flex items-center gap-2 pt-5">
+                      <Checkbox
+                        checked={formData.repasseIcms}
+                        onCheckedChange={(checked) => updateForm('repasseIcms', Boolean(checked))}
+                        className="h-3.5 w-3.5"
+                      />
+                      <label className="text-xs">Repasse ICMS</label>
+                    </div>
                   </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Quantidade reservada</Label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      className="h-8 text-xs"
-                      value={formData.quantidadeReservada}
-                      onChange={(e) =>
-                        updateForm('quantidadeReservada', Number(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Disponível</Label>
-                    <Input
-                      className="h-8 text-xs bg-muted"
-                      value={toFixedNumber(
-                        Number(formData.estoque || 0) - Number(formData.quantidadeReservada || 0),
-                        3,
-                      )}
-                      readOnly
-                    />
-                  </div>
-                  <div className="md:col-span-3 flex items-center gap-2 pt-5">
-                    <Checkbox
-                      checked={formData.repasseIcms}
-                      onCheckedChange={(checked) => updateForm('repasseIcms', Boolean(checked))}
-                      className="h-3.5 w-3.5"
-                    />
-                    <label className="text-xs">Repasse ICMS</label>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Custo médio</Label>
-                    <Input
-                      type="number"
-                      step="0.00001"
-                      className="h-8 text-xs"
-                      value={formData.custoMedio}
-                      onChange={(e) => updateForm('custoMedio', Number(e.target.value) || 0)}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Custo médio</Label>
+                      <Input
+                        type="number"
+                        step="0.00001"
+                        className="h-8 text-xs"
+                        value={formData.custoMedio}
+                        onChange={(e) => updateForm('custoMedio', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Custo nota</Label>
+                      <Input
+                        type="number"
+                        step="0.00001"
+                        className="h-8 text-xs"
+                        value={formData.custoNota}
+                        onChange={(e) => updateForm('custoNota', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Custo compra</Label>
+                      <Input
+                        type="number"
+                        step="0.00001"
+                        className="h-8 text-xs"
+                        value={formData.custoCompra}
+                        onChange={(e) => updateForm('custoCompra', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">CST</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        maxLength={2}
+                        value={formData.cst}
+                        onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
+                      />
+                    </div>
                   </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Custo nota</Label>
-                    <Input
-                      type="number"
-                      step="0.00001"
-                      className="h-8 text-xs"
-                      value={formData.custoNota}
-                      onChange={(e) => updateForm('custoNota', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Custo compra</Label>
-                    <Input
-                      type="number"
-                      step="0.00001"
-                      className="h-8 text-xs"
-                      value={formData.custoCompra}
-                      onChange={(e) => updateForm('custoCompra', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">CST</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      maxLength={2}
-                      value={formData.cst}
-                      onChange={(e) => updateForm('cst', e.target.value.toUpperCase())}
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Aliq. ICMS</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.aliquotaIcms}
-                      onChange={(e) => updateForm('aliquotaIcms', Number(e.target.value) || 0)}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">Aliq. ICMS</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={formData.aliquotaIcms}
+                        onChange={(e) => updateForm('aliquotaIcms', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">Aliq. ICMS crédito</Label>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        className="h-8 text-xs"
+                        value={formData.aliquotaIcmsCredito}
+                        onChange={(e) =>
+                          updateForm('aliquotaIcmsCredito', Number(e.target.value) || 0)
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs">PFCP</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={formData.pfcp}
+                        onChange={(e) => updateForm('pfcp', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Pauta ICMS</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={formData.pautaIcms}
+                        onChange={(e) => updateForm('pautaIcms', Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Redução ST</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={formData.reducaoSt}
+                        onChange={(e) => updateForm('reducaoSt', Number(e.target.value) || 0)}
+                      />
+                    </div>
                   </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Aliq. ICMS crédito</Label>
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      className="h-8 text-xs"
-                      value={formData.aliquotaIcmsCredito}
-                      onChange={(e) =>
-                        updateForm('aliquotaIcmsCredito', Number(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">PFCP</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.pfcp}
-                      onChange={(e) => updateForm('pfcp', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Pauta ICMS</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.pautaIcms}
-                      onChange={(e) => updateForm('pautaIcms', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Redução ST</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.reducaoSt}
-                      onChange={(e) => updateForm('reducaoSt', Number(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Redução convênio</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-8 text-xs"
-                      value={formData.reducaoConvenio}
-                      onChange={(e) =>
-                        updateForm('reducaoConvenio', Number(e.target.value) || 0)
-                      }
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Redução convênio</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={formData.reducaoConvenio}
+                        onChange={(e) =>
+                          updateForm('reducaoConvenio', Number(e.target.value) || 0)
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Origem do produto</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={formData.origemProduto}
+                        onChange={(e) => updateForm('origemProduto', e.target.value)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Reg. MS</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={formData.regMs}
+                        onChange={(e) => updateForm('regMs', e.target.value)}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Validade</Label>
+                      <Input
+                        type="date"
+                        className="h-8 text-xs"
+                        value={formData.validade}
+                        onChange={(e) => updateForm('validade', e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Origem do produto</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.origemProduto}
-                      onChange={(e) => updateForm('origemProduto', e.target.value)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Reg. MS</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.regMs}
-                      onChange={(e) => updateForm('regMs', e.target.value)}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="text-xs">Validade</Label>
-                    <Input
-                      type="date"
-                      className="h-8 text-xs"
-                      value={formData.validade}
-                      onChange={(e) => updateForm('validade', e.target.value)}
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="md:col-span-12">
-                    <Label className="text-xs">Mensagem na nota fiscal</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={formData.mensagemNotaFiscal}
-                      onChange={(e) => updateForm('mensagemNotaFiscal', e.target.value)}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-12">
+                      <Label className="text-xs">Mensagem na nota fiscal</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={formData.mensagemNotaFiscal}
+                        onChange={(e) => updateForm('mensagemNotaFiscal', e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
+              )}
 
               <TabsContent value="complementar" className="mt-0 px-1 space-y-3 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
