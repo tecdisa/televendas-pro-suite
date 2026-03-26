@@ -84,23 +84,6 @@ const PINNABLE_PRODUCT_COLUMNS = PRODUCTS_GRID_COLUMNS.filter(
   (column) => column.pinnable,
 );
 
-const parseEmpresasAutorizadas = (value?: string | null) =>
-  Array.from(
-    new Set(
-      (String(value ?? '').match(/\d+/g) ?? [])
-        .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item) && item > 0),
-    ),
-  );
-
-const isFornecedorAutorizadoParaEmpresa = (
-  fornecedor: Fornecedor,
-  empresaId: number,
-) => {
-  const autorizadas = parseEmpresasAutorizadas(fornecedor.empresas_autorizadas);
-  return autorizadas.length === 0 || autorizadas.includes(empresaId);
-};
-
 type StatusType = 'ativos' | 'inativos' | 'todos';
 
 interface ProductFormState {
@@ -463,13 +446,8 @@ export function ProdutosTab() {
     );
   }, [fornecedores]);
   const fornecedoresDisponiveis = useMemo(() => {
-    if (!empresaIdAtual) return fornecedores;
-    return fornecedores.filter(
-      (fornecedor) =>
-        isFornecedorAutorizadoParaEmpresa(fornecedor, empresaIdAtual) ||
-        Number(fornecedor.fornecedor_id) === Number(formData.fornecedorId || 0),
-    );
-  }, [empresaIdAtual, formData.fornecedorId, fornecedores]);
+    return fornecedores;
+  }, [fornecedores]);
 
   const divisoesMap = useMemo(() => {
     return new Map<number, string>(
@@ -718,6 +696,14 @@ export function ProdutosTab() {
     }
     if (!formData.divisaoId) {
       toast.error('Selecione a divisão');
+      return;
+    }
+    if (formData.ean13.trim().length > 13) {
+      toast.error('EAN13 deve ter no máximo 13 caracteres');
+      return;
+    }
+    if (formData.dun14.trim().length > 14) {
+      toast.error('DUN14 deve ter no máximo 14 caracteres');
       return;
     }
 
@@ -1336,7 +1322,8 @@ export function ProdutosTab() {
                     <Input
                       className="h-8 text-xs"
                       value={formData.ean13}
-                      onChange={(e) => updateForm('ean13', e.target.value)}
+                      maxLength={13}
+                      onChange={(e) => updateForm('ean13', e.target.value.slice(0, 13))}
                     />
                   </div>
                   <div className="col-span-1 md:col-span-2">
@@ -1344,7 +1331,8 @@ export function ProdutosTab() {
                     <Input
                       className="h-8 text-xs"
                       value={formData.dun14}
-                      onChange={(e) => updateForm('dun14', e.target.value)}
+                      maxLength={14}
+                      onChange={(e) => updateForm('dun14', e.target.value.slice(0, 14))}
                     />
                   </div>
                   <div className="col-span-1 md:col-span-3">
@@ -1725,17 +1713,6 @@ export function ProdutosTab() {
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="md:col-span-3">
-                      <Label className="text-xs">Código situação ICMS</Label>
-                      <Input
-                        className="h-8 text-xs"
-                        maxLength={6}
-                        value={formData.codigoSituacaoIcms}
-                        onChange={(e) =>
-                          updateForm('codigoSituacaoIcms', e.target.value.toUpperCase())
-                        }
-                      />
-                    </div>
-                    <div className="md:col-span-3">
                       <Label className="text-xs">Custo médio</Label>
                       <Input
                         type="number"
@@ -1781,6 +1758,17 @@ export function ProdutosTab() {
                         maxLength={3}
                         value={formData.csosn}
                         onChange={(e) => updateForm('csosn', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <Label className="text-xs">Código situação ICMS</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        maxLength={6}
+                        value={formData.codigoSituacaoIcms}
+                        onChange={(e) =>
+                          updateForm('codigoSituacaoIcms', e.target.value.toUpperCase())
+                        }
                       />
                     </div>
                   </div>

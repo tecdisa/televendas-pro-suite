@@ -11,8 +11,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   authService,
-  getEmpresaDisplayName,
-  type Empresa,
 } from '@/services/authService';
 import { metadataService, type Cidade, type Uf } from '@/services/metadataService';
 import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from '@/services/usersService';
@@ -121,8 +119,6 @@ export function UsuariosTab() {
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
-  const [empresasDisponiveis, setEmpresasDisponiveis] = useState<Empresa[]>([]);
-  const [empresasLoading, setEmpresasLoading] = useState(false);
 
   const buildInitialFormData = (): UsuarioCadastroFormData => ({
     ...initialFormData,
@@ -142,21 +138,6 @@ export function UsuariosTab() {
       toast.error(error?.message || 'Erro ao carregar UFs');
     } finally {
       setUfsLoading(false);
-    }
-  };
-
-  const loadEmpresas = async () => {
-    setEmpresasLoading(true);
-    try {
-      const data = await authService.getEmpresas();
-      const sorted = [...data].sort((a, b) =>
-        getEmpresaDisplayName(a).localeCompare(getEmpresaDisplayName(b)),
-      );
-      setEmpresasDisponiveis(sorted);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao carregar empresas');
-    } finally {
-      setEmpresasLoading(false);
     }
   };
 
@@ -273,7 +254,6 @@ export function UsuariosTab() {
 
   useEffect(() => {
     loadUfs();
-    loadEmpresas();
   }, []);
 
   useEffect(() => {
@@ -352,7 +332,7 @@ export function UsuariosTab() {
       toast.error('Preencha o nome');
       return false;
     }
-    if (mode === 'create' && !formData.email?.trim()) {
+    if (!formData.email?.trim()) {
       toast.error('Preencha o e-mail do usuario');
       return false;
     }
@@ -371,7 +351,7 @@ export function UsuariosTab() {
       const result = await usersService.create({
         usuario: formData.usuario.trim(),
         nome: formData.nome.trim(),
-        email: formData.email?.trim().toLowerCase() || null,
+        email: formData.email.trim().toLowerCase(),
         endereco: formData.endereco?.trim() || null,
         numero: formData.numero?.trim() || null,
         complemento: formData.complemento?.trim() || null,
@@ -420,7 +400,7 @@ export function UsuariosTab() {
       await usersService.update(editId, {
         usuario: formData.usuario.trim(),
         nome: formData.nome.trim(),
-        email: formData.email?.trim().toLowerCase() || null,
+        email: formData.email.trim().toLowerCase(),
         endereco: formData.endereco?.trim() || null,
         numero: formData.numero?.trim() || null,
         complemento: formData.complemento?.trim() || null,
@@ -471,20 +451,6 @@ export function UsuariosTab() {
     }
   };
 
-  const toggleEmpresa = (empresaId: number, checked: boolean) => {
-    setFormData((prev) => {
-      const current = Array.isArray(prev.empresa_ids) ? prev.empresa_ids : [];
-      const nextEmpresaIds = checked
-        ? Array.from(new Set([...current, empresaId]))
-        : current.filter((id) => id !== empresaId);
-
-      return {
-        ...prev,
-        empresa_ids: nextEmpresaIds,
-      };
-    });
-  };
-
   const formContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -521,7 +487,7 @@ export function UsuariosTab() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <div className="col-span-1 md:col-span-12">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            E-mail {createOpen ? '*' : ''}
+            E-mail *
           </label>
           <Input
             type="email"
@@ -590,41 +556,6 @@ export function UsuariosTab() {
               }))
             }
           />
-        </div>
-      </div>
-
-      <div className="border-b border-primary/50 pb-1 mt-4">
-        <span className="text-sm font-medium text-primary">Empresas</span>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted-foreground block">
-          Empresas vinculadas
-        </label>
-        <div className="rounded-md border p-3 max-h-40 overflow-auto space-y-2">
-          {empresasLoading ? (
-            <div className="text-sm text-muted-foreground">Carregando empresas...</div>
-          ) : empresasDisponiveis.length ? (
-            empresasDisponiveis.map((empresa) => {
-              const checked = (formData.empresa_ids ?? []).includes(empresa.empresa_id);
-              return (
-                <label
-                  key={empresa.empresa_id}
-                  className="flex items-center gap-2 text-sm"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(nextChecked) =>
-                      toggleEmpresa(empresa.empresa_id, Boolean(nextChecked))
-                    }
-                  />
-                  <span>{`${empresa.empresa_id} - ${getEmpresaDisplayName(empresa)}`}</span>
-                </label>
-              );
-            })
-          ) : (
-            <div className="text-sm text-muted-foreground">Nenhuma empresa disponível.</div>
-          )}
         </div>
       </div>
 
