@@ -107,6 +107,7 @@ function normalizeRepresentante(raw: any): Representante {
 
   return {
     representante_id:
+      raw.usuario_empresa_id ??
       raw.representante_id ??
       raw.forca_de_venda_id ??
       raw.forcaDeVendaId ??
