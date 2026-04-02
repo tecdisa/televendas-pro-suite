@@ -196,7 +196,7 @@ export function EstoquesTab() {
     setProductSearchLoading(true);
     try {
       const result = await productsService.listCadastro(
-        { status: 'todos', search: productSearch.trim() },
+        { status: 'ativos', search: productSearch.trim() },
         1,
         20,
       );
@@ -510,9 +510,9 @@ export function EstoquesTab() {
                 <Input
                   type="number"
                   step="0.001"
-                  className="h-9 text-sm"
+                  className="h-9 text-sm bg-muted"
                   value={formData.quantidade_reservada}
-                  onChange={(e) => updateForm('quantidade_reservada', Number(e.target.value) || 0)}
+                  readOnly
                 />
               </div>
               <div className="md:col-span-3">

@@ -221,8 +221,8 @@ function mapProductToForm(product: Product): ProductFormState {
     unidade: String(product.un ?? 'UN').trim() || 'UN',
     tipoItem: String(product.tipoItem ?? 'MERCADORIA_REVENDA').trim() || 'MERCADORIA_REVENDA',
     codigoFabrica: String(product.codigoFabrica ?? '').trim(),
-    ean13: String(product.ean13 ?? '').trim(),
-    dun14: String(product.dun14 ?? '').trim(),
+    ean13: onlyDigits(String(product.ean13 ?? '').trim(), 13),
+    dun14: onlyDigits(String(product.dun14 ?? '').trim(), 14),
     apresentacao: String(product.apresentacao ?? '').trim(),
     marca: String(product.marca ?? '').trim(),
     fornecedorId: Number(product.fornecedorId ?? 0) || 0,
@@ -288,6 +288,10 @@ function mapProductKitToFormItems(product?: Product | null): ProductKitFormItem[
 const formatBooleanCell = (value?: boolean | null) => (value ? 'Sim' : 'Não');
 const formatNullableInteger = (value?: number | null) =>
   value === null || value === undefined ? '-' : Number(value).toLocaleString('pt-BR');
+const onlyDigits = (value: string | null | undefined, maxLength: number) =>
+  String(value ?? '')
+    .replace(/\D+/g, '')
+    .slice(0, maxLength);
 const formatNullableDecimal = (value?: number | null, fractionDigits = 3) =>
   value === null || value === undefined
     ? '-'
@@ -311,8 +315,8 @@ function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
     descricao_produto: form.descricao.trim(),
     unidade: form.unidade.trim().toUpperCase(),
     codigo_fabrica: form.codigoFabrica.trim() || null,
-    ean13: form.ean13.trim() || null,
-    dun14: form.dun14.trim() || null,
+    ean13: onlyDigits(form.ean13, 13) || null,
+    dun14: onlyDigits(form.dun14, 14) || null,
     apresentacao: form.apresentacao.trim() || null,
     marca: form.marca.trim() || null,
     fornecedor_id: Number(form.fornecedorId) || 0,
@@ -682,6 +686,9 @@ export function ProdutosTab() {
   };
 
   const handleSave = async () => {
+    const ean13 = onlyDigits(formData.ean13, 13);
+    const dun14 = onlyDigits(formData.dun14, 14);
+
     if (!formData.descricao.trim()) {
       toast.error('Preencha a descrição do produto');
       return;
@@ -698,11 +705,11 @@ export function ProdutosTab() {
       toast.error('Selecione a divisão');
       return;
     }
-    if (formData.ean13.trim().length > 13) {
+    if (ean13.length > 13) {
       toast.error('EAN13 deve ter no máximo 13 caracteres');
       return;
     }
-    if (formData.dun14.trim().length > 14) {
+    if (dun14.length > 14) {
       toast.error('DUN14 deve ter no máximo 14 caracteres');
       return;
     }
@@ -762,7 +769,7 @@ export function ProdutosTab() {
     setKitSearchLoading(true);
     try {
       const result = await productsService.listCadastro(
-        { status: 'todos', search: term },
+        { status: 'ativos', search: term },
         1,
         20,
       );
@@ -1323,7 +1330,8 @@ export function ProdutosTab() {
                       className="h-8 text-xs"
                       value={formData.ean13}
                       maxLength={13}
-                      onChange={(e) => updateForm('ean13', e.target.value.slice(0, 13))}
+                      inputMode="numeric"
+                      onChange={(e) => updateForm('ean13', onlyDigits(e.target.value, 13))}
                     />
                   </div>
                   <div className="col-span-1 md:col-span-2">
@@ -1332,7 +1340,8 @@ export function ProdutosTab() {
                       className="h-8 text-xs"
                       value={formData.dun14}
                       maxLength={14}
-                      onChange={(e) => updateForm('dun14', e.target.value.slice(0, 14))}
+                      inputMode="numeric"
+                      onChange={(e) => updateForm('dun14', onlyDigits(e.target.value, 14))}
                     />
                   </div>
                   <div className="col-span-1 md:col-span-3">
@@ -1680,15 +1689,13 @@ export function ProdutosTab() {
                     </div>
                     <div className="md:col-span-3">
                       <Label className="text-xs">Quantidade reservada</Label>
-                      <Input
-                        type="number"
-                        step="0.001"
-                        className="h-8 text-xs"
-                        value={formData.quantidadeReservada}
-                        onChange={(e) =>
-                          updateForm('quantidadeReservada', Number(e.target.value) || 0)
-                        }
-                      />
+                    <Input
+                      type="number"
+                      step="0.001"
+                      className="h-8 text-xs bg-muted"
+                      value={formData.quantidadeReservada}
+                      readOnly
+                    />
                     </div>
                     <div className="md:col-span-3">
                       <Label className="text-xs">Disponível</Label>
