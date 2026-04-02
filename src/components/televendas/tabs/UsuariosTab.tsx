@@ -100,7 +100,7 @@ export function UsuariosTab() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('todos');
+  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -693,20 +693,26 @@ export function UsuariosTab() {
         </div>
       </div>
 
+      <div className="space-y-1 pt-1">
+        <label className="text-xs font-medium text-muted-foreground block">
+          Status do usuario
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={formData.ativo ?? true}
+            onCheckedChange={(checked) =>
+              setFormData((prev) => ({ ...prev, ativo: Boolean(checked) }))
+            }
+          />
+          Ativo
+        </label>
+      </div>
+
       <div className="border-b border-primary/50 pb-1 mt-4">
         <span className="text-sm font-medium text-primary">Funções</span>
       </div>
 
       <div className="flex flex-wrap items-end pb-1 gap-6">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={formData.ativo ?? true}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, ativo: Boolean(checked) }))
-              }
-            />
-            Ativo
-          </label>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={formData.admin ?? false}
