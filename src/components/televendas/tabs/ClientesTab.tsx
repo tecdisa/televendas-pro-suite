@@ -90,12 +90,6 @@ const formatCep = (value: string | number | null | undefined) => {
 const handleUpperChange = (e: ChangeEvent<HTMLInputElement>) => {
   e.currentTarget.value = toUpperValue(e.currentTarget.value);
 };
-const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>) => {
-  e.currentTarget.value = formatPhone(e.currentTarget.value);
-};
-const handleCpfChange = (e: ChangeEvent<HTMLInputElement>) => {
-  e.currentTarget.value = formatCpf(e.currentTarget.value);
-};
 const handleCepChange = (e: ChangeEvent<HTMLInputElement>) => {
   e.currentTarget.value = formatCep(e.currentTarget.value);
 };
@@ -476,6 +470,9 @@ export const ClientesTab = () => {
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
+  const [cnpjDuplicateLoading, setCnpjDuplicateLoading] = useState(false);
+  const [existingClientByCnpj, setExistingClientByCnpj] =
+    useState<ExistingClientDuplicate | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
   const [clientInfoOpen, setClientInfoOpen] = useState(false);
   const [clientInfoId, setClientInfoId] = useState<number | null>(null);
@@ -509,11 +506,6 @@ export const ClientesTab = () => {
   const [ufsLoading, setUfsLoading] = useState(false);
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
   const [cidadesLoading, setCidadesLoading] = useState(false);
-  const [complementarUf, setComplementarUf] = useState('');
-  const [complementarCidadeId, setComplementarCidadeId] = useState(0);
-  const [, setComplementarCidade] = useState('');
-  const [cidadesComplementares, setCidadesComplementares] = useState<Cidade[]>([]);
-  const [cidadesComplementaresLoading, setCidadesComplementaresLoading] = useState(false);
   const [cidadesCobranca, setCidadesCobranca] = useState<Cidade[]>([]);
   const [cidadesCobrancaLoading, setCidadesCobrancaLoading] = useState(false);
 
@@ -805,14 +797,6 @@ export const ClientesTab = () => {
   }, [cidadesApi, formData.cidade, formData.cidadeId]);
 
   useEffect(() => {
-    if (complementarUf && (createOpen || editOpen)) {
-      loadCidadesComplementares(complementarUf);
-    } else {
-      setCidadesComplementares([]);
-    }
-  }, [complementarUf, createOpen, editOpen]);
-
-  useEffect(() => {
     if (formData.cobrancaEnderecoUf && (createOpen || editOpen)) {
       loadCidadesCobranca(formData.cobrancaEnderecoUf);
     } else {
@@ -837,6 +821,50 @@ export const ClientesTab = () => {
       setRepSearch('');
     }
   }, [createOpen, editOpen]);
+
+  useEffect(() => {
+    if (!createOpen) {
+      setExistingClientByCnpj(null);
+      setCnpjDuplicateLoading(false);
+      return;
+    }
+
+    const cleaned = normalizeCnpj(formData.cnpjCpf);
+    if (cleaned.length !== 11 && cleaned.length !== 14) {
+      setExistingClientByCnpj(null);
+      setCnpjDuplicateLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCnpjDuplicateLoading(true);
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const existing = await clientsService.findByCnpjCpf(cleaned);
+        if (cancelled) return;
+        setExistingClientByCnpj(
+          existing
+            ? {
+                id: existing.id,
+                codigoCliente: existing.codigoCliente,
+                nome: existing.nome,
+                inativo: existing.inativo,
+              }
+            : null,
+        );
+      } catch {
+        if (!cancelled) setExistingClientByCnpj(null);
+      } finally {
+        if (!cancelled) setCnpjDuplicateLoading(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [createOpen, formData.cnpjCpf]);
 
   // Carregar representantes quando abrir dialog de busca
   const REP_LIMIT = 100;
@@ -959,18 +987,6 @@ export const ClientesTab = () => {
       console.error('Erro ao carregar cidades:', e);
     } finally {
       setCidadesLoading(false);
-    }
-  };
-
-  const loadCidadesComplementares = async (uf: string) => {
-    setCidadesComplementaresLoading(true);
-    try {
-      const data = await metadataService.getCidadesPorUf(uf);
-      setCidadesComplementares(data);
-    } catch (e) {
-      console.error('Erro ao carregar cidades:', e);
-    } finally {
-      setCidadesComplementaresLoading(false);
     }
   };
 
@@ -1345,6 +1361,7 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
   return Number.isFinite(num) && num > 0 ? num : fallback;
 };
 type ClientFormData = ReturnType<typeof createEmptyFormData>;
+type ExistingClientDuplicate = Pick<Client, 'id' | 'codigoCliente' | 'nome' | 'inativo'>;
 
 const normalizeErrorMessages = (error: unknown): string[] => {
   if (!error) return ['Erro desconhecido'];
@@ -1355,6 +1372,14 @@ const normalizeErrorMessages = (error: unknown): string[] => {
     .map((item) => item.trim())
     .filter(Boolean);
   return parts.length ? parts : [String(message)];
+};
+
+const buildExistingClientDuplicateMessage = (
+  client: ExistingClientDuplicate,
+) => {
+  const codigo = client.codigoCliente ? `${client.codigoCliente} - ` : '';
+  const status = client.inativo ? ' (inativo)' : '';
+  return `Já existe um cliente com este CNPJ/CPF: ${codigo}${client.nome}${status}.`;
 };
 
 const validateFormData = (data: ClientFormData): string[] => {
@@ -1377,6 +1402,7 @@ const validateFormData = (data: ClientFormData): string[] => {
   if (!isValidId(data.segmentoId)) errors.push('Selecione o segmento.');
   if (!isValidId(data.rotaId)) errors.push('Selecione a rota de entrega.');
   if (!isValidId(data.formaPagtoId)) errors.push('Selecione a forma de pagamento.');
+  if (!hasText(data.prazo)) errors.push('Selecione o prazo máximo liberado.');
   if (!isValidId(data.prazoPagtoId)) errors.push('Selecione o prazo de pagamento.');
   if (!Array.isArray(data.tabelaIds) || data.tabelaIds.length === 0) errors.push('Selecione ao menos uma tabela de preços.');
   if (!Array.isArray(data.representantes) || data.representantes.length === 0) errors.push('Selecione o representante.');
@@ -1390,13 +1416,11 @@ const validateFormData = (data: ClientFormData): string[] => {
 };
   const openCreateDialog = () => {
     setFormErrors([]);
+    setExistingClientByCnpj(null);
+    setCnpjDuplicateLoading(false);
     const empty = createEmptyFormData(getLoggedCompanyUf());
     setFormData(empty);
     setFormSnapshot(empty);
-    setComplementarUf('');
-    setComplementarCidadeId(0);
-    setComplementarCidade('');
-    setCidadesComplementares([]);
     setCidadesCobranca([]);
     setTabelaSearchOpen(false);
     setTabelaSearch('');
@@ -1405,6 +1429,10 @@ const validateFormData = (data: ClientFormData): string[] => {
 
   const submitCreate = async () => {
     setFormErrors([]);
+    if (existingClientByCnpj) {
+      setFormErrors([buildExistingClientDuplicateMessage(existingClientByCnpj)]);
+      return;
+    }
     const errors = validateFormData(formData);
     if (errors.length) {
       setFormErrors(errors);
@@ -1478,10 +1506,6 @@ const validateFormData = (data: ClientFormData): string[] => {
     setFormSnapshot(formData);
     setFormErrors([]);
     setDetailLoading(true);
-    setComplementarUf('');
-    setComplementarCidadeId(0);
-    setComplementarCidade('');
-    setCidadesComplementares([]);
     setCidadesCobranca([]);
     setTabelaSearchOpen(false);
     setTabelaSearch('');
@@ -3055,14 +3079,23 @@ const validateFormData = (data: ClientFormData): string[] => {
                         {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                       </Button>
                     </div>
+                    {existingClientByCnpj ? (
+                      <p className="mt-1 text-xs text-destructive">
+                        {buildExistingClientDuplicateMessage(existingClientByCnpj)}
+                      </p>
+                    ) : cnpjDuplicateLoading ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Verificando cliente existente...
+                      </p>
+                    ) : null}
                   </div>
                   <div className="col-span-1 md:col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
                     <Input className="h-8 text-sm bg-muted" value={formData.codigoCliente} readOnly />
                   </div>
                   <div className="col-span-1 md:col-span-3 flex items-center gap-2">
-                    <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
-                    <label className="text-sm">Cliente Inativo</label>
+                    <Checkbox checked={!formData.inativo} onCheckedChange={(checked) => setFormData({ ...formData, inativo: checked !== true })} />
+                    <label className="text-sm">Ativo</label>
                   </div>
                 </div>
 
@@ -3272,173 +3305,16 @@ const validateFormData = (data: ClientFormData): string[] => {
 
               {/* =================== Dados Complementares =================== */}
               <TabsContent value="complementares" className="m-0 space-y-4">
-                {/* Proprietário + Aniversário */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-6">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
-                    <Input type="date" className="h-8 text-sm" />
-                  </div>
-                </div>
-
-                {/* CPF + RG + Início atividade */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
-                    <Input className="h-8 text-sm" onChange={handleCpfChange} />
-                  </div>
                   <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
-                    <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: formatRg(e.target.value) })} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
-                    <Input type="date" className="h-8 text-sm" />
-                  </div>
-                </div>
-
-                {/* Endereço complementar */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-8">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4 flex items-center gap-2">
-                    <Checkbox />
-                    <label className="text-sm">Endereço para entrega</label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-2">
-                    <Select
-                      value={complementarUf}
-                      onValueChange={(v) => {
-                        const nextUf = toUpperValue(v);
-                        setComplementarUf(nextUf);
-                        setComplementarCidadeId(0);
-                        setComplementarCidade('');
-                      }}
-                      disabled={ufsLoading}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        {ufsApi.map(u => (
-                          <SelectItem key={u.uf} value={u.uf}>{u.uf}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <Select
-                      value={complementarCidadeId ? String(complementarCidadeId) : ''}
-                      onValueChange={(v) => {
-                        const cid = cidadesComplementares.find(c => String(c.cidade_id) === v);
-                        setComplementarCidadeId(parseInt(v) || 0);
-                        setComplementarCidade(toUpperValue(cid?.nome_cidade || ''));
-                      }}
-                      disabled={cidadesComplementaresLoading || !complementarUf}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue
-                          placeholder={
-                            cidadesComplementaresLoading
-                              ? 'Carregando...'
-                              : (complementarUf ? 'Selecione' : 'Selecione UF')
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50 max-h-60">
-                        {cidadesComplementares.map(c => (
-                          <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-                    <Input className="h-8 text-sm" placeholder="-" onChange={handleCepChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                </div>
-
-                <FormField label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} className="max-w-md" upperCase={false} />
-
-                {/* Seção Referências */}
-                <div className="border-b border-primary/50 pb-1 mt-4">
-                  <span className="text-sm font-medium text-primary">Referências</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <Input className="h-8 text-sm" placeholder="Agência" onChange={handleUpperChange} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-4">
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                </div>
-
-                {/* Referências Comerciais + Sócios */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start mt-4">
-                  <div className="col-span-1 md:col-span-6 space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-6 space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
-                    <div className="flex gap-2">
-                      <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
-                      <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
-                    </div>
-                    <div className="flex gap-2">
-                      <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
-                      <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
-                    </div>
-                    <div className="flex gap-2">
-                      <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
-                      <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
-                    </div>
-                  </div>
-                </div>
-
-                <FormField label="Cap. social" value="" onChange={() => {}} />
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-8">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Contador</label>
-                    <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
-                    <Input className="h-8 text-sm" placeholder="( )" onChange={handlePhoneChange} />
+                    <Input
+                      className="h-8 text-sm"
+                      value={formData.rg}
+                      onChange={(e) =>
+                        setFormData({ ...formData, rg: formatRg(e.target.value) })
+                      }
+                    />
                   </div>
                 </div>
 
@@ -3824,7 +3700,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                     </Select>
                   </div>
                   <div className="col-span-1 md:col-span-6">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado *</label>
                     <Select
                       value={formData.prazo}
                       onValueChange={(v) => {
@@ -4000,7 +3876,16 @@ const validateFormData = (data: ClientFormData): string[] => {
           )}
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => requestCloseDialog('create')} disabled={formLoading}>Cancelar</Button>
-            <Button onClick={submitCreate} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
+            <Button
+              onClick={submitCreate}
+              disabled={
+                formLoading ||
+                cnpjDuplicateLoading ||
+                Boolean(existingClientByCnpj)
+              }
+            >
+              {formLoading ? 'Salvando...' : 'Salvar'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -4045,8 +3930,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <Input className="h-8 text-sm bg-muted" value={formData.codigoCliente} readOnly />
                     </div>
                     <div className="col-span-1 md:col-span-3 flex items-center gap-2">
-                      <Checkbox checked={formData.inativo} onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })} />
-                      <label className="text-sm">Cliente Inativo</label>
+                      <Checkbox checked={!formData.inativo} onCheckedChange={(checked) => setFormData({ ...formData, inativo: checked !== true })} />
+                      <label className="text-sm">Ativo</label>
                     </div>
                   </div>
 
@@ -4235,66 +4120,15 @@ const validateFormData = (data: ClientFormData): string[] => {
                 {/* Dados Complementares */}
                 <TabsContent value="complementares" className="m-0 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="col-span-1 md:col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Proprietário</label>
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    </div>
-                    <div className="col-span-1 md:col-span-3">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Aniversário</label>
-                      <Input type="date" className="h-8 text-sm" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="col-span-1 md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF</label>
-                      <Input className="h-8 text-sm" onChange={handleCpfChange} />
-                    </div>
                     <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">RG</label>
-                      <Input className="h-8 text-sm" value={formData.rg} onChange={(e) => setFormData({ ...formData, rg: formatRg(e.target.value) })} />
-                    </div>
-                    <div className="col-span-1 md:col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Início de atividade</label>
-                      <Input type="date" className="h-8 text-sm" />
-                    </div>
-                  </div>
-
-                  <div className="border-b border-primary/50 pb-1 mt-4">
-                    <span className="text-sm font-medium text-primary">Referências</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="col-span-1 md:col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Banco</label>
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    </div>
-                    <div className="col-span-1 md:col-span-4">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Conta</label>
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    </div>
-                    <div className="col-span-1 md:col-span-4">
-                      <Input className="h-8 text-sm" placeholder="Agência" onChange={handleUpperChange} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start mt-4">
-                    <div className="col-span-1 md:col-span-6 space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground block">Referências Comerciais</label>
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                      <Input className="h-8 text-sm" onChange={handleUpperChange} />
-                    </div>
-                    <div className="col-span-1 md:col-span-6 space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground block">Sócios</label>
-                      <div className="flex gap-2">
-                        <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
-                        <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
-                      </div>
-                      <div className="flex gap-2">
-                        <Input className="h-8 text-sm flex-1" onChange={handleUpperChange} />
-                        <Input type="number" className="h-8 text-sm w-16 text-right" defaultValue={0} />
-                      </div>
+                      <Input
+                        className="h-8 text-sm"
+                        value={formData.rg}
+                        onChange={(e) =>
+                          setFormData({ ...formData, rg: formatRg(e.target.value) })
+                        }
+                      />
                     </div>
                   </div>
 
@@ -4674,7 +4508,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </Select>
                     </div>
                     <div className="col-span-1 md:col-span-6">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado</label>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado *</label>
                       <Select
                         value={formData.prazo}
                         onValueChange={(v) => {

@@ -467,7 +467,7 @@ export function ProdutosTab() {
           1,
           500,
           'ativos',
-          undefined,
+          true,
           empresaCadastroId || undefined,
         ),
         divisionsService.getAll(
@@ -1098,7 +1098,7 @@ export function ProdutosTab() {
                       <SelectItem value="all">Todos</SelectItem>
                       {fornecedoresDisponiveis.map((f) => (
                         <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
-                          {f.fornecedor_id} - {f.nome_fornecedor}
+                          {f.nome_fornecedor} - {f.fornecedor_id}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1374,7 +1374,7 @@ export function ProdutosTab() {
                         <SelectItem value="none">Selecione</SelectItem>
                         {fornecedoresDisponiveis.map((f) => (
                           <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
-                            {f.fornecedor_id} - {f.nome_fornecedor}
+                            {f.nome_fornecedor} - {f.fornecedor_id}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1443,11 +1443,11 @@ export function ProdutosTab() {
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
-                        checked={formData.inativo}
-                        onCheckedChange={(v) => updateForm('inativo', Boolean(v))}
+                        checked={!formData.inativo}
+                        onCheckedChange={(checked) => updateForm('inativo', checked !== true)}
                         className="h-3.5 w-3.5"
                       />
-                      Produto inativo
+                      Ativo
                     </label>
                   </div>
                 </div>

@@ -177,10 +177,10 @@ export function GruposTab() {
         </div>
         <div className="col-span-1 md:col-span-3 flex items-center gap-2 pt-5">
           <Checkbox
-            checked={formData.inativo}
-            onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
+            checked={!formData.inativo}
+            onCheckedChange={(checked) => setFormData({ ...formData, inativo: checked !== true })}
           />
-          <label className="text-sm">Inativo</label>
+          <label className="text-sm">Ativo</label>
         </div>
       </div>
     </div>

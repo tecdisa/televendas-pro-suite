@@ -307,8 +307,8 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <ReadOnlyField label="Código" value={data?.codigo} />
                   <div className="flex items-center gap-2 pt-6">
-                    <Checkbox checked={data?.inativo ?? false} disabled />
-                    <label className="text-sm">Inativo</label>
+                    <Checkbox checked={!(data?.inativo ?? false)} disabled />
+                    <label className="text-sm">Ativo</label>
                   </div>
                   <ReadOnlyField label="CNPJ/CPF" value={data?.cnpjCpf} className="col-span-1 md:col-span-1" />
                   <ReadOnlyField label="Insc. Est." value={data?.inscEstadual} />

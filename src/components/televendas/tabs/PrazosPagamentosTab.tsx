@@ -431,10 +431,10 @@ export function PrazosPagamentosTab() {
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
-              checked={formData.inativo}
-              onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
+              checked={!formData.inativo}
+              onCheckedChange={(checked) => setFormData({ ...formData, inativo: checked !== true })}
             />
-            <label className="text-sm">Inativo</label>
+            <label className="text-sm">Ativo</label>
           </div>
         </div>
       </TabsContent>

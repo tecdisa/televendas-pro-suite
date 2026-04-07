@@ -133,7 +133,7 @@ export const ProductSearchDialog = ({
       // Load fornecedores
       setLoadingFornecedores(true);
       try {
-        const result = await suppliersService.getAll();
+        const result = await suppliersService.getAll(undefined, 1, 100, 'ativos', true);
         setFornecedores(result.data);
       } catch (e) {
         console.error('Erro ao carregar fornecedores:', e);
@@ -346,7 +346,7 @@ export const ProductSearchDialog = ({
                           <SelectItem value="_all">Todos</SelectItem>
                           {fornecedores.map((f) => (
                             <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
-                              {f.nome_fornecedor}
+                              {f.nome_fornecedor} - {f.fornecedor_id}
                             </SelectItem>
                           ))}
                         </SelectContent>

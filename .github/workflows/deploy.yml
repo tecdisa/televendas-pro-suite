@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'nginx.conf'
+      - 'Dockerfile'
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 concurrency:
@@ -14,9 +24,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      VITE_API_BASE: ""
-      VITE_BASE_PATH: /
-      FRONTEND_PORT: 8081
+      VITE_API_BASE: ${{ vars.VITE_API_BASE || '' }}
+      VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/' }}
+      FRONTEND_PORT: ${{ vars.FRONTEND_PORT || '8081' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,25 +43,50 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Setup SSH key
+      - name: Install SSH password helper (if needed)
+        env:
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          if [ -n "${SSH_PASSWORD:-}" ]; then
+            sudo apt-get update
+            sudo apt-get install -y sshpass
+          fi
+
+      - name: Setup SSH authentication
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
-          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
-            echo "Missing SSH_PRIVATE_KEY secret"
-            exit 1
-          fi
           if [ -z "${SSH_HOST:-}" ]; then
             echo "Missing SSH_HOST secret"
             exit 1
           fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+            chmod 600 ~/.ssh/id_deploy
+            {
+              echo "SSH_AUTH_MODE=key"
+              echo "SSH_BASE_ARGS=-i ~/.ssh/id_deploy -p ${SSH_PORT:-22} -o StrictHostKeyChecking=yes"
+              echo "SCP_BASE_ARGS=-i ~/.ssh/id_deploy -P ${SSH_PORT:-22} -o StrictHostKeyChecking=yes"
+              echo "RSYNC_RSH=ssh -i ~/.ssh/id_deploy -p ${SSH_PORT:-22} -o StrictHostKeyChecking=yes"
+            } >> "$GITHUB_ENV"
+          elif [ -n "${SSH_PASSWORD:-}" ]; then
+            {
+              echo "SSH_AUTH_MODE=password"
+              echo "SSHPASS=${SSH_PASSWORD}"
+              echo "SSH_BASE_ARGS=-p ${SSH_PORT:-22} -o StrictHostKeyChecking=yes"
+              echo "SCP_BASE_ARGS=-P ${SSH_PORT:-22} -o StrictHostKeyChecking=yes"
+              echo "RSYNC_RSH=ssh -p ${SSH_PORT:-22} -o StrictHostKeyChecking=yes"
+            } >> "$GITHUB_ENV"
+          else
+            echo "Missing SSH auth secret. Set SSH_PRIVATE_KEY or SSH_PASSWORD."
+            exit 1
+          fi
 
       - name: Preflight SSH check
         env:
@@ -59,8 +94,55 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
-          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" -o StrictHostKeyChecking=yes \
-            "${SSH_USER}@${SSH_HOST}" 'echo ok'
+          TARGET_USER="${SSH_USER:-root}"
+          if [ "${SSH_AUTH_MODE}" = "key" ]; then
+            ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" 'echo ok'
+          else
+            sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" 'echo ok'
+          fi
+
+      - name: Bootstrap VPS
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+        run: |
+          TARGET_USER="${SSH_USER:-root}"
+          TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
+          REMOTE_SCRIPT=$(cat <<'EOF'
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
+            DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
+          fi
+          if command -v apt-get >/dev/null 2>&1; then
+            apt-get update -y -o Dpkg::Lock::Timeout=600
+            apt-get install -y -o Dpkg::Lock::Timeout=600 ca-certificates curl git rsync ufw
+          fi
+          if ! docker compose version >/dev/null 2>&1; then
+            install -m 0755 -d /etc/apt/keyrings
+            if [ ! -f /etc/apt/keyrings/docker.asc ]; then
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+              chmod a+r /etc/apt/keyrings/docker.asc
+            fi
+            ARCH="$(dpkg --print-architecture)"
+            CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+            cat >/etc/apt/sources.list.d/docker.list <<SRC
+          deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${CODENAME} stable
+          SRC
+            apt-get update -y -o Dpkg::Lock::Timeout=600
+            apt-get install -y -o Dpkg::Lock::Timeout=600 docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            systemctl enable --now docker
+          fi
+          mkdir -p "$DEPLOY_DIR"
+          EOF
+          )
+          if [ "${SSH_AUTH_MODE}" = "key" ]; then
+            ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" DEPLOY_DIR="${TARGET_DIR}" 'bash -se' <<< "$REMOTE_SCRIPT"
+          else
+            sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" DEPLOY_DIR="${TARGET_DIR}" 'bash -se' <<< "$REMOTE_SCRIPT"
+          fi
 
       - name: Copy project to VPS (rsync)
         env:
@@ -69,16 +151,29 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
         run: |
+          TARGET_USER="${SSH_USER:-root}"
           TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
-          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "mkdir -p ${TARGET_DIR}"
-          rsync -az --delete \
-            --exclude '.git/' \
-            --exclude 'node_modules/' \
-            --exclude 'dist/' \
-            --exclude '.env' \
-            --exclude '.env.*' \
-            -e "ssh -i ~/.ssh/id_deploy -p ${SSH_PORT:-22}" \
-            ./ "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}/"
+          if [ "${SSH_AUTH_MODE}" = "key" ]; then
+            ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" "mkdir -p ${TARGET_DIR}"
+            rsync -az --delete \
+              --exclude '.git/' \
+              --exclude 'node_modules/' \
+              --exclude 'dist/' \
+              --exclude '.env' \
+              --exclude '.env.*' \
+              -e "$RSYNC_RSH" \
+              ./ "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/"
+          else
+            sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" "mkdir -p ${TARGET_DIR}"
+            sshpass -e rsync -az --delete \
+              --exclude '.git/' \
+              --exclude 'node_modules/' \
+              --exclude 'dist/' \
+              --exclude '.env' \
+              --exclude '.env.*' \
+              -e "$RSYNC_RSH" \
+              ./ "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/"
+          fi
 
       - name: Upload deploy env file
         env:
@@ -87,13 +182,18 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
         run: |
+          TARGET_USER="${SSH_USER:-root}"
           TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
           {
             printf 'VITE_API_BASE=%s\n' "$VITE_API_BASE"
             printf 'VITE_BASE_PATH=%s\n' "$VITE_BASE_PATH"
             printf 'FRONTEND_PORT=%s\n' "$FRONTEND_PORT"
           } > .env.deploy
-          scp -i ~/.ssh/id_deploy -P "${SSH_PORT:-22}" .env.deploy "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}/.env"
+          if [ "${SSH_AUTH_MODE}" = "key" ]; then
+            scp $SCP_BASE_ARGS .env.deploy "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/.env"
+          else
+            sshpass -e scp $SCP_BASE_ARGS .env.deploy "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/.env"
+          fi
           rm -f .env.deploy
 
       - name: Deploy on VPS (Docker Compose up)
@@ -103,10 +203,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
         run: |
-          ssh -i ~/.ssh/id_deploy -p "${SSH_PORT:-22}" \
-            "${SSH_USER}@${SSH_HOST}" \
-            DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
-            'bash -se' <<'EOF'
+          TARGET_USER="${SSH_USER:-root}"
+          REMOTE_SCRIPT=$(cat <<'EOF'
           set -euo pipefail
 
           if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
@@ -126,3 +224,13 @@ jobs:
 
           $COMPOSE -f docker-compose.prod.yml up -d --build --remove-orphans
           EOF
+          )
+          if [ "${SSH_AUTH_MODE}" = "key" ]; then
+            ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
+              DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+              'bash -se' <<< "$REMOTE_SCRIPT"
+          else
+            sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
+              DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+              'bash -se' <<< "$REMOTE_SCRIPT"
+          fi

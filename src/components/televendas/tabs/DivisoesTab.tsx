@@ -218,10 +218,10 @@ export function DivisoesTab() {
         </div>
         <div className="col-span-1 md:col-span-3 flex items-center gap-2 pt-5">
           <Checkbox
-            checked={formData.inativo}
-            onCheckedChange={(c) => setFormData({ ...formData, inativo: c as boolean })}
+            checked={!formData.inativo}
+            onCheckedChange={(checked) => setFormData({ ...formData, inativo: checked !== true })}
           />
-          <label className="text-sm">Inativo</label>
+          <label className="text-sm">Ativo</label>
         </div>
       </div>
 
@@ -301,8 +301,8 @@ export function DivisoesTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Código</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead className="hidden md:table-cell">Grupo</TableHead>
+                    <TableHead>Divisão</TableHead>
                     <TableHead className="w-20">Status</TableHead>
                     <TableHead className="w-28 text-center">Ações</TableHead>
                   </TableRow>
@@ -324,10 +324,10 @@ export function DivisoesTab() {
                     divisoes.map((d) => (
                       <TableRow key={d.divisao_id} className={d.inativo ? 'opacity-50' : ''}>
                         <TableCell className="font-mono text-xs">{d.codigo_divisao || '-'}</TableCell>
-                        <TableCell className="font-medium">{d.descricao_divisao}</TableCell>
                         <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                           {getGrupoNome(d.grupo_id)}
                         </TableCell>
+                        <TableCell className="font-medium">{d.descricao_divisao}</TableCell>
                         <TableCell>
                           <span className={`text-xs px-2 py-0.5 rounded ${d.inativo ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-600'}`}>
                             {d.inativo ? 'Inativo' : 'Ativo'}

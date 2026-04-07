@@ -2,6 +2,9 @@ import { authService } from '@/services/authService';
 import { API_BASE } from '@/utils/env';
 import { apiClient } from '@/utils/apiClient';
 
+const normalizeDocumentDigits = (value: string | number | null | undefined) =>
+  String(value ?? '').replace(/\D+/g, '');
+
 export interface ClientRota {
   id: number;
   codigo_rota?: string;
@@ -624,6 +627,20 @@ export const clientsService = {
     } catch (e) {
       return Promise.reject('Erro de conexão na consulta de CNPJ');
     }
+  },
+  findByCnpjCpf: async (cnpjCpf: string): Promise<Client | undefined> => {
+    const cleaned = normalizeDocumentDigits(cnpjCpf).slice(0, 14);
+    if (!cleaned) return undefined;
+
+    const list = await fetchFromApi({
+      filters: { query: cleaned, status: 'todos' },
+      page: 1,
+      limit: 10,
+    });
+
+    return list.find(
+      (client) => normalizeDocumentDigits(client.cnpjCpf).slice(0, 14) === cleaned,
+    );
   },
   // Server-side search with pagination
   find: async (

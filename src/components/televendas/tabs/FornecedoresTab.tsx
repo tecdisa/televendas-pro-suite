@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -18,13 +18,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Truck, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Search, Truck, Plus, Pencil, Trash2, Loader2, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { clientsService } from '@/services/clientsService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
+import {
+  authService,
+  EmpresaMasterGroup,
+  getEmpresaDisplayName,
+  getMasterDisplayName,
+  groupEmpresasByMaster,
+} from '@/services/authService';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 const normalizeCityKey = (value: string | null | undefined) =>
@@ -71,6 +79,39 @@ const formatCnpj = (value: string | number | null | undefined) => {
 
 const normalizeCnpj = (v: string) => String(v ?? '').replace(/\D+/g, '').slice(0, 14);
 const normalizeCep = (v: string) => String(v ?? '').replace(/\D+/g, '').slice(0, 8);
+const parseAuthorizedCompanyIds = (value: string | null | undefined) =>
+  Array.from(
+    new Set(
+      String(value ?? '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => /^\d+$/.test(item)),
+    ),
+  );
+const serializeAuthorizedCompanyIds = (ids: string[]) =>
+  Array.from(
+    new Set(
+      ids
+        .map((item) => item.trim())
+        .filter((item) => /^\d+$/.test(item)),
+    ),
+  )
+    .sort((a, b) => Number(a) - Number(b))
+    .join(',');
+type ExistingFornecedorDuplicate = Pick<
+  Fornecedor,
+  'fornecedor_id' | 'codigo_fornecedor' | 'nome_fornecedor' | 'inativo'
+>;
+
+const buildExistingFornecedorDuplicateMessage = (
+  fornecedor: ExistingFornecedorDuplicate,
+) => {
+  const codigo = fornecedor.codigo_fornecedor
+    ? `${fornecedor.codigo_fornecedor} - `
+    : '';
+  const status = fornecedor.inativo ? ' (inativo)' : '';
+  return `Já existe um fornecedor com este CNPJ/CPF: ${codigo}${fornecedor.nome_fornecedor}${status}.`;
+};
 
 const initialFormData = {
   codigo_fornecedor: '',
@@ -93,7 +134,6 @@ const initialFormData = {
   obs: '',
   inativo: false,
   revenda: false,
-  cadastra_produtos: false,
 };
 
 export function FornecedoresTab() {
@@ -111,8 +151,14 @@ export function FornecedoresTab() {
   const [formLoading, setFormLoading] = useState(false);
   const [cnpjLookupLoading, setCnpjLookupLoading] = useState(false);
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
+  const [cnpjDuplicateLoading, setCnpjDuplicateLoading] = useState(false);
+  const [existingFornecedorByCnpj, setExistingFornecedorByCnpj] =
+    useState<ExistingFornecedorDuplicate | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState(initialFormData);
+  const [empresaGroups, setEmpresaGroups] = useState<EmpresaMasterGroup[]>([]);
+  const [empresasLoading, setEmpresasLoading] = useState(false);
+  const [empresasAutorizadasOpen, setEmpresasAutorizadasOpen] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
   const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
@@ -148,6 +194,57 @@ export function FornecedoresTab() {
   const handleCancelClose = () => {
     setPendingClose(null);
     setShowConfirmClose(false);
+  };
+  const selectedAuthorizedCompanyIds = useMemo(
+    () => parseAuthorizedCompanyIds(formData.empresas_autorizadas),
+    [formData.empresas_autorizadas],
+  );
+  const authorizedCompanyLabelMap = useMemo(() => {
+    const labels = new Map<string, string>();
+
+    empresaGroups.forEach((group) => {
+      const masterId = String(group.empresa_master_id);
+      const hasMasterAsOperational = group.empresas.some(
+        (empresa) => String(empresa.empresa_id) === masterId,
+      );
+
+      if (!hasMasterAsOperational) {
+        labels.set(masterId, `Master: ${getMasterDisplayName(group)}`);
+      }
+
+      group.empresas.forEach((empresa) => {
+        const companyId = String(empresa.empresa_id);
+        const isMasterOperational = companyId === masterId;
+        labels.set(
+          companyId,
+          `${getEmpresaDisplayName(empresa)}${isMasterOperational ? ' (master)' : ''}`,
+        );
+      });
+    });
+
+    return labels;
+  }, [empresaGroups]);
+  const empresasAutorizadasResumo = useMemo(() => {
+    if (!selectedAuthorizedCompanyIds.length) return 'Selecione as empresas autorizadas';
+
+    const labels = selectedAuthorizedCompanyIds.map(
+      (id) => authorizedCompanyLabelMap.get(id) ?? `Empresa ${id}`,
+    );
+
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.length} selecionadas`;
+  }, [authorizedCompanyLabelMap, selectedAuthorizedCompanyIds]);
+
+  const updateAuthorizedCompanies = (id: string, checked: boolean) => {
+    setFormData((prev) => {
+      const current = new Set(parseAuthorizedCompanyIds(prev.empresas_autorizadas));
+      if (checked) current.add(id);
+      else current.delete(id);
+      return {
+        ...prev,
+        empresas_autorizadas: serializeAuthorizedCompanyIds(Array.from(current)),
+      };
+    });
   };
 
   // UFs e Cidades
@@ -335,12 +432,85 @@ export function FornecedoresTab() {
   }, [createOpen, editOpen]);
 
   useEffect(() => {
+    if (!createOpen && !editOpen) {
+      setEmpresasAutorizadasOpen(false);
+      return;
+    }
+
+    let cancelled = false;
+    setEmpresasLoading(true);
+
+    authService
+      .getEmpresas()
+      .then((empresas) => {
+        if (cancelled) return;
+        setEmpresaGroups(groupEmpresasByMaster(empresas));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Erro ao carregar empresas autorizadas:', error);
+        toast.error('Erro ao carregar empresas autorizadas');
+      })
+      .finally(() => {
+        if (!cancelled) setEmpresasLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [createOpen, editOpen]);
+
+  useEffect(() => {
     if (formData.uf && (createOpen || editOpen)) {
       loadCidades(formData.uf);
     } else {
       setCidadesApi([]);
     }
   }, [formData.uf, createOpen, editOpen]);
+
+  useEffect(() => {
+    if (!createOpen) {
+      setExistingFornecedorByCnpj(null);
+      setCnpjDuplicateLoading(false);
+      return;
+    }
+
+    const cleaned = normalizeCnpj(formData.cnpj_cpf);
+    if (cleaned.length !== 11 && cleaned.length !== 14) {
+      setExistingFornecedorByCnpj(null);
+      setCnpjDuplicateLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCnpjDuplicateLoading(true);
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const existing = await suppliersService.findByCnpjCpf(cleaned);
+        if (cancelled) return;
+        setExistingFornecedorByCnpj(
+          existing
+            ? {
+                fornecedor_id: existing.fornecedor_id,
+                codigo_fornecedor: existing.codigo_fornecedor,
+                nome_fornecedor: existing.nome_fornecedor,
+                inativo: existing.inativo,
+              }
+            : null,
+        );
+      } catch {
+        if (!cancelled) setExistingFornecedorByCnpj(null);
+      } finally {
+        if (!cancelled) setCnpjDuplicateLoading(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [createOpen, formData.cnpj_cpf]);
 
   const handleSearch = () => loadFornecedores(true);
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -351,6 +521,8 @@ export function FornecedoresTab() {
     const nextData = { ...initialFormData };
     setFormData(nextData);
     setEditId(null);
+    setExistingFornecedorByCnpj(null);
+    setCnpjDuplicateLoading(false);
     if (updateSnapshot) setFormSnapshot(nextData);
   };
 
@@ -388,7 +560,6 @@ export function FornecedoresTab() {
           obs: detail.obs || '',
           inativo: detail.inativo || false,
           revenda: detail.revenda || false,
-          cadastra_produtos: detail.cadastra_produtos ?? false,
         };
         setFormData(nextData);
         setFormSnapshot(nextData);
@@ -404,6 +575,10 @@ export function FornecedoresTab() {
   const handleCreate = async () => {
     if (!formData.nome_fornecedor.trim() || !formData.cnpj_cpf.trim()) {
       toast.error('Preencha os campos obrigatórios: CNPJ/CPF e Nome');
+      return;
+    }
+    if (existingFornecedorByCnpj) {
+      toast.error(buildExistingFornecedorDuplicateMessage(existingFornecedorByCnpj));
       return;
     }
     setFormLoading(true);
@@ -428,7 +603,6 @@ export function FornecedoresTab() {
         obs: formData.obs.trim() || undefined,
         inativo: formData.inativo,
         revenda: formData.revenda,
-        cadastra_produtos: Boolean(formData.cadastra_produtos),
       });
       toast.success('Fornecedor criado com sucesso');
       setCreateOpen(false);
@@ -467,7 +641,6 @@ export function FornecedoresTab() {
         obs: formData.obs.trim() || undefined,
         inativo: formData.inativo,
         revenda: formData.revenda,
-        cadastra_produtos: Boolean(formData.cadastra_produtos),
       });
       toast.success('Fornecedor atualizado com sucesso');
       setEditOpen(false);
@@ -536,6 +709,15 @@ export function FornecedoresTab() {
                 {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
+            {existingFornecedorByCnpj ? (
+              <p className="mt-1 text-xs text-destructive">
+                {buildExistingFornecedorDuplicateMessage(existingFornecedorByCnpj)}
+              </p>
+            ) : cnpjDuplicateLoading ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Verificando fornecedor existente...
+              </p>
+            ) : null}
           </div>
           <div className="col-span-1 md:col-span-4 flex items-center gap-4 pt-5">
             <div className="flex items-center gap-2">
@@ -737,23 +919,104 @@ export function FornecedoresTab() {
       </TabsContent>
 
       <TabsContent value="complementar" className="m-0 space-y-4 mt-4">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            checked={formData.cadastra_produtos}
-            onCheckedChange={(c) => setFormData({ ...formData, cadastra_produtos: c as boolean })}
-          />
-          <label className="text-sm">Permite cadastrar produtos</label>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
           <div className="col-span-1 md:col-span-12">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresas Autorizadas</label>
-            <Input
-              className="h-8 text-sm"
-              placeholder="Ex: 1,2,3"
-              value={formData.empresas_autorizadas}
-              onChange={(e) => setFormData({ ...formData, empresas_autorizadas: e.target.value })}
-            />
+            <Popover
+              open={empresasAutorizadasOpen}
+              onOpenChange={setEmpresasAutorizadasOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto min-h-8 w-full justify-between text-left font-normal"
+                >
+                  <span className="truncate">
+                    {empresasLoading ? 'Carregando empresas...' : empresasAutorizadasResumo}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-[420px] max-w-[calc(100vw-2rem)] p-0"
+              >
+                <div className="p-3">
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Selecione a empresa master e as unidades operacionais autorizadas.
+                  </p>
+                  <ScrollArea className="max-h-72 pr-3">
+                    <div className="space-y-4">
+                      {!empresasLoading && empresaGroups.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhuma empresa disponível para seleção.
+                        </p>
+                      ) : null}
+
+                      {empresaGroups.map((group) => {
+                        const masterId = String(group.empresa_master_id);
+                        const hasMasterAsOperational = group.empresas.some(
+                          (empresa) => String(empresa.empresa_id) === masterId,
+                        );
+
+                        return (
+                          <div
+                            key={group.empresa_master_id}
+                            className="space-y-2 border-b pb-3 last:border-b-0 last:pb-0"
+                          >
+                            <p className="text-xs font-medium text-primary">
+                              {`${getMasterDisplayName(group)} (${group.uf})`}
+                            </p>
+
+                            {!hasMasterAsOperational ? (
+                              <label className="flex items-start gap-2 text-sm">
+                                <Checkbox
+                                  checked={selectedAuthorizedCompanyIds.includes(masterId)}
+                                  onCheckedChange={(checked) =>
+                                    updateAuthorizedCompanies(masterId, checked === true)
+                                  }
+                                />
+                                <span className="leading-5">
+                                  {`Empresa master: ${getMasterDisplayName(group)}`}
+                                </span>
+                              </label>
+                            ) : null}
+
+                            {group.empresas.map((empresa) => {
+                              const companyId = String(empresa.empresa_id);
+                              const isMasterOperational = companyId === masterId;
+
+                              return (
+                                <label
+                                  key={empresa.empresa_id}
+                                  className="flex items-start gap-2 text-sm"
+                                >
+                                  <Checkbox
+                                    checked={selectedAuthorizedCompanyIds.includes(companyId)}
+                                    onCheckedChange={(checked) =>
+                                      updateAuthorizedCompanies(companyId, checked === true)
+                                    }
+                                  />
+                                  <span className="leading-5">
+                                    {`${getEmpresaDisplayName(empresa)} (${empresa.uf})${isMasterOperational ? ' - master' : ''}`}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </PopoverContent>
+            </Popover>
+            {selectedAuthorizedCompanyIds.length ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                IDs selecionados: {formData.empresas_autorizadas}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -917,7 +1180,14 @@ export function FornecedoresTab() {
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => requestCloseDialog('create')}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={formLoading}>
+            <Button
+              onClick={handleCreate}
+              disabled={
+                formLoading ||
+                cnpjDuplicateLoading ||
+                Boolean(existingFornecedorByCnpj)
+              }
+            >
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>
