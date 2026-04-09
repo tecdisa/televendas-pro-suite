@@ -47,8 +47,26 @@ jobs:
         env:
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
         run: |
+          wait_apt_locks() {
+            local timeout_seconds="${1:-600}"
+            local waited=0
+            while pgrep -x apt >/dev/null 2>&1 \
+              || pgrep -x apt-get >/dev/null 2>&1 \
+              || pgrep -x unattended-upgrade >/dev/null 2>&1; do
+              if [ "$waited" -ge "$timeout_seconds" ]; then
+                echo "Timed out waiting for apt lock on GitHub runner."
+                return 1
+              fi
+              echo "Apt lock detected on runner, waiting..."
+              sleep 5
+              waited=$((waited + 5))
+            done
+          }
+
           if [ -n "${SSH_PASSWORD:-}" ]; then
-            sudo apt-get update
+            wait_apt_locks 600
+            sudo apt-get update -y
+            wait_apt_locks 600
             sudo apt-get install -y sshpass
           fi
 
@@ -113,12 +131,34 @@ jobs:
           REMOTE_SCRIPT=$(cat <<'EOF'
           set -euo pipefail
           export DEBIAN_FRONTEND=noninteractive
+
+          wait_apt_locks() {
+            local timeout_seconds="${1:-900}"
+            local waited=0
+            while pgrep -x apt >/dev/null 2>&1 \
+              || pgrep -x apt-get >/dev/null 2>&1 \
+              || pgrep -x unattended-upgrade >/dev/null 2>&1; do
+              if [ "$waited" -ge "$timeout_seconds" ]; then
+                echo "Timed out waiting for apt lock on VPS."
+                return 1
+              fi
+              echo "Apt lock detected on VPS, waiting..."
+              sleep 5
+              waited=$((waited + 5))
+            done
+          }
+
+          apt_safe() {
+            wait_apt_locks 900
+            apt-get "$@" -o Dpkg::Lock::Timeout=900
+          }
+
           if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
             DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
           fi
           if command -v apt-get >/dev/null 2>&1; then
-            apt-get update -y -o Dpkg::Lock::Timeout=600
-            apt-get install -y -o Dpkg::Lock::Timeout=600 ca-certificates curl git rsync ufw
+            apt_safe update -y
+            apt_safe install -y ca-certificates curl git rsync ufw
           fi
           if ! docker compose version >/dev/null 2>&1; then
             install -m 0755 -d /etc/apt/keyrings
@@ -131,8 +171,8 @@ jobs:
             cat >/etc/apt/sources.list.d/docker.list <<SRC
           deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${CODENAME} stable
           SRC
-            apt-get update -y -o Dpkg::Lock::Timeout=600
-            apt-get install -y -o Dpkg::Lock::Timeout=600 docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            apt_safe update -y
+            apt_safe install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
             systemctl enable --now docker
           fi
           mkdir -p "$DEPLOY_DIR"
