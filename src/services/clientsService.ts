@@ -1,9 +1,7 @@
 import { authService } from '@/services/authService';
 import { API_BASE } from '@/utils/env';
 import { apiClient } from '@/utils/apiClient';
-
-const normalizeDocumentDigits = (value: string | number | null | undefined) =>
-  String(value ?? '').replace(/\D+/g, '');
+import { normalizeCnpjCpf } from '@/utils/cnpjCpf';
 
 export interface ClientRota {
   id: number;
@@ -629,7 +627,7 @@ export const clientsService = {
     }
   },
   findByCnpjCpf: async (cnpjCpf: string): Promise<Client | undefined> => {
-    const cleaned = normalizeDocumentDigits(cnpjCpf).slice(0, 14);
+    const cleaned = normalizeCnpjCpf(cnpjCpf);
     if (!cleaned) return undefined;
 
     const list = await fetchFromApi({
@@ -639,7 +637,7 @@ export const clientsService = {
     });
 
     return list.find(
-      (client) => normalizeDocumentDigits(client.cnpjCpf).slice(0, 14) === cleaned,
+      (client) => normalizeCnpjCpf(client.cnpjCpf) === cleaned,
     );
   },
   // Server-side search with pagination

@@ -32,6 +32,7 @@ import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from '../overlays/ClientInfoModal';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatCnpjCpf, isNumericCnpj, normalizeCnpjCpf } from '@/utils/cnpjCpf';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -618,8 +619,8 @@ export const ClientesTab = () => {
   const cnpjLookupRef = useRef<(v: string) => void>();
   if (!cnpjLookupRef.current) {
     cnpjLookupRef.current = debounce(async (value: string) => {
-      const cleaned = normalizeCnpj(value);
-      if (cleaned.length !== 14) {
+      const cleaned = normalizeCnpjCpf(value);
+      if (!isNumericCnpj(cleaned)) {
         setCnpjLookupLoading(false);
         return;
       }
@@ -647,7 +648,7 @@ export const ClientesTab = () => {
           const nextCep = cepValue || normalizeCep(String(prev.cep));
           return {
             ...prev,
-            cnpjCpf: cleaned,
+            cnpjCpf: formatCnpjCpf(cleaned),
             nome: toUpperValue(d.razao_social || prev.nome),
             fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
             endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
@@ -829,7 +830,7 @@ export const ClientesTab = () => {
       return;
     }
 
-    const cleaned = normalizeCnpj(formData.cnpjCpf);
+    const cleaned = normalizeCnpjCpf(formData.cnpjCpf);
     if (cleaned.length !== 11 && cleaned.length !== 14) {
       setExistingClientByCnpj(null);
       setCnpjDuplicateLoading(false);
@@ -1355,7 +1356,6 @@ const normalizeDateInput = (value: unknown) => {
   if (raw.includes('T')) return raw.split('T')[0];
   return raw.length >= 10 ? raw.slice(0, 10) : raw;
 };
-const normalizeCnpj = (v: string) => v.replace(/\D+/g, '').slice(0, 14);
 const ensurePositiveId = (value: number | string | undefined | null, fallback = 1) => {
   const num = Number(value);
   return Number.isFinite(num) && num > 0 ? num : fallback;
@@ -1449,6 +1449,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       const { representantes, tabelaIds, ...payloadBase } = formData;
       const payloadNormalized = {
         ...payloadBase,
+        cnpjCpf: normalizeCnpjCpf(payloadBase.cnpjCpf),
         site: payloadBase.site?.trim() || undefined,
         telefone: normalizePhoneDigits(payloadBase.telefone),
         fax: normalizePhoneDigits(payloadBase.fax),
@@ -1528,7 +1529,7 @@ const validateFormData = (data: ClientFormData): string[] => {
         inativo: Boolean(d.inativo),
         simplesNacional: Boolean(d.simples_nacional ?? d.simplesNacional ?? false),
         consumidorFinal: Boolean(d.consumidor_final ?? d.consumidorFinal ?? false),
-        cnpjCpf: toUpperValue(d.cnpj_cpf ?? d.cnpjCpf ?? d.cnpj ?? d.cpf ?? ''),
+        cnpjCpf: formatCnpjCpf(d.cnpj_cpf ?? d.cnpjCpf ?? d.cnpj ?? d.cpf ?? ''),
         inscEstadual: toUpperValue(d.inscricao_estadual ?? d.inscEstadual ?? d.insc_estadual ?? ''),
           inscMunicipal: toUpperValue(d.inscricao_municipal ?? d.inscMunicipal ?? d.insc_municipal ?? ''),
           rg: formatRg(d.rg ?? ''),
@@ -1640,6 +1641,7 @@ const validateFormData = (data: ClientFormData): string[] => {
       const { representantes, tabelaIds, ...payloadBase } = formData;
       const payloadNormalized = {
         ...payloadBase,
+        cnpjCpf: normalizeCnpjCpf(payloadBase.cnpjCpf),
         site: payloadBase.site?.trim() || undefined,
         telefone: normalizePhoneDigits(payloadBase.telefone),
         fax: normalizePhoneDigits(payloadBase.fax),
@@ -3065,8 +3067,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                         className="h-8 text-sm flex-1"
                         value={formData.cnpjCpf}
                         onChange={(e) => {
-                          setFormData({ ...formData, cnpjCpf: toUpperValue(e.target.value) });
-                          cnpjLookupRef.current?.(e.target.value);
+                          const next = formatCnpjCpf(e.target.value);
+                          setFormData({ ...formData, cnpjCpf: next });
+                          cnpjLookupRef.current?.(next);
                         }}
                       />
                       <Button
@@ -3913,7 +3916,13 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
                     <div className="flex gap-1">
-                        <Input className="h-8 text-sm flex-1" value={formData.cnpjCpf} onChange={(e) => setFormData({ ...formData, cnpjCpf: toUpperValue(e.target.value) })} />
+                        <Input
+                          className="h-8 text-sm flex-1"
+                          value={formData.cnpjCpf}
+                          onChange={(e) =>
+                            setFormData({ ...formData, cnpjCpf: formatCnpjCpf(e.target.value) })
+                          }
+                        />
                         <Button
                           variant="outline"
                           size="icon"

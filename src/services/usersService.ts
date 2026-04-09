@@ -20,6 +20,7 @@ export interface UsuarioCadastro {
   whatsapp?: string | null;
   ativo?: boolean;
   admin?: boolean;
+  admin_master?: boolean;
   forca_de_vendas?: boolean;
   empresa_master_id?: number | null;
   empresa_ids?: number[];
@@ -46,6 +47,7 @@ export interface UsuarioCadastroFormData {
   whatsapp?: string | null;
   ativo?: boolean;
   admin?: boolean;
+  admin_master?: boolean;
   forca_de_vendas?: boolean;
   empresa_master_id?: number | null;
   empresa_ids?: number[];
@@ -55,6 +57,26 @@ export interface UsuarioCadastroFormData {
 
 export interface UsuarioCreateResult {
   usuario: UsuarioCadastro;
+  email_delivery?: {
+    status?: 'sent' | 'skipped' | 'failed';
+    reason?: string;
+    message?: string;
+    messageId?: string;
+  };
+}
+
+export interface UsuarioInviteLoginResult {
+  status: 'linked_existing' | 'invited_to_register';
+  empresa_id: number;
+  email?: string;
+  usuario?: {
+    usuario_id: number;
+    usuario: string;
+    nome: string;
+    email?: string | null;
+  };
+  link_created?: boolean;
+  link_reactivated?: boolean;
   email_delivery?: {
     status?: 'sent' | 'skipped' | 'failed';
     reason?: string;
@@ -118,6 +140,7 @@ function normalizeUsuario(raw: any): UsuarioCadastro {
     whatsapp: onlyDigits(raw?.whatsapp),
     ativo: toBoolean(raw?.ativo, true),
     admin: toBoolean(raw?.admin, false),
+    admin_master: toBoolean(raw?.admin_master, false),
     forca_de_vendas: toBoolean(
       raw?.forca_de_vendas ?? raw?.forcaDeVendas,
       false,
@@ -284,6 +307,35 @@ export const usersService = {
       usuario: normalizeUsuario(json?.usuario ?? json),
       email_delivery: json?.email_delivery,
     };
+  },
+
+  async inviteLogin(input: {
+    email: string;
+    registerUrl?: string;
+  }): Promise<UsuarioInviteLoginResult> {
+    const payload = {
+      data: {
+        email: String(input.email || '').trim().toLowerCase(),
+        registerUrl:
+          typeof input.registerUrl === 'string' && input.registerUrl.trim()
+            ? input.registerUrl.trim()
+            : undefined,
+      },
+    };
+
+    const res = await apiClient.fetch(`${API_BASE}/api/usuarios/invite-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        await parseErrorMessage(res, 'Falha ao enviar convite de login'),
+      );
+    }
+
+    return (await res.json()) as UsuarioInviteLoginResult;
   },
 
   async update(

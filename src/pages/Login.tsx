@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -284,8 +284,19 @@ const Login = () => {
                   Voltar
               </Button>
             ) : (
-              <div className="text-xs text-center text-muted-foreground mt-4">
-                Exemplo: usuário <strong>vend1@tecdisa.com</strong> / senha <strong>admin123</strong>
+              <div className="space-y-2 pt-1">
+                <div className="text-sm text-center text-muted-foreground">
+                  Nao tem conta?{' '}
+                  <Link
+                    to="/registre-se"
+                    className="text-primary underline underline-offset-4"
+                  >
+                    Registre-se
+                  </Link>
+                </div>
+                <div className="text-xs text-center text-muted-foreground">
+                  Exemplo: usuário <strong>vend1@tecdisa.com</strong> / senha <strong>admin123</strong>
+                </div>
               </div>
             )}
           </form>

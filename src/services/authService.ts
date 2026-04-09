@@ -30,10 +30,22 @@ export interface SessionUser {
   nome: string;
   token: string;
   admin?: boolean;
+  admin_master?: boolean;
   payload?: any;
   empresa?: Empresa | null;
   parametros_app_mobile?: ParametrosAppMobile | null;
   timestamp: string;
+}
+
+export interface RegisterPayload {
+  usuario: string;
+  nome: string;
+  email: string;
+  senha: string;
+  cnpj_cpf?: string;
+  fantasia?: string;
+  fone?: string;
+  whatsapp?: string;
 }
 
 export function getEmpresaMasterId(empresa: Empresa): number {
@@ -142,6 +154,9 @@ export const authService = {
         nome: data?.user?.nome ?? data?.nome ?? data?.name ?? data?.username ?? usuario,
         token,
         admin: Boolean(data?.user?.admin ?? data?.admin ?? false),
+        admin_master: Boolean(
+          data?.user?.admin_master ?? data?.admin_master ?? false,
+        ),
         // Keep full payload for potential future use
         payload: data,
         parametros_app_mobile: data?.parametros_app_mobile ?? null,
@@ -151,6 +166,40 @@ export const authService = {
       localStorage.setItem('session', JSON.stringify(session));
       return { success: true, user: session } as const;
     } catch (e) {
+      return { success: false, error: 'Erro de conexão com o servidor' } as const;
+    }
+  },
+
+  register: async (payload: RegisterPayload) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        credentials: 'omit',
+      });
+
+      if (!res.ok) {
+        try {
+          const errData = await res.json();
+          const message =
+            errData?.error?.message ||
+            errData?.message ||
+            (typeof errData?.error === 'string' ? errData.error : undefined) ||
+            res.statusText ||
+            'Falha no cadastro';
+          return { success: false, error: message } as const;
+        } catch {
+          return { success: false, error: 'Falha no cadastro' } as const;
+        }
+      }
+
+      const data = await res.json();
+      return { success: true, data } as const;
+    } catch {
       return { success: false, error: 'Erro de conexão com o servidor' } as const;
     }
   },
@@ -175,7 +224,23 @@ export const authService = {
 
   isAdmin: () => {
     const session = authService.getSession();
-    return Boolean(session?.admin ?? session?.payload?.user?.admin ?? session?.payload?.admin);
+    return Boolean(
+      session?.admin ??
+        session?.payload?.user?.admin ??
+        session?.payload?.admin ??
+        session?.admin_master ??
+        session?.payload?.user?.admin_master ??
+        session?.payload?.admin_master,
+    );
+  },
+
+  isMasterAdmin: () => {
+    const session = authService.getSession();
+    return Boolean(
+      session?.admin_master ??
+        session?.payload?.user?.admin_master ??
+        session?.payload?.admin_master,
+    );
   },
 
   getEmpresas: async (): Promise<Empresa[]> => {

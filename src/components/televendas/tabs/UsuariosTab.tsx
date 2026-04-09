@@ -14,6 +14,7 @@ import {
 } from '@/services/authService';
 import { metadataService, type Cidade, type Uf } from '@/services/metadataService';
 import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from '@/services/usersService';
+import { formatCnpjCpf } from '@/utils/cnpjCpf';
 
 const PAGE_LIMIT = 100;
 
@@ -42,20 +43,6 @@ const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
 const maskCep = (value: string | null | undefined) => {
   const digits = onlyDigits(value).slice(0, 8);
   return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2').replace(/-$/, '');
-};
-
-const maskCnpjCpf = (value: string | null | undefined) => {
-  const digits = onlyDigits(value);
-  if (digits.length <= 11) {
-    return digits
-      .slice(0, 11)
-      .replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4')
-      .replace(/-$/, '');
-  }
-  return digits
-    .slice(0, 14)
-    .replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5')
-    .replace(/-$/, '');
 };
 
 const maskPhone = (value: string | null | undefined) => {
@@ -91,7 +78,10 @@ const initialFormData: UsuarioCadastroFormData = {
 };
 
 const statusLabel = (ativo?: boolean) => (ativo ? 'Ativo' : 'Inativo');
-const perfilLabel = (admin?: boolean) => (admin ? 'Administrador' : 'Usuario');
+const perfilLabel = (admin?: boolean, adminMaster?: boolean) => {
+  if (adminMaster) return 'Admin Master';
+  return admin ? 'Administrador' : 'Usuario';
+};
 
 export function UsuariosTab() {
   const empresaAtual = authService.getEmpresa();
@@ -103,6 +93,7 @@ export function UsuariosTab() {
   const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
@@ -279,6 +270,7 @@ export function UsuariosTab() {
 
   const openCreate = () => {
     resetForm();
+    setInviteEmail('');
     setCreateOpen(true);
   };
 
@@ -303,7 +295,7 @@ export function UsuariosTab() {
         cidade_id: detail.cidade_id ?? null,
         uf: detail.uf || '',
         cep: maskCep(detail.cep || ''),
-        cnpj_cpf: maskCnpjCpf(detail.cnpj_cpf || ''),
+        cnpj_cpf: formatCnpjCpf(detail.cnpj_cpf || ''),
         fantasia: detail.fantasia || '',
         fone: maskPhone(detail.fone || ''),
         whatsapp: maskPhone(detail.whatsapp || ''),
@@ -324,6 +316,20 @@ export function UsuariosTab() {
   };
 
   const validateForm = (mode: 'create' | 'edit') => {
+    if (mode === 'create') {
+      const email = inviteEmail.trim().toLowerCase();
+      if (!email) {
+        toast.error('Preencha o e-mail');
+        return false;
+      }
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!isEmail) {
+        toast.error('Informe um e-mail valido');
+        return false;
+      }
+      return true;
+    }
+
     if (!formData.usuario?.trim()) {
       toast.error('Preencha o usuario');
       return false;
@@ -336,10 +342,6 @@ export function UsuariosTab() {
       toast.error('Preencha o e-mail do usuario');
       return false;
     }
-    if (!formData.empresa_ids?.length) {
-      toast.error('Selecione ao menos uma empresa vinculada');
-      return false;
-    }
     return true;
   };
 
@@ -348,45 +350,60 @@ export function UsuariosTab() {
     setFormLoading(true);
 
     try {
-      const result = await usersService.create({
-        usuario: formData.usuario.trim(),
-        nome: formData.nome.trim(),
-        email: formData.email.trim().toLowerCase(),
-        endereco: formData.endereco?.trim() || null,
-        numero: formData.numero?.trim() || null,
-        complemento: formData.complemento?.trim() || null,
-        bairro: formData.bairro?.trim() || null,
-        cidade_id: formData.cidade_id ?? null,
-        uf: formData.uf?.trim().toUpperCase() || null,
-        cep: formData.cep || null,
-        cnpj_cpf: formData.cnpj_cpf || null,
-        fantasia: formData.fantasia?.trim() || null,
-        fone: formData.fone || null,
-        whatsapp: formData.whatsapp || null,
-        ativo: formData.ativo ?? true,
-        admin: formData.admin ?? false,
-        forca_de_vendas: formData.forca_de_vendas ?? false,
-        empresa_master_id: formData.empresa_master_id ?? null,
-        empresa_ids: formData.empresa_ids,
+      const appBaseUrl =
+        typeof window !== 'undefined' ? window.location.origin : '';
+      const basePath =
+        typeof import.meta !== 'undefined' &&
+        typeof import.meta.env?.BASE_URL === 'string'
+          ? import.meta.env.BASE_URL
+          : '/';
+      const registerUrl = appBaseUrl
+        ? new URL(
+            `${basePath.replace(/\/$/, '')}/registre-se`,
+            appBaseUrl,
+          ).toString()
+        : undefined;
+
+      const result = await usersService.inviteLogin({
+        email: inviteEmail.trim().toLowerCase(),
+        registerUrl,
       });
-      if (result.email_delivery?.status === 'sent') {
-        toast.success('Usuario criado e senha enviada por e-mail');
-      } else if (result.email_delivery?.status === 'skipped') {
-        toast(
-          'Usuario criado. O envio da senha por e-mail ficou pendente por falta de configuracao SMTP.',
-        );
-      } else if (result.email_delivery?.status === 'failed') {
-        toast(
-          'Usuario criado, mas houve falha ao enviar a senha por e-mail.',
-        );
+
+      if (result.status === 'linked_existing') {
+        if (result.email_delivery?.status === 'sent') {
+          toast.success('Login existente vinculado e e-mail enviado');
+        } else if (result.email_delivery?.status === 'skipped') {
+          toast.success(
+            'Login existente vinculado. E-mail pendente por falta de SMTP.',
+          );
+        } else if (result.email_delivery?.status === 'failed') {
+          toast.success(
+            'Login existente vinculado, mas houve falha no envio do e-mail.',
+          );
+        } else {
+          toast.success('Login existente vinculado com sucesso');
+        }
       } else {
-        toast.success('Usuario criado com sucesso');
+        if (result.email_delivery?.status === 'sent') {
+          toast.success('Convite de cadastro enviado por e-mail');
+        } else if (result.email_delivery?.status === 'skipped') {
+          toast.success(
+            'Convite registrado, mas o e-mail nao foi enviado por falta de SMTP.',
+          );
+        } else if (result.email_delivery?.status === 'failed') {
+          toast.success(
+            'Convite registrado, mas houve falha no envio do e-mail.',
+          );
+        } else {
+          toast.success('Convite para cadastro processado');
+        }
       }
       setCreateOpen(false);
+      setInviteEmail('');
       resetForm();
       loadUsuarios(true);
     } catch (error: any) {
-      toast.error(error?.message || 'Erro ao criar usuario');
+      toast.error(error?.message || 'Erro ao convidar usuario');
     } finally {
       setFormLoading(false);
     }
@@ -415,7 +432,6 @@ export function UsuariosTab() {
         ativo: formData.ativo ?? true,
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
-        empresa_ids: formData.empresa_ids,
       });
       toast.success('Usuario atualizado com sucesso');
       setEditOpen(false);
@@ -451,17 +467,30 @@ export function UsuariosTab() {
     }
   };
 
-  const formContent = (
+  const inviteFormContent = (
+    <div className="space-y-3">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+          E-mail da pessoa *
+        </label>
+        <Input
+          type="email"
+          className="h-8 text-sm"
+          placeholder="nome@empresa.com.br"
+          value={inviteEmail}
+          onChange={(event) => setInviteEmail(event.target.value)}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Se o e-mail ja tiver login, o sistema vincula esta empresa e envia aviso.
+        Se nao tiver login, envia convite para registro.
+      </p>
+    </div>
+  );
+
+  const editFormContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-2">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">ID</label>
-          <Input
-            className="h-8 text-sm bg-muted"
-            value={editOpen && editId ? String(editId) : ''}
-            readOnly
-          />
-        </div>
         <div className="col-span-1 md:col-span-6">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario *</label>
           <Input
@@ -472,13 +501,13 @@ export function UsuariosTab() {
             }
           />
         </div>
-        <div className="col-span-1 md:col-span-4">
+        <div className="col-span-1 md:col-span-6">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
           <Input
             className="h-8 text-sm"
             value={formData.nome}
             onChange={(event) =>
-              setFormData((prev) => ({ ...prev, nome: toUpperValue(event.target.value) }))
+              setFormData((prev) => ({ ...prev, nome: event.target.value }))
             }
           />
         </div>
@@ -526,7 +555,7 @@ export function UsuariosTab() {
             onChange={(event) =>
               setFormData((prev) => ({
                 ...prev,
-                cnpj_cpf: maskCnpjCpf(event.target.value),
+                cnpj_cpf: formatCnpjCpf(event.target.value),
               }))
             }
           />
@@ -749,7 +778,7 @@ export function UsuariosTab() {
             </CardTitle>
             <Button onClick={openCreate} size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Novo Usuario
+              Cadastrar Login
             </Button>
           </div>
         </CardHeader>
@@ -811,7 +840,9 @@ export function UsuariosTab() {
                       <TableCell>{usuario.nome}</TableCell>
                       <TableCell>{usuario.email || '-'}</TableCell>
                       <TableCell>{statusLabel(usuario.ativo)}</TableCell>
-                      <TableCell>{perfilLabel(usuario.admin)}</TableCell>
+                      <TableCell>
+                        {perfilLabel(usuario.admin, usuario.admin_master)}
+                      </TableCell>
                       <TableCell>{usuario.forca_de_vendas ? 'Sim' : 'Nao'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -877,18 +908,19 @@ export function UsuariosTab() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Novo Usuario</DialogTitle>
+            <DialogTitle>Cadastrar Login</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            {formContent}
+            {inviteFormContent}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
                 setCreateOpen(false);
+                setInviteEmail('');
                 resetForm();
               }}
               disabled={formLoading}
@@ -897,7 +929,7 @@ export function UsuariosTab() {
             </Button>
             <Button onClick={handleCreate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
+              Enviar convite
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -909,7 +941,7 @@ export function UsuariosTab() {
             <DialogTitle>Editar Usuario</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-            {formContent}
+            {editFormContent}
           </div>
           <DialogFooter>
             <Button

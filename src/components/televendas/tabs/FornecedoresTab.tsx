@@ -33,6 +33,7 @@ import {
 } from '@/services/authService';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { formatCnpjCpf, isNumericCnpj, normalizeCnpjCpf } from '@/utils/cnpjCpf';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 const normalizeCityKey = (value: string | null | undefined) =>
@@ -67,17 +68,6 @@ const formatCep = (value: string | number | null | undefined) => {
   if (digits.length <= 5) return digits;
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
-const formatCnpj = (value: string | number | null | undefined) => {
-  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 14);
-  if (!digits) return '';
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
-  if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
-  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
-};
-
-const normalizeCnpj = (v: string) => String(v ?? '').replace(/\D+/g, '').slice(0, 14);
 const normalizeCep = (v: string) => String(v ?? '').replace(/\D+/g, '').slice(0, 8);
 const parseAuthorizedCompanyIds = (value: string | null | undefined) =>
   Array.from(
@@ -98,6 +88,16 @@ const serializeAuthorizedCompanyIds = (ids: string[]) =>
   )
     .sort((a, b) => Number(a) - Number(b))
     .join(',');
+
+const getDefaultAuthorizedCompaniesValue = () => {
+  const empresaAtual = authService.getEmpresa();
+  const masterId = Number(
+    empresaAtual?.empresa_master_id ?? empresaAtual?.empresa_id ?? 0,
+  );
+
+  if (!Number.isInteger(masterId) || masterId <= 0) return '';
+  return serializeAuthorizedCompanyIds([String(masterId)]);
+};
 type ExistingFornecedorDuplicate = Pick<
   Fornecedor,
   'fornecedor_id' | 'codigo_fornecedor' | 'nome_fornecedor' | 'inativo'
@@ -113,7 +113,7 @@ const buildExistingFornecedorDuplicateMessage = (
   return `Já existe um fornecedor com este CNPJ/CPF: ${codigo}${fornecedor.nome_fornecedor}${status}.`;
 };
 
-const initialFormData = {
+const createInitialFormData = () => ({
   codigo_fornecedor: '',
   cnpj_cpf: '',
   nome_fornecedor: '',
@@ -130,11 +130,11 @@ const initialFormData = {
   email: '',
   whatsapp: '',
   site: '',
-  empresas_autorizadas: '',
+  empresas_autorizadas: getDefaultAuthorizedCompaniesValue(),
   obs: '',
   inativo: false,
   revenda: false,
-};
+});
 
 export function FornecedoresTab() {
   const PAGE_LIMIT = 100;
@@ -155,14 +155,14 @@ export function FornecedoresTab() {
   const [existingFornecedorByCnpj, setExistingFornecedorByCnpj] =
     useState<ExistingFornecedorDuplicate | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState(() => createInitialFormData());
   const [empresaGroups, setEmpresaGroups] = useState<EmpresaMasterGroup[]>([]);
   const [empresasLoading, setEmpresasLoading] = useState(false);
   const [empresasAutorizadasOpen, setEmpresasAutorizadasOpen] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
-  const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
-  const setFormSnapshot = (data: typeof initialFormData) => {
+  const formSnapshotRef = useRef<string>(JSON.stringify(createInitialFormData()));
+  const setFormSnapshot = (data: ReturnType<typeof createInitialFormData>) => {
     formSnapshotRef.current = JSON.stringify(data);
   };
   const isFormDirty = () => JSON.stringify(formData) !== formSnapshotRef.current;
@@ -324,8 +324,8 @@ export function FornecedoresTab() {
   const cnpjLookupRef = useRef<(v: string) => void>();
   if (!cnpjLookupRef.current) {
     cnpjLookupRef.current = debounce(async (value: string) => {
-      const cleaned = normalizeCnpj(value);
-      if (cleaned.length !== 14) {
+      const cleaned = normalizeCnpjCpf(value);
+      if (!isNumericCnpj(cleaned)) {
         setCnpjLookupLoading(false);
         return;
       }
@@ -354,7 +354,7 @@ export function FornecedoresTab() {
           const nextCep = cepValue || normalizeCep(String(prev.cep));
           return {
             ...prev,
-            cnpj_cpf: cleaned,
+            cnpj_cpf: formatCnpjCpf(cleaned),
             nome_fornecedor: toUpperValue(d.razao_social || prev.nome_fornecedor),
             fantasia: toUpperValue(d.nome_fantasia || estab.nome_fantasia || prev.fantasia),
             endereco: toUpperValue(enderecoFmt || d.logradouro || prev.endereco),
@@ -475,7 +475,7 @@ export function FornecedoresTab() {
       return;
     }
 
-    const cleaned = normalizeCnpj(formData.cnpj_cpf);
+    const cleaned = normalizeCnpjCpf(formData.cnpj_cpf);
     if (cleaned.length !== 11 && cleaned.length !== 14) {
       setExistingFornecedorByCnpj(null);
       setCnpjDuplicateLoading(false);
@@ -518,7 +518,7 @@ export function FornecedoresTab() {
   };
 
   const resetForm = (updateSnapshot = false) => {
-    const nextData = { ...initialFormData };
+    const nextData = createInitialFormData();
     setFormData(nextData);
     setEditId(null);
     setExistingFornecedorByCnpj(null);
@@ -541,7 +541,7 @@ export function FornecedoresTab() {
       if (detail) {
         const nextData = {
           codigo_fornecedor: detail.codigo_fornecedor || '',
-          cnpj_cpf: detail.cnpj_cpf || '',
+          cnpj_cpf: formatCnpjCpf(detail.cnpj_cpf || ''),
           nome_fornecedor: detail.nome_fornecedor || '',
           fantasia: detail.fantasia || '',
           endereco: detail.endereco || '',
@@ -556,7 +556,8 @@ export function FornecedoresTab() {
           email: detail.email || '',
           whatsapp: formatPhone(detail.whatsapp || ''),
           site: detail.site || '',
-          empresas_autorizadas: detail.empresas_autorizadas || '',
+          empresas_autorizadas:
+            detail.empresas_autorizadas || getDefaultAuthorizedCompaniesValue(),
           obs: detail.obs || '',
           inativo: detail.inativo || false,
           revenda: detail.revenda || false,
@@ -577,6 +578,10 @@ export function FornecedoresTab() {
       toast.error('Preencha os campos obrigatórios: CNPJ/CPF e Nome');
       return;
     }
+    if (selectedAuthorizedCompanyIds.length === 0) {
+      toast.error('Selecione ao menos uma empresa autorizada');
+      return;
+    }
     if (existingFornecedorByCnpj) {
       toast.error(buildExistingFornecedorDuplicateMessage(existingFornecedorByCnpj));
       return;
@@ -584,7 +589,7 @@ export function FornecedoresTab() {
     setFormLoading(true);
     try {
       await suppliersService.create({
-        cnpj_cpf: normalizeCnpj(formData.cnpj_cpf),
+        cnpj_cpf: normalizeCnpjCpf(formData.cnpj_cpf),
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
         endereco: formData.endereco.trim() || undefined,
@@ -617,12 +622,16 @@ export function FornecedoresTab() {
 
   const handleUpdate = async () => {
     if (!editId) return;
+    if (selectedAuthorizedCompanyIds.length === 0) {
+      toast.error('Selecione ao menos uma empresa autorizada');
+      return;
+    }
     setFormLoading(true);
     try {
       const codigoFornecedor = formData.codigo_fornecedor.trim();
       await suppliersService.update(editId, {
         ...(codigoFornecedor ? { codigo_fornecedor: codigoFornecedor } : {}),
-        cnpj_cpf: normalizeCnpj(formData.cnpj_cpf),
+        cnpj_cpf: normalizeCnpjCpf(formData.cnpj_cpf),
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
         endereco: formData.endereco.trim() || undefined,
@@ -694,7 +703,7 @@ export function FornecedoresTab() {
                 className="h-8 text-sm"
                 value={formData.cnpj_cpf}
                 onChange={(e) => {
-                  const next = e.target.value;
+                  const next = formatCnpjCpf(e.target.value);
                   setFormData({ ...formData, cnpj_cpf: next });
                   cnpjLookupRef.current?.(next);
                 }}
@@ -1016,7 +1025,11 @@ export function FornecedoresTab() {
               <p className="mt-1 text-xs text-muted-foreground">
                 IDs selecionados: {formData.empresas_autorizadas}
               </p>
-            ) : null}
+            ) : (
+              <p className="mt-1 text-xs text-destructive">
+                Selecione ao menos uma empresa autorizada.
+              </p>
+            )}
           </div>
         </div>
 
@@ -1118,7 +1131,7 @@ export function FornecedoresTab() {
                         <TableCell className="font-mono text-xs">{f.codigo_fornecedor || '-'}</TableCell>
                         <TableCell className="font-medium">{f.nome_fornecedor}</TableCell>
                         <TableCell className="hidden md:table-cell">{f.fantasia || '-'}</TableCell>
-                        <TableCell className="hidden sm:table-cell font-mono text-xs">{formatCnpj(f.cnpj_cpf || '')}</TableCell>
+                        <TableCell className="hidden sm:table-cell font-mono text-xs">{formatCnpjCpf(f.cnpj_cpf || '')}</TableCell>
                         <TableCell className="text-center">
                           <TooltipProvider>
                             <div className="flex items-center justify-center gap-0.5">

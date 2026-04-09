@@ -1,9 +1,7 @@
 import { apiClient } from '@/utils/apiClient';
 import { authService } from '@/services/authService';
 import { API_BASE } from '@/utils/env';
-
-const normalizeDocumentDigits = (value: string | number | null | undefined) =>
-  String(value ?? '').replace(/\D+/g, '');
+import { normalizeCnpjCpf } from '@/utils/cnpjCpf';
 
 export interface Fornecedor {
   empresa_id?: number;
@@ -124,13 +122,13 @@ export const suppliersService = {
   },
 
   async findByCnpjCpf(cnpjCpf: string): Promise<Fornecedor | undefined> {
-    const cleaned = normalizeDocumentDigits(cnpjCpf).slice(0, 14);
+    const cleaned = normalizeCnpjCpf(cnpjCpf);
     if (!cleaned) return undefined;
 
     const { data } = await this.getAll(cleaned, 1, 10, 'todos');
     return data.find(
       (fornecedor) =>
-        normalizeDocumentDigits(fornecedor.cnpj_cpf).slice(0, 14) === cleaned,
+        normalizeCnpjCpf(fornecedor.cnpj_cpf) === cleaned,
     );
   },
 

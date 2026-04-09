@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Televendas from "./pages/Televendas";
 import EmpresaSelect from "./pages/EmpresaSelect";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,8 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/registre-se" element={<Register />} />
+            <Route path="/register" element={<Register />} />
             <Route 
               path="/empresa" 
               element={
