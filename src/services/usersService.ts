@@ -261,6 +261,19 @@ export const usersService = {
     return normalizeUsuario(await res.json());
   },
 
+  async getMyProfile(): Promise<UsuarioCadastro> {
+    const res = await apiClient.fetch(`${API_BASE}/api/usuarios/me/perfil`, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      throw new Error(await parseErrorMessage(res, 'Falha ao buscar perfil'));
+    }
+
+    return normalizeUsuario(await res.json());
+  },
+
   async create(data: UsuarioCadastroFormData): Promise<UsuarioCreateResult> {
     const empresaId = await getEmpresaId();
     const empresaIds =
@@ -381,6 +394,42 @@ export const usersService = {
 
     if (!res.ok) {
       throw new Error(await parseErrorMessage(res, 'Falha ao atualizar usuario'));
+    }
+
+    return normalizeUsuario(await res.json());
+  },
+
+  async updateMyProfile(
+    data: Partial<UsuarioCadastroFormData>,
+  ): Promise<UsuarioCadastro> {
+    const payloadData: Record<string, any> = {};
+
+    if (data.usuario !== undefined) payloadData.usuario = data.usuario;
+    if (data.nome !== undefined) payloadData.nome = data.nome;
+    if (data.email !== undefined) payloadData.email = toNullableText(data.email);
+    if (data.endereco !== undefined) payloadData.endereco = toNullableText(data.endereco);
+    if (data.numero !== undefined) payloadData.numero = toNullableText(data.numero);
+    if (data.complemento !== undefined) payloadData.complemento = toNullableText(data.complemento);
+    if (data.bairro !== undefined) payloadData.bairro = toNullableText(data.bairro);
+    if (data.cidade_id !== undefined) payloadData.cidade_id = toNullableNumber(data.cidade_id);
+    if (data.uf !== undefined) payloadData.uf = toNullableText(data.uf)?.toUpperCase() ?? null;
+    if (data.cep !== undefined) payloadData.cep = onlyDigits(data.cep);
+    if (data.cnpj_cpf !== undefined) payloadData.cnpj_cpf = onlyDigits(data.cnpj_cpf);
+    if (data.fantasia !== undefined) payloadData.fantasia = toNullableText(data.fantasia);
+    if (data.fone !== undefined) payloadData.fone = onlyDigits(data.fone);
+    if (data.whatsapp !== undefined) payloadData.whatsapp = onlyDigits(data.whatsapp);
+    if (data.senha !== undefined && data.senha.trim()) {
+      payloadData.senha = data.senha.trim();
+    }
+
+    const res = await apiClient.fetch(`${API_BASE}/api/usuarios/me/perfil`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ data: payloadData }),
+    });
+
+    if (!res.ok) {
+      throw new Error(await parseErrorMessage(res, 'Falha ao atualizar perfil'));
     }
 
     return normalizeUsuario(await res.json());

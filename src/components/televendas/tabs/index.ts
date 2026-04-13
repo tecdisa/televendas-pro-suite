@@ -1,4 +1,5 @@
 export { DashboardTab } from './DashboardTab';
+export { PerfilTab } from './PerfilTab';
 export { PesquisaTab } from './PesquisaTab';
 export { DadosTab } from './DadosTab';
 export { ItinerariosTab } from './ItinerariosTab';

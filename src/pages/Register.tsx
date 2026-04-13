@@ -9,11 +9,22 @@ import { Label } from '@/components/ui/label';
 import { authService } from '@/services/authService';
 import { formatCnpjCpf } from '@/utils/cnpjCpf';
 
+const onlyDigits = (value: string) => value.replace(/\D+/g, '');
+
+const maskPhone = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 10) {
+    return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
+  }
+  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
+};
+
 const Register = () => {
   const navigate = useNavigate();
   const [nome, setNome] = useState('');
   const [usuario, setUsuario] = useState('');
   const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [cnpjCpf, setCnpjCpf] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -34,6 +45,7 @@ const Register = () => {
         usuario: usuario.trim(),
         email: email.trim().toLowerCase(),
         senha,
+        fone: telefone.trim() || undefined,
         cnpj_cpf: cnpjCpf.trim() || undefined,
       });
 
@@ -115,6 +127,17 @@ const Register = () => {
                 placeholder="Informe se desejar"
                 value={cnpjCpf}
                 onChange={(e) => setCnpjCpf(formatCnpjCpf(e.target.value))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone (opcional)</Label>
+              <Input
+                id="telefone"
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={telefone}
+                onChange={(e) => setTelefone(maskPhone(e.target.value))}
               />
             </div>
 

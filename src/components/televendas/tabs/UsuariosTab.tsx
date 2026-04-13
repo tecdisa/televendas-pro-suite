@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, UserRoundCog, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,72 +9,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  authService,
-} from '@/services/authService';
-import { metadataService, type Cidade, type Uf } from '@/services/metadataService';
 import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from '@/services/usersService';
-import { formatCnpjCpf } from '@/utils/cnpjCpf';
 
 const PAGE_LIMIT = 100;
-
-const onlyDigits = (value: string | null | undefined) =>
-  String(value ?? '').replace(/\D+/g, '');
-
-const toUpperValue = (value: string | null | undefined) =>
-  String(value ?? '').toUpperCase();
-
-const normalizeCityKey = (value: string | null | undefined) =>
-  String(value ?? '')
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-
-const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), wait);
-  };
-};
-
-const maskCep = (value: string | null | undefined) => {
-  const digits = onlyDigits(value).slice(0, 8);
-  return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2').replace(/-$/, '');
-};
-
-const maskPhone = (value: string | null | undefined) => {
-  const digits = onlyDigits(value).slice(0, 11);
-  if (digits.length <= 10) {
-    return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
-  }
-  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
-};
 
 const initialFormData: UsuarioCadastroFormData = {
   usuario: '',
   nome: '',
   email: '',
-  endereco: '',
-  numero: '',
-  complemento: '',
-  bairro: '',
-  cidade_id: null,
-  uf: '',
-  cep: '',
-  cnpj_cpf: '',
-  fantasia: '',
-  fone: '',
-  whatsapp: '',
   ativo: true,
   admin: false,
   forca_de_vendas: false,
-  empresa_master_id: null,
-  criado_em: null,
-  atualizado_em: null,
-  empresa_ids: [],
 };
 
 const statusLabel = (ativo?: boolean) => (ativo ? 'Ativo' : 'Inativo');
@@ -84,7 +29,6 @@ const perfilLabel = (admin?: boolean, adminMaster?: boolean) => {
 };
 
 export function UsuariosTab() {
-  const empresaAtual = authService.getEmpresa();
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioCadastro[]>([]);
   const [page, setPage] = useState(1);
@@ -97,119 +41,7 @@ export function UsuariosTab() {
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [formData, setFormData] = useState<UsuarioCadastroFormData>(() => ({
-    ...initialFormData,
-    empresa_master_id:
-      empresaAtual?.empresa_master_id != null
-        ? Number(empresaAtual.empresa_master_id)
-        : empresaAtual?.empresa_id ?? null,
-    empresa_ids: empresaAtual?.empresa_id ? [empresaAtual.empresa_id] : [],
-  }));
-  const [ufsApi, setUfsApi] = useState<Uf[]>([]);
-  const [ufsLoading, setUfsLoading] = useState(false);
-  const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
-  const [cidadesLoading, setCidadesLoading] = useState(false);
-  const [cepLookupLoading, setCepLookupLoading] = useState(false);
-
-  const buildInitialFormData = (): UsuarioCadastroFormData => ({
-    ...initialFormData,
-    empresa_master_id:
-      empresaAtual?.empresa_master_id != null
-        ? Number(empresaAtual.empresa_master_id)
-        : empresaAtual?.empresa_id ?? null,
-    empresa_ids: empresaAtual?.empresa_id ? [empresaAtual.empresa_id] : [],
-  });
-
-  const loadUfs = async () => {
-    setUfsLoading(true);
-    try {
-      const data = await metadataService.getUfs();
-      setUfsApi(data);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao carregar UFs');
-    } finally {
-      setUfsLoading(false);
-    }
-  };
-
-  const loadCidades = async (uf: string) => {
-    if (!uf?.trim()) {
-      setCidadesApi([]);
-      return;
-    }
-
-    setCidadesLoading(true);
-    try {
-      const data = await metadataService.getCidadesPorUf(uf);
-      setCidadesApi(data);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao carregar cidades');
-    } finally {
-      setCidadesLoading(false);
-    }
-  };
-
-  const resolveCidadeId = async (uf: string, nomeCidade?: string) => {
-    if (!uf) return 0;
-    try {
-      const cidades = await metadataService.getCidadesPorUf(uf);
-      setCidadesApi(cidades);
-      if (!nomeCidade) return 0;
-      const target = normalizeCityKey(nomeCidade);
-      if (!target) return 0;
-      const match = cidades.find(
-        (cidade) => normalizeCityKey(cidade.nome_cidade) === target,
-      );
-      return match ? Number(match.cidade_id) || 0 : 0;
-    } catch {
-      return 0;
-    }
-  };
-
-  const cepLookupRef = useRef<(value: string) => void>();
-  if (!cepLookupRef.current) {
-    cepLookupRef.current = debounce(async (value: string) => {
-      const cleaned = onlyDigits(value).slice(0, 8);
-      if (cleaned.length !== 8) {
-        setCepLookupLoading(false);
-        return;
-      }
-
-      setCepLookupLoading(true);
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
-        if (!response.ok) {
-          toast.error('Falha ao consultar CEP');
-          return;
-        }
-
-        const data = await response.json();
-        if (!data || data.erro) {
-          toast.error('CEP nao encontrado');
-          return;
-        }
-
-        const ufValue = data.uf ? toUpperValue(data.uf) : '';
-        const cidadeNome = data.localidade ? String(data.localidade) : '';
-        const cidadeId = ufValue ? await resolveCidadeId(ufValue, cidadeNome) : 0;
-
-        setFormData((prev) => ({
-          ...prev,
-          cep: maskCep(cleaned),
-          endereco: toUpperValue(data.logradouro || prev.endereco),
-          complemento: toUpperValue(data.complemento || prev.complemento),
-          bairro: toUpperValue(data.bairro || prev.bairro),
-          uf: ufValue || prev.uf,
-          cidade_id: cidadeId || prev.cidade_id,
-        }));
-        toast.success('Endereco preenchido pelo CEP');
-      } catch {
-        toast.error('Erro na consulta de CEP');
-      } finally {
-        setCepLookupLoading(false);
-      }
-    }, 600);
-  }
+  const [formData, setFormData] = useState<UsuarioCadastroFormData>(initialFormData);
 
   const loadUsuarios = async (reset = false) => {
     if (loading) return;
@@ -243,20 +75,6 @@ export function UsuariosTab() {
     loadUsuarios(true);
   }, [filtroStatus]);
 
-  useEffect(() => {
-    loadUfs();
-  }, []);
-
-  useEffect(() => {
-    if (!createOpen && !editOpen) return;
-    if (!formData.uf?.trim()) {
-      setCidadesApi([]);
-      return;
-    }
-
-    loadCidades(formData.uf);
-  }, [createOpen, editOpen, formData.uf]);
-
   const handleSearch = () => loadUsuarios(true);
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -264,7 +82,7 @@ export function UsuariosTab() {
   };
 
   const resetForm = () => {
-    setFormData(buildInitialFormData());
+    setFormData(initialFormData);
     setEditId(null);
   };
 
@@ -288,24 +106,9 @@ export function UsuariosTab() {
         usuario: detail.usuario || '',
         nome: detail.nome || '',
         email: detail.email || '',
-        endereco: detail.endereco || '',
-        numero: detail.numero || '',
-        complemento: detail.complemento || '',
-        bairro: detail.bairro || '',
-        cidade_id: detail.cidade_id ?? null,
-        uf: detail.uf || '',
-        cep: maskCep(detail.cep || ''),
-        cnpj_cpf: formatCnpjCpf(detail.cnpj_cpf || ''),
-        fantasia: detail.fantasia || '',
-        fone: maskPhone(detail.fone || ''),
-        whatsapp: maskPhone(detail.whatsapp || ''),
         ativo: detail.ativo ?? true,
         admin: detail.admin ?? false,
         forca_de_vendas: detail.forca_de_vendas ?? false,
-        empresa_master_id: detail.empresa_master_id ?? null,
-        empresa_ids: detail.empresa_ids ?? [],
-        criado_em: detail.criado_em ?? null,
-        atualizado_em: detail.atualizado_em ?? null,
       });
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao carregar usuario');
@@ -330,18 +133,11 @@ export function UsuariosTab() {
       return true;
     }
 
-    if (!formData.usuario?.trim()) {
-      toast.error('Preencha o usuario');
+    if (!editId) {
+      toast.error('Usuario nao encontrado');
       return false;
     }
-    if (!formData.nome?.trim()) {
-      toast.error('Preencha o nome');
-      return false;
-    }
-    if (!formData.email?.trim()) {
-      toast.error('Preencha o e-mail do usuario');
-      return false;
-    }
+
     return true;
   };
 
@@ -415,25 +211,11 @@ export function UsuariosTab() {
 
     try {
       await usersService.update(editId, {
-        usuario: formData.usuario.trim(),
-        nome: formData.nome.trim(),
-        email: formData.email.trim().toLowerCase(),
-        endereco: formData.endereco?.trim() || null,
-        numero: formData.numero?.trim() || null,
-        complemento: formData.complemento?.trim() || null,
-        bairro: formData.bairro?.trim() || null,
-        cidade_id: formData.cidade_id ?? null,
-        uf: formData.uf?.trim().toUpperCase() || null,
-        cep: formData.cep || null,
-        cnpj_cpf: formData.cnpj_cpf || null,
-        fantasia: formData.fantasia?.trim() || null,
-        fone: formData.fone || null,
-        whatsapp: formData.whatsapp || null,
         ativo: formData.ativo ?? true,
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
       });
-      toast.success('Usuario atualizado com sucesso');
+      toast.success('Vinculo do usuario atualizado com sucesso');
       setEditOpen(false);
       resetForm();
       loadUsuarios(true);
@@ -491,235 +273,22 @@ export function UsuariosTab() {
   const editFormContent = (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario *</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.usuario}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, usuario: event.target.value }))
-            }
-          />
-        </div>
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome *</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.nome}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, nome: event.target.value }))
-            }
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-12">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            E-mail *
-          </label>
-          <Input
-            type="email"
-            className="h-8 text-sm"
-            value={formData.email ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, email: event.target.value }))
-            }
-          />
-          {createOpen && (
-            <p className="text-xs text-muted-foreground mt-1">
-              A senha sera gerada automaticamente e enviada para este e-mail.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.fantasia ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, fantasia: toUpperValue(event.target.value) }))
-            }
-          />
-        </div>
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">
-            CNPJ/CPF
-          </label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.cnpj_cpf ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                cnpj_cpf: formatCnpjCpf(event.target.value),
-              }))
-            }
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Fone</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.fone ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, fone: maskPhone(event.target.value) }))
-            }
-          />
-        </div>
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Whatsapp</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.whatsapp ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                whatsapp: maskPhone(event.target.value),
-              }))
-            }
-          />
-        </div>
-      </div>
-
-      <div className="border-b border-primary/50 pb-1 mt-4">
-        <span className="text-sm font-medium text-primary">Endereço</span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-8">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereco</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.endereco ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, endereco: toUpperValue(event.target.value) }))
-            }
-          />
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario</label>
+          <Input className="h-8 text-sm" value={formData.usuario ?? ''} disabled />
         </div>
         <div className="col-span-1 md:col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Numero</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.numero ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, numero: toUpperValue(event.target.value) }))
-            }
-          />
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome</label>
+          <Input className="h-8 text-sm" value={formData.nome ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
+          <Input className="h-8 text-sm" value={formData.email ?? ''} disabled />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.complemento ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                complemento: toUpperValue(event.target.value),
-              }))
-            }
-          />
-        </div>
-        <div className="col-span-1 md:col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.bairro ?? ''}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, bairro: toUpperValue(event.target.value) }))
-            }
-          />
-        </div>
-        <div className="col-span-1 md:col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
-          <Input
-            className="h-8 text-sm"
-            value={formData.cep ?? ''}
-            onChange={(event) => {
-              const nextCep = maskCep(event.target.value);
-              setFormData((prev) => ({ ...prev, cep: nextCep }));
-              cepLookupRef.current?.(nextCep);
-            }}
-          />
-          {cepLookupLoading && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Buscando endereco pelo CEP...
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-2">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-          <Select
-            value={formData.uf ?? ''}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                uf: value,
-                cidade_id: null,
-              }))
-            }
-            disabled={ufsLoading}
-          >
-            <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder={ufsLoading ? '...' : 'UF'} />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              {ufsApi.map((uf) => (
-                <SelectItem key={uf.uf} value={uf.uf}>
-                  {uf.uf}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="col-span-1 md:col-span-6">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
-          <Select
-            value={formData.cidade_id ? String(formData.cidade_id) : 'none'}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                cidade_id: value === 'none' ? null : Number(value),
-              }))
-            }
-            disabled={cidadesLoading || !formData.uf}
-          >
-            <SelectTrigger className="h-8 text-sm">
-              <SelectValue
-                placeholder={
-                  cidadesLoading
-                    ? 'Carregando...'
-                    : formData.uf
-                    ? 'Selecione'
-                    : 'Selecione UF'
-                }
-              />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50 max-h-60">
-              <SelectItem value="none">Selecione</SelectItem>
-              {cidadesApi.map((cidade) => (
-                <SelectItem
-                  key={cidade.cidade_id}
-                  value={String(cidade.cidade_id)}
-                >
-                  {cidade.nome_cidade}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="border-b border-primary/50 pb-1 mt-2">
+        <span className="text-sm font-medium text-primary">Vinculo na Empresa</span>
       </div>
 
       <div className="space-y-1 pt-1">
@@ -738,28 +307,28 @@ export function UsuariosTab() {
       </div>
 
       <div className="border-b border-primary/50 pb-1 mt-4">
-        <span className="text-sm font-medium text-primary">Funções</span>
+        <span className="text-sm font-medium text-primary">Funcoes</span>
       </div>
 
       <div className="flex flex-wrap items-end pb-1 gap-6">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={formData.admin ?? false}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, admin: Boolean(checked) }))
-              }
-            />
-            Administrador
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={formData.forca_de_vendas ?? false}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, forca_de_vendas: Boolean(checked) }))
-              }
-            />
-            Forca de vendas
-          </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={formData.admin ?? false}
+            onCheckedChange={(checked) =>
+              setFormData((prev) => ({ ...prev, admin: Boolean(checked) }))
+            }
+          />
+          Administrador
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={formData.forca_de_vendas ?? false}
+            onCheckedChange={(checked) =>
+              setFormData((prev) => ({ ...prev, forca_de_vendas: Boolean(checked) }))
+            }
+          />
+          Forca de vendas
+        </label>
       </div>
     </div>
   );
@@ -936,9 +505,9 @@ export function UsuariosTab() {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogTitle>Editar Vinculo do Usuario</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto pr-1">
             {editFormContent}

@@ -6,6 +6,7 @@ import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, G
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
+  PerfilTab,
   PesquisaTab,
   DadosTab,
   ItinerariosTab,
@@ -36,6 +37,7 @@ import { ChevronRight } from 'lucide-react';
 
 const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
   dashboard: { title: 'Dashboard', icon: LayoutDashboard },
+  perfil: { title: 'Meu Perfil', icon: UserRoundCog },
   pesquisa: { title: 'Pesquisa de Pedidos', icon: Search },
   dados: { title: 'Dados', icon: FileText },
   itinerarios: { title: 'Itinerários', icon: Route },
@@ -96,6 +98,8 @@ const Televendas = () => {
     switch (effectiveTab) {
       case 'dashboard':
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
+      case 'perfil':
+        return <ErrorBoundary><PerfilTab /></ErrorBoundary>;
       case 'pesquisa':
         return <ErrorBoundary><PesquisaTab onNavigateToDigitacao={() => setDigitacaoOpen(true)} /></ErrorBoundary>;
       case 'dados':
@@ -236,6 +240,14 @@ const Televendas = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleTabChange('perfil')}
+            >
+              <UserRoundCog className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Meu Perfil</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"

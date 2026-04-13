@@ -40,6 +40,7 @@ const baseNavGroups: NavGroup[] = [
     icon: LayoutDashboard,
     children: [
       { title: 'Painel Geral', tab: 'dashboard', icon: LayoutDashboard },
+      { title: 'Meu Perfil', tab: 'perfil', icon: UserRoundCog },
     ],
   },
   {
