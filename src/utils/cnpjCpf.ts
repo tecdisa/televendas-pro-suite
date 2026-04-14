@@ -74,7 +74,7 @@ export const isNumericCnpj = (
   value: string | number | null | undefined,
 ): boolean => {
   const normalized = normalizeCnpjCpf(value);
-  return normalized.length === 14 && isDigitsOnlyDocument(normalized);
+  return normalized.length === 14 && isValidCnpjDigits(normalized);
 };
 
 export const isValidCpfDigits = (value: string): boolean => {
@@ -100,6 +100,29 @@ export const isValidCpfDigits = (value: string): boolean => {
   return numbers[10] === checkDigit;
 };
 
+export const isValidCnpjDigits = (value: string): boolean => {
+  if (!ONLY_DIGITS_REGEX.test(value) || value.length !== 14) return false;
+  if (REPEATED_DIGITS_REGEX.test(value)) return false;
+
+  const numbers = value.split('').map((digit) => Number(digit));
+  const weightsFirst = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const weightsSecond = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+  let sum = 0;
+  for (let index = 0; index < 12; index += 1) {
+    sum += numbers[index] * weightsFirst[index];
+  }
+  let checkDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (numbers[12] !== checkDigit) return false;
+
+  sum = 0;
+  for (let index = 0; index < 13; index += 1) {
+    sum += numbers[index] * weightsSecond[index];
+  }
+  checkDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return numbers[13] === checkDigit;
+};
+
 export const isValidCpf = (
   value: string | number | null | undefined,
 ): boolean => {
@@ -121,7 +144,9 @@ export const getCpfOrCnpjValidationError = (
   if (normalized.length === 11) {
     return isValidCpfDigits(normalized) ? null : 'cpf_incorreto';
   }
-  if (normalized.length === 14 && isDigitsOnlyDocument(normalized)) return null;
+  if (normalized.length === 14) {
+    return isValidCnpjDigits(normalized) ? null : 'documento_invalido';
+  }
   return 'documento_invalido';
 };
 
