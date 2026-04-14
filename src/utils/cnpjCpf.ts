@@ -1,5 +1,7 @@
 const NON_ALNUM_DOCUMENT_REGEX = /[^0-9A-Z]+/g;
 const ONLY_DIGITS_REGEX = /^\d+$/;
+const REPEATED_DIGITS_REGEX = /^(\d)\1+$/;
+export type CpfOrCnpjValidationError = 'cpf_incorreto' | 'documento_invalido';
 
 const applyMask = (
   value: string,
@@ -73,4 +75,60 @@ export const isNumericCnpj = (
 ): boolean => {
   const normalized = normalizeCnpjCpf(value);
   return normalized.length === 14 && isDigitsOnlyDocument(normalized);
+};
+
+export const isValidCpfDigits = (value: string): boolean => {
+  if (!ONLY_DIGITS_REGEX.test(value) || value.length !== 11) return false;
+  if (REPEATED_DIGITS_REGEX.test(value)) return false;
+
+  const numbers = value.split('').map((digit) => Number(digit));
+  let sum = 0;
+
+  for (let index = 0; index < 9; index += 1) {
+    sum += numbers[index] * (10 - index);
+  }
+  let checkDigit = 11 - (sum % 11);
+  if (checkDigit >= 10) checkDigit = 0;
+  if (numbers[9] !== checkDigit) return false;
+
+  sum = 0;
+  for (let index = 0; index < 10; index += 1) {
+    sum += numbers[index] * (11 - index);
+  }
+  checkDigit = 11 - (sum % 11);
+  if (checkDigit >= 10) checkDigit = 0;
+  return numbers[10] === checkDigit;
+};
+
+export const isValidCpf = (
+  value: string | number | null | undefined,
+): boolean => {
+  const normalized = normalizeCnpjCpf(value);
+  return normalized.length === 11 && isValidCpfDigits(normalized);
+};
+
+export const isValidCpfOrCnpj = (
+  value: string | number | null | undefined,
+): boolean => {
+  return getCpfOrCnpjValidationError(value) === null;
+};
+
+export const getCpfOrCnpjValidationError = (
+  value: string | number | null | undefined,
+): CpfOrCnpjValidationError | null => {
+  const normalized = normalizeCnpjCpf(value);
+  if (!normalized) return 'documento_invalido';
+  if (normalized.length === 11) {
+    return isValidCpfDigits(normalized) ? null : 'cpf_incorreto';
+  }
+  if (normalized.length === 14 && isDigitsOnlyDocument(normalized)) return null;
+  return 'documento_invalido';
+};
+
+export const getCpfOrCnpjValidationMessage = (
+  value: string | number | null | undefined,
+): string | null => {
+  const error = getCpfOrCnpjValidationError(value);
+  if (!error) return null;
+  return error === 'cpf_incorreto' ? 'CPF incorreto' : 'CNPJ/CPF inválido';
 };

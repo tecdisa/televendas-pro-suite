@@ -32,7 +32,12 @@ import { operacoes } from '@/mocks/data';
 import { ClientInfoModal } from '../overlays/ClientInfoModal';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatCnpjCpf, isNumericCnpj, normalizeCnpjCpf } from '@/utils/cnpjCpf';
+import {
+  formatCnpjCpf,
+  getCpfOrCnpjValidationMessage,
+  isNumericCnpj,
+  normalizeCnpjCpf,
+} from '@/utils/cnpjCpf';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -577,6 +582,14 @@ export const ClientesTab = () => {
   const [formData, setFormData] = useState<ClientFormData>(() =>
     createEmptyFormData(getLoggedCompanyUf()),
   );
+  const cnpjCpfFieldError = useMemo(() => {
+    const cleaned = normalizeCnpjCpf(formData.cnpjCpf);
+    if (!cleaned) return null;
+    // Evita erro visual durante digitação parcial.
+    if (cleaned.length < 11) return null;
+    if (cleaned.length > 11 && cleaned.length < 14) return null;
+    return getCpfOrCnpjValidationMessage(cleaned);
+  }, [formData.cnpjCpf]);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
   const formSnapshotRef = useRef<string>(
@@ -831,6 +844,11 @@ export const ClientesTab = () => {
     }
 
     const cleaned = normalizeCnpjCpf(formData.cnpjCpf);
+    if (getCpfOrCnpjValidationMessage(cleaned)) {
+      setExistingClientByCnpj(null);
+      setCnpjDuplicateLoading(false);
+      return;
+    }
     if (cleaned.length !== 11 && cleaned.length !== 14) {
       setExistingClientByCnpj(null);
       setCnpjDuplicateLoading(false);
@@ -1389,6 +1407,10 @@ const validateFormData = (data: ClientFormData): string[] => {
     Number.isFinite(Number(value)) && Number(value) > 0;
 
   if (!hasText(data.cnpjCpf)) errors.push('Informe o CNPJ/CPF.');
+  if (hasText(data.cnpjCpf)) {
+    const cnpjCpfError = getCpfOrCnpjValidationMessage(data.cnpjCpf);
+    if (cnpjCpfError) errors.push(cnpjCpfError);
+  }
   if (!hasText(data.nome)) errors.push('Informe a Razão Social/Nome.');
   if (!hasText(data.cep)) errors.push('Informe o CEP.');
   if (!hasText(data.telefone)) errors.push('Informe o telefone fixo.');
@@ -3086,6 +3108,8 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <p className="mt-1 text-xs text-destructive">
                         {buildExistingClientDuplicateMessage(existingClientByCnpj)}
                       </p>
+                    ) : cnpjCpfFieldError ? (
+                      <p className="mt-1 text-xs text-destructive">{cnpjCpfFieldError}</p>
                     ) : cnpjDuplicateLoading ? (
                       <p className="mt-1 text-xs text-muted-foreground">
                         Verificando cliente existente...
@@ -3915,7 +3939,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">CNPJ / CPF *</label>
-                    <div className="flex gap-1">
+                      <div className="flex gap-1">
                         <Input
                           className="h-8 text-sm flex-1"
                           value={formData.cnpjCpf}
@@ -3933,6 +3957,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                           {cnpjLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
                       </div>
+                      {cnpjCpfFieldError ? (
+                        <p className="mt-1 text-xs text-destructive">{cnpjCpfFieldError}</p>
+                      ) : null}
                     </div>
                     <div className="col-span-1 md:col-span-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>

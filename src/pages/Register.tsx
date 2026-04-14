@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authService } from '@/services/authService';
-import { formatCnpjCpf } from '@/utils/cnpjCpf';
+import { formatCnpjCpf, getCpfOrCnpjValidationMessage } from '@/utils/cnpjCpf';
 
 const onlyDigits = (value: string) => value.replace(/\D+/g, '');
 
@@ -35,6 +35,13 @@ const Register = () => {
 
     if (senha !== confirmarSenha) {
       toast.error('As senhas nao conferem');
+      return;
+    }
+    const cnpjCpfError = cnpjCpf.trim()
+      ? getCpfOrCnpjValidationMessage(cnpjCpf)
+      : null;
+    if (cnpjCpfError) {
+      toast.error(cnpjCpfError);
       return;
     }
 

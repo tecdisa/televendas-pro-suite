@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { authService } from '@/services/authService';
 import { metadataService, type Cidade, type Uf } from '@/services/metadataService';
 import { usersService, type UsuarioCadastroFormData } from '@/services/usersService';
-import { formatCnpjCpf } from '@/utils/cnpjCpf';
+import { formatCnpjCpf, getCpfOrCnpjValidationMessage } from '@/utils/cnpjCpf';
 
 const onlyDigits = (value: string | null | undefined) =>
   String(value ?? '').replace(/\D+/g, '');
@@ -215,6 +215,13 @@ export function PerfilTab() {
     }
     if (!formData.email?.trim()) {
       toast.error('Preencha o e-mail');
+      return;
+    }
+    const cnpjCpfError = formData.cnpj_cpf?.trim()
+      ? getCpfOrCnpjValidationMessage(formData.cnpj_cpf)
+      : null;
+    if (cnpjCpfError) {
+      toast.error(cnpjCpfError);
       return;
     }
 
@@ -522,4 +529,3 @@ export function PerfilTab() {
     </Card>
   );
 }
-

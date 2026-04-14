@@ -33,7 +33,12 @@ import {
 } from '@/services/authService';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { formatCnpjCpf, isNumericCnpj, normalizeCnpjCpf } from '@/utils/cnpjCpf';
+import {
+  formatCnpjCpf,
+  getCpfOrCnpjValidationMessage,
+  isNumericCnpj,
+  normalizeCnpjCpf,
+} from '@/utils/cnpjCpf';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 const normalizeCityKey = (value: string | null | undefined) =>
@@ -578,6 +583,12 @@ export function FornecedoresTab() {
       toast.error('Preencha os campos obrigatórios: CNPJ/CPF e Nome');
       return;
     }
+    const normalizedCnpjCpf = normalizeCnpjCpf(formData.cnpj_cpf);
+    const cnpjCpfError = getCpfOrCnpjValidationMessage(normalizedCnpjCpf);
+    if (cnpjCpfError) {
+      toast.error(cnpjCpfError);
+      return;
+    }
     if (selectedAuthorizedCompanyIds.length === 0) {
       toast.error('Selecione ao menos uma empresa autorizada');
       return;
@@ -589,7 +600,7 @@ export function FornecedoresTab() {
     setFormLoading(true);
     try {
       await suppliersService.create({
-        cnpj_cpf: normalizeCnpjCpf(formData.cnpj_cpf),
+        cnpj_cpf: normalizedCnpjCpf,
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
         endereco: formData.endereco.trim() || undefined,
@@ -622,6 +633,12 @@ export function FornecedoresTab() {
 
   const handleUpdate = async () => {
     if (!editId) return;
+    const normalizedCnpjCpf = normalizeCnpjCpf(formData.cnpj_cpf);
+    const cnpjCpfError = getCpfOrCnpjValidationMessage(normalizedCnpjCpf);
+    if (cnpjCpfError) {
+      toast.error(cnpjCpfError);
+      return;
+    }
     if (selectedAuthorizedCompanyIds.length === 0) {
       toast.error('Selecione ao menos uma empresa autorizada');
       return;
@@ -631,7 +648,7 @@ export function FornecedoresTab() {
       const codigoFornecedor = formData.codigo_fornecedor.trim();
       await suppliersService.update(editId, {
         ...(codigoFornecedor ? { codigo_fornecedor: codigoFornecedor } : {}),
-        cnpj_cpf: normalizeCnpjCpf(formData.cnpj_cpf),
+        cnpj_cpf: normalizedCnpjCpf,
         nome_fornecedor: formData.nome_fornecedor.trim(),
         fantasia: formData.fantasia.trim() || undefined,
         endereco: formData.endereco.trim() || undefined,
