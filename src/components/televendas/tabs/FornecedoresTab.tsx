@@ -770,6 +770,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social *</label>
             <Input
               className="h-8 text-sm"
+              maxLength={100}
               value={formData.nome_fornecedor}
               onChange={(e) => setFormData({ ...formData, nome_fornecedor: toUpperValue(e.target.value) })}
             />
@@ -781,6 +782,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Fantasia</label>
             <Input
               className="h-8 text-sm"
+              maxLength={100}
               value={formData.fantasia}
               onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })}
             />
@@ -822,6 +824,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço</label>
             <Input
               className="h-8 text-sm"
+              maxLength={100}
               value={formData.endereco}
               onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })}
             />
@@ -830,6 +833,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
             <Input
               className="h-8 text-sm"
+              maxLength={20}
               value={formData.numero}
               onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })}
             />
@@ -875,6 +879,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro</label>
             <Input
               className="h-8 text-sm"
+              maxLength={50}
               value={formData.bairro}
               onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })}
             />
@@ -886,6 +891,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
             <Input
               className="h-8 text-sm"
+              maxLength={50}
               value={formData.complemento}
               onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })}
             />
@@ -917,6 +923,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Contato</label>
             <Input
               className="h-8 text-sm"
+              maxLength={50}
               value={formData.contato}
               onChange={(e) => setFormData({ ...formData, contato: toUpperValue(e.target.value) })}
             />
@@ -929,6 +936,7 @@ export function FornecedoresTab() {
             <Input
               className="h-8 text-sm"
               type="email"
+              maxLength={100}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })}
             />
@@ -937,6 +945,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Site</label>
             <Input
               className="h-8 text-sm"
+              maxLength={200}
               value={formData.site}
               onChange={(e) => setFormData({ ...formData, site: e.target.value.toLowerCase() })}
             />
@@ -1055,6 +1064,7 @@ export function FornecedoresTab() {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações</label>
             <Textarea
               className="text-sm min-h-[80px]"
+              maxLength={250}
               value={formData.obs}
               onChange={(e) => setFormData({ ...formData, obs: toUpperValue(e.target.value) })}
             />
