@@ -17,6 +17,7 @@ const initialFormData = {
   codigo_cidade: '',
   nome_cidade: '',
   codigo_ibge: '',
+  siafi: '',
   uf: '',
 };
 
@@ -107,6 +108,7 @@ export function CidadesTab() {
         codigo_cidade: detail.codigo_cidade || '',
         nome_cidade: detail.nome_cidade || '',
         codigo_ibge: detail.codigo_ibge || '',
+        siafi: detail.siafi || '',
         uf: detail.uf || '',
       });
     } catch (error: any) {
@@ -136,6 +138,7 @@ export function CidadesTab() {
       await citiesRegistryService.create({
         nome_cidade: formData.nome_cidade.trim(),
         codigo_ibge: formData.codigo_ibge.trim() || null,
+        siafi: formData.siafi.trim() || null,
         uf: formData.uf,
       });
       toast.success('Cidade criada com sucesso');
@@ -156,6 +159,7 @@ export function CidadesTab() {
       await citiesRegistryService.update(editId, {
         nome_cidade: formData.nome_cidade.trim(),
         codigo_ibge: formData.codigo_ibge.trim() || null,
+        siafi: formData.siafi.trim() || null,
         uf: formData.uf,
       });
       toast.success('Cidade atualizada com sucesso');
@@ -220,7 +224,7 @@ export function CidadesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-1 md:col-span-6">
+        <div className="col-span-1 md:col-span-4">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Código IBGE</label>
           <Input
             className="h-8 text-sm"
@@ -229,6 +233,19 @@ export function CidadesTab() {
               setFormData({
                 ...formData,
                 codigo_ibge: event.target.value.replace(/\D+/g, '').slice(0, 7),
+              })
+            }
+          />
+        </div>
+        <div className="col-span-1 md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Código SIAFI</label>
+          <Input
+            className="h-8 text-sm"
+            value={formData.siafi}
+            onChange={(event) =>
+              setFormData({
+                ...formData,
+                siafi: event.target.value.replace(/\D+/g, '').slice(0, 10),
               })
             }
           />
@@ -269,7 +286,7 @@ export function CidadesTab() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <Input
-              placeholder="Buscar por código, nome, UF ou IBGE..."
+              placeholder="Buscar por código, nome, UF, IBGE ou SIAFI..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={handleKeyDown}
@@ -304,19 +321,20 @@ export function CidadesTab() {
                       <TableHead>Cidade</TableHead>
                       <TableHead className="w-20">UF</TableHead>
                       <TableHead className="w-28">IBGE</TableHead>
+                      <TableHead className="w-28">SIAFI</TableHead>
                       <TableHead className="w-28 text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isInitialLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
                     ) : cidades.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Nenhuma cidade encontrada
                         </TableCell>
                       </TableRow>
@@ -327,6 +345,7 @@ export function CidadesTab() {
                           <TableCell className="font-medium">{cidade.nome_cidade}</TableCell>
                           <TableCell>{cidade.uf || '-'}</TableCell>
                           <TableCell>{cidade.codigo_ibge || '-'}</TableCell>
+                          <TableCell>{cidade.siafi || '-'}</TableCell>
                           <TableCell className="text-center">
                             <TooltipProvider>
                               <div className="flex items-center justify-center gap-1">
@@ -370,7 +389,7 @@ export function CidadesTab() {
 
                     {isLoadingMore && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-3 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-3 text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>

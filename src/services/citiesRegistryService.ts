@@ -8,6 +8,7 @@ export interface CidadeCadastro {
   codigo_cidade: string;
   nome_cidade: string;
   codigo_ibge?: string | null;
+  siafi?: string | null;
   uf: string;
 }
 
@@ -15,6 +16,7 @@ export interface CidadeCadastroFormData {
   codigo_cidade?: string;
   nome_cidade: string;
   codigo_ibge?: string | null;
+  siafi?: string | null;
   uf: string;
 }
 
@@ -29,6 +31,14 @@ function normalizeCidade(raw: any): CidadeCadastro {
         ? String(raw.codigo_ibge).trim()
         : raw?.codigoIbge != null
         ? String(raw.codigoIbge).trim()
+        : null,
+    siafi:
+      raw?.siafi != null
+        ? String(raw.siafi).trim()
+        : raw?.codigo_siafi != null
+        ? String(raw.codigo_siafi).trim()
+        : raw?.codigoSiafi != null
+        ? String(raw.codigoSiafi).trim()
         : null,
     uf: String(raw?.uf ?? '').trim(),
   };
@@ -106,6 +116,7 @@ export const citiesRegistryService = {
       data: {
         nome_cidade: data.nome_cidade,
         codigo_ibge: data.codigo_ibge || undefined,
+        siafi: data.siafi || undefined,
         uf: data.uf,
       },
     };

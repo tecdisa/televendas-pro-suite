@@ -57,6 +57,7 @@ export function RepresentantesPastasTab() {
   const [copySubmitting, setCopySubmitting] = useState(false);
 
   const fornecedorReqRef = useRef(0);
+  const refreshRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadRepresentantes = async (query = '') => {
     setRepLoading(true);
@@ -98,8 +99,37 @@ export function RepresentantesPastasTab() {
     }
   };
 
+  const refreshFornecedoresView = async (
+    representanteId: string,
+    expectedIncrease = 0,
+  ) => {
+    if (!representanteId) return;
+
+    await loadFornecedores(representanteId, '');
+
+    if (refreshRetryTimerRef.current) {
+      clearTimeout(refreshRetryTimerRef.current);
+      refreshRetryTimerRef.current = null;
+    }
+
+    // Retry curto para refletir importações/cópias imediatamente em cenários com atraso de leitura.
+    if (expectedIncrease > 0) {
+      refreshRetryTimerRef.current = setTimeout(() => {
+        loadFornecedores(representanteId, '');
+      }, 450);
+    }
+  };
+
   useEffect(() => {
     loadRepresentantes();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (refreshRetryTimerRef.current) {
+        clearTimeout(refreshRetryTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -191,7 +221,7 @@ export function RepresentantesPastasTab() {
   const loadFornecedoresParaInclusao = async (query = '') => {
     setIncludeLoading(true);
     try {
-      const result = await suppliersService.getAll(query, 1, 100, 'ativos');
+      const result = await suppliersService.getAll(query, 1, 100, 'ativos', true);
       setIncludeResults(result.data);
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao carregar fornecedores');
@@ -229,7 +259,7 @@ export function RepresentantesPastasTab() {
     try {
       await representativesService.addFornecedor(selectedRepresentanteId, fornecedorId);
       toast.success('Fornecedor incluído com sucesso');
-      await loadFornecedores(selectedRepresentanteId, '');
+      await refreshFornecedoresView(selectedRepresentanteId, 1);
       setIncludeResults((prev) => prev.filter((item) => item.fornecedor_id !== fornecedorId));
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao incluir fornecedor');
@@ -414,7 +444,10 @@ export function RepresentantesPastasTab() {
         `Copiados: ${result.totalCriados} | Ignorados (duplicados): ${result.totalIgnorados}`,
       );
       setCopyDialogOpen(false);
-      await loadFornecedores(selectedRepresentanteId, '');
+      await refreshFornecedoresView(
+        selectedRepresentanteId,
+        Number(result.totalCriados ?? 0),
+      );
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao copiar fornecedores');
     } finally {
