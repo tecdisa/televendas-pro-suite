@@ -66,6 +66,11 @@ export function PerfilTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<UsuarioCadastroFormData>(initialFormData);
+  const [passwordData, setPasswordData] = useState({
+    senhaAtual: '',
+    senhaNova: '',
+    confirmarSenha: '',
+  });
   const [ufsApi, setUfsApi] = useState<Uf[]>([]);
   const [ufsLoading, setUfsLoading] = useState(false);
   const [cidadesApi, setCidadesApi] = useState<Cidade[]>([]);
@@ -225,6 +230,33 @@ export function PerfilTab() {
       return;
     }
 
+    const senhaAtual = passwordData.senhaAtual.trim();
+    const senhaNova = passwordData.senhaNova.trim();
+    const confirmarSenha = passwordData.confirmarSenha.trim();
+    const hasPasswordChange = Boolean(senhaAtual || senhaNova || confirmarSenha);
+    if (hasPasswordChange) {
+      if (!senhaAtual) {
+        toast.error('Informe a senha atual');
+        return;
+      }
+      if (!senhaNova) {
+        toast.error('Informe a nova senha');
+        return;
+      }
+      if (senhaNova.length < 6) {
+        toast.error('A nova senha deve ter no mínimo 6 caracteres');
+        return;
+      }
+      if (senhaNova.length > 72) {
+        toast.error('A nova senha deve ter no máximo 72 caracteres');
+        return;
+      }
+      if (confirmarSenha !== senhaNova) {
+        toast.error('A confirmação da nova senha não confere');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const updated = await usersService.updateMyProfile({
@@ -242,6 +274,8 @@ export function PerfilTab() {
         fantasia: formData.fantasia?.trim() || null,
         fone: formData.fone || null,
         whatsapp: formData.whatsapp || null,
+        senha_atual: hasPasswordChange ? senhaAtual : undefined,
+        senha: hasPasswordChange ? senhaNova : undefined,
       });
 
       const session = authService.getSession();
@@ -255,6 +289,11 @@ export function PerfilTab() {
       }
 
       toast.success('Perfil atualizado com sucesso');
+      setPasswordData({
+        senhaAtual: '',
+        senhaNova: '',
+        confirmarSenha: '',
+      });
       await loadProfile();
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao atualizar perfil');
@@ -365,6 +404,64 @@ export function PerfilTab() {
                     setFormData((prev) => ({
                       ...prev,
                       whatsapp: maskPhone(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="border-b border-primary/50 pb-1 mt-4">
+              <span className="text-sm font-medium text-primary">Seguranca</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+              <div className="col-span-1 md:col-span-4">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Senha atual
+                </label>
+                <Input
+                  type="password"
+                  autoComplete="current-password"
+                  className="h-8 text-sm"
+                  value={passwordData.senhaAtual}
+                  onChange={(event) =>
+                    setPasswordData((prev) => ({
+                      ...prev,
+                      senhaAtual: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="col-span-1 md:col-span-4">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Nova senha
+                </label>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  className="h-8 text-sm"
+                  value={passwordData.senhaNova}
+                  onChange={(event) =>
+                    setPasswordData((prev) => ({
+                      ...prev,
+                      senhaNova: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="col-span-1 md:col-span-4">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Confirmar nova senha
+                </label>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  className="h-8 text-sm"
+                  value={passwordData.confirmarSenha}
+                  onChange={(event) =>
+                    setPasswordData((prev) => ({
+                      ...prev,
+                      confirmarSenha: event.target.value,
                     }))
                   }
                 />

@@ -33,6 +33,8 @@ export interface UsuarioCadastroFormData {
   usuario: string;
   nome: string;
   senha?: string;
+  senha_atual?: string;
+  senhaAtual?: string;
   email?: string | null;
   endereco?: string | null;
   numero?: string | null;
@@ -418,6 +420,9 @@ export const usersService = {
     if (data.fantasia !== undefined) payloadData.fantasia = toNullableText(data.fantasia);
     if (data.fone !== undefined) payloadData.fone = onlyDigits(data.fone);
     if (data.whatsapp !== undefined) payloadData.whatsapp = onlyDigits(data.whatsapp);
+    if (data.senha_atual !== undefined || data.senhaAtual !== undefined) {
+      payloadData.senha_atual = toNullableText(data.senha_atual ?? data.senhaAtual);
+    }
     if (data.senha !== undefined && data.senha.trim()) {
       payloadData.senha = data.senha.trim();
     }

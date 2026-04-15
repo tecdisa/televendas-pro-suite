@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authService } from '@/services/authService';
+import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog, User } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
@@ -93,6 +93,14 @@ const Televendas = () => {
   };
 
   const empresa = authService.getEmpresa();
+  const session = authService.getSession();
+  const usuarioLogado =
+    session?.nome?.trim() ||
+    session?.usuario?.trim() ||
+    'Não identificado';
+  const empresaLogada = empresa
+    ? getEmpresaDisplayName(empresa)
+    : 'Não selecionada';
 
   const renderContent = () => {
     switch (effectiveTab) {
@@ -222,13 +230,19 @@ const Televendas = () => {
               </SheetContent>
             </Sheet>
 
-            <div>
+            <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-bold text-primary">ADS Vendas</h1>
-              {empresa && (
-                <p className="text-xs text-muted-foreground">
-                  {empresa.fantasia?.trim() || empresa.razao_social?.trim()}
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground truncate max-w-[260px] sm:max-w-[360px] flex items-center gap-1.5">
+                <User className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  {usuarioLogado}
+                </span>
+                <span className="shrink-0">|</span>
+                <Building2 className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  {empresaLogada}
+                </span>
+              </p>
             </div>
 
             {/* Desktop top navbar */}
