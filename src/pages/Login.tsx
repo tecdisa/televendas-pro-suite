@@ -7,6 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -28,6 +36,9 @@ const Login = () => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [masterId, setMasterId] = useState('');
   const [empresaId, setEmpresaId] = useState('');
+  const [forgotDialogOpen, setForgotDialogOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const navigate = useNavigate();
 
   const masterGroups = useMemo(() => groupEmpresasByMaster(empresas), [empresas]);
@@ -162,6 +173,34 @@ const Login = () => {
     resetEmpresaSelection();
   };
 
+  const handleForgotPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const email = forgotEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error('Informe seu e-mail');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const result = await authService.forgotPassword(email);
+      if (!result.success) {
+        toast.error(String(result.error));
+        return;
+      }
+
+      toast.success(
+        'Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.',
+      );
+      setForgotEmail('');
+      setForgotDialogOpen(false);
+    } catch {
+      toast.error('Erro ao solicitar recuperação de senha');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-primary/5 p-3 sm:p-4">
       <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -206,6 +245,50 @@ const Login = () => {
                     onChange={(e) => setSenha(e.target.value)}
                     required
                   />
+                </div>
+                <div className="flex justify-end">
+                  <Dialog
+                    open={forgotDialogOpen}
+                    onOpenChange={(open) => {
+                      setForgotDialogOpen(open);
+                      if (!open) {
+                        setForgotEmail('');
+                      }
+                    }}
+                  >
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="link" className="h-auto p-0 text-sm">
+                        Esqueceu sua senha?
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Recuperar senha</DialogTitle>
+                        <DialogDescription>
+                          Informe seu e-mail para receber o link de redefinição de senha.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form className="space-y-3" onSubmit={handleForgotPassword}>
+                        <div className="space-y-2">
+                          <Label htmlFor="forgot-email">E-mail</Label>
+                          <Input
+                            id="forgot-email"
+                            type="email"
+                            placeholder="Digite seu e-mail"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            required
+                            autoFocus
+                          />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={forgotLoading}>
+                          {forgotLoading
+                            ? 'Enviando...'
+                            : 'Enviar link de recuperação'}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 </>
               ) : selectingMaster ? (

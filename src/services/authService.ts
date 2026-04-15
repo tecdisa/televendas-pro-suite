@@ -204,6 +204,77 @@ export const authService = {
     }
   },
 
+  forgotPassword: async (email: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+        credentials: 'omit',
+      });
+
+      if (!res.ok) {
+        try {
+          const errData = await res.json();
+          const message =
+            errData?.error?.message ||
+            errData?.message ||
+            (typeof errData?.error === 'string' ? errData.error : undefined) ||
+            res.statusText ||
+            'Falha ao solicitar recuperação de senha';
+          return { success: false, error: message } as const;
+        } catch {
+          return {
+            success: false,
+            error: 'Falha ao solicitar recuperação de senha',
+          } as const;
+        }
+      }
+
+      const data = await res.json();
+      return { success: true, data } as const;
+    } catch {
+      return { success: false, error: 'Erro de conexão com o servidor' } as const;
+    }
+  },
+
+  resetPassword: async (token: string, senha: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token, senha }),
+        credentials: 'omit',
+      });
+
+      if (!res.ok) {
+        try {
+          const errData = await res.json();
+          const message =
+            errData?.error?.message ||
+            errData?.message ||
+            (typeof errData?.error === 'string' ? errData.error : undefined) ||
+            res.statusText ||
+            'Falha ao redefinir senha';
+          return { success: false, error: message } as const;
+        } catch {
+          return { success: false, error: 'Falha ao redefinir senha' } as const;
+        }
+      }
+
+      const data = await res.json();
+      return { success: true, data } as const;
+    } catch {
+      return { success: false, error: 'Erro de conexão com o servidor' } as const;
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('session');
   },

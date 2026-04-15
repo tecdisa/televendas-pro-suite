@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import Televendas from "./pages/Televendas";
 import EmpresaSelect from "./pages/EmpresaSelect";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,8 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/registre-se" element={<Register />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/redefinir-senha" element={<ResetPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route 
               path="/empresa" 
               element={
