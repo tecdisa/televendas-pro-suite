@@ -293,24 +293,34 @@ export const authService = {
     return session?.token;
   },
 
+  toBooleanFlag: (value: unknown): boolean => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value === 1;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return ['true', '1', 't', 'on', 'yes', 'y', 'sim', 's'].includes(normalized);
+    }
+    return false;
+  },
+
   isAdmin: () => {
     const session = authService.getSession();
-    return Boolean(
-      session?.admin ??
-        session?.payload?.user?.admin ??
-        session?.payload?.admin ??
-        session?.admin_master ??
-        session?.payload?.user?.admin_master ??
-        session?.payload?.admin_master,
+    return (
+      authService.toBooleanFlag(session?.admin) ||
+      authService.toBooleanFlag(session?.payload?.user?.admin) ||
+      authService.toBooleanFlag(session?.payload?.admin) ||
+      authService.toBooleanFlag(session?.admin_master) ||
+      authService.toBooleanFlag(session?.payload?.user?.admin_master) ||
+      authService.toBooleanFlag(session?.payload?.admin_master)
     );
   },
 
   isMasterAdmin: () => {
     const session = authService.getSession();
-    return Boolean(
-      session?.admin_master ??
-        session?.payload?.user?.admin_master ??
-        session?.payload?.admin_master,
+    return (
+      authService.toBooleanFlag(session?.admin_master) ||
+      authService.toBooleanFlag(session?.payload?.user?.admin_master) ||
+      authService.toBooleanFlag(session?.payload?.admin_master)
     );
   },
 
