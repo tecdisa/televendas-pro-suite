@@ -6,10 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, ChevronUp, Loader2, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { authService } from '@/services/authService';
 import { Product, productsService } from '@/services/productsService';
-import { StockEntry, stocksService } from '@/services/stocksService';
+import { divisionsService, Divisao } from '@/services/divisionsService';
+import { suppliersService, Fornecedor } from '@/services/suppliersService';
+import { StockEntry, StockListFilters, stocksService } from '@/services/stocksService';
 
 interface StockFormData {
   produto_id: number;
@@ -100,12 +104,15 @@ function mapStockToForm(stock: StockEntry): StockFormData {
 const toFixedNumber = (value: number, decimals = 3) =>
   Number.isFinite(value) ? value.toFixed(decimals) : '0.000';
 
+type StatusType = 'ativos' | 'inativos' | 'todos';
+
 export function EstoquesTab() {
   const [loading, setLoading] = useState(false);
   const [stocks, setStocks] = useState<StockEntry[]>([]);
   const [totalStocks, setTotalStocks] = useState(0);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [divisoes, setDivisoes] = useState<Divisao[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingStock, setEditingStock] = useState<StockEntry | null>(null);
@@ -116,12 +123,82 @@ export function EstoquesTab() {
   const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [productResults, setProductResults] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('none');
+  const empresaAtual = authService.getEmpresa();
+  const empresaCadastroId =
+    Number(empresaAtual?.empresa_master_id ?? empresaAtual?.empresa_id) || 0;
 
-  const loadStocks = async () => {
+  const [filters, setFilters] = useState<{
+    status: StatusType;
+    search: string;
+    fornecedor: string;
+    divisao: string;
+    marca: string;
+    possuiFoto?: boolean;
+    permiteVendaB2b?: boolean;
+    permiteVendaB2c?: boolean;
+    lancamento?: boolean;
+  }>({
+    status: 'ativos',
+    search: '',
+    fornecedor: 'all',
+    divisao: 'all',
+    marca: '',
+    possuiFoto: undefined,
+    permiteVendaB2b: undefined,
+    permiteVendaB2c: undefined,
+    lancamento: undefined,
+  });
+
+  const loadOptions = async () => {
+    try {
+      const [fornRes, divRes] = await Promise.all([
+        suppliersService.getAll(
+          undefined,
+          1,
+          500,
+          'ativos',
+          true,
+          empresaCadastroId || undefined,
+        ),
+        divisionsService.getAll(
+          undefined,
+          undefined,
+          1,
+          500,
+          'ativos',
+          empresaCadastroId || undefined,
+        ),
+      ]);
+      setFornecedores(fornRes.data || []);
+      setDivisoes(divRes.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar opções de estoques:', error);
+      toast.error('Erro ao carregar fornecedores/divisões');
+    }
+  };
+
+  const loadStocks = async (overrideFilters?: Partial<StockListFilters>) => {
     if (loading) return;
     setLoading(true);
     try {
-      const result = await stocksService.getAll(search, 1, 500, status);
+      const params: StockListFilters = {
+        status: overrideFilters?.status ?? filters.status,
+        search: overrideFilters?.search ?? filters.search,
+        fornecedorId:
+          overrideFilters?.fornecedorId ??
+          (filters.fornecedor !== 'all' ? Number(filters.fornecedor) : undefined),
+        divisaoId:
+          overrideFilters?.divisaoId ??
+          (filters.divisao !== 'all' ? Number(filters.divisao) : undefined),
+        marca: overrideFilters?.marca ?? filters.marca,
+        possuiFoto: overrideFilters?.possuiFoto ?? filters.possuiFoto,
+        permiteVendaB2b:
+          overrideFilters?.permiteVendaB2b ?? filters.permiteVendaB2b,
+        permiteVendaB2c:
+          overrideFilters?.permiteVendaB2c ?? filters.permiteVendaB2c,
+        lancamento: overrideFilters?.lancamento ?? filters.lancamento,
+      };
+      const result = await stocksService.getAll(params, 1, 500);
       setStocks(result.data || []);
       setTotalStocks(result.total ?? (result.data || []).length);
     } catch (error: any) {
@@ -133,9 +210,10 @@ export function EstoquesTab() {
   };
 
   useEffect(() => {
+    void loadOptions();
     void loadStocks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [empresaCadastroId]);
 
   const resetForm = () => {
     setFormData(initialFormData);
@@ -174,19 +252,23 @@ export function EstoquesTab() {
   };
 
   const handleClear = async () => {
-    setSearch('');
-    setStatus('ativos');
-    try {
-      setLoading(true);
-      const result = await stocksService.getAll('', 1, 500, 'ativos');
-      setStocks(result.data || []);
-      setTotalStocks(result.total ?? (result.data || []).length);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao carregar estoques');
-    } finally {
-      setLoading(false);
-    }
+    const resetFilters = {
+      status: 'ativos' as StatusType,
+      search: '',
+      fornecedor: 'all',
+      divisao: 'all',
+      marca: '',
+      possuiFoto: undefined,
+      permiteVendaB2b: undefined,
+      permiteVendaB2c: undefined,
+      lancamento: undefined,
+    };
+    setFilters(resetFilters);
+    await loadStocks({ status: 'ativos', search: '' });
   };
+
+  const updateFilter = (key: string, value: any) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
 
   const handleSearchProducts = async () => {
     if (!productSearch.trim()) {
@@ -312,38 +394,158 @@ export function EstoquesTab() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-            <div className="md:col-span-7">
-              <label className="text-sm font-medium mb-1 block">Pesquisa</label>
-              <Input
-                placeholder="Código, descrição, EAN, código de fábrica..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
-              />
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-1 block">Status</label>
+                  <Select
+                    value={filters.status}
+                    onValueChange={(v: StatusType) => updateFilter('status', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativos">Ativos</SelectItem>
+                      <SelectItem value="inativos">Inativos</SelectItem>
+                      <SelectItem value="todos">Todos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-5">
+                  <label className="text-sm font-medium mb-1 block">Pesquisa</label>
+                  <Input
+                    placeholder="Descrição, código, EAN, fornecedor, divisão..."
+                    value={filters.search}
+                    onChange={(e) => updateFilter('search', e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Button onClick={() => void handleSearch()} disabled={loading} className="w-full">
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Search className="h-4 w-4 mr-2" />
+                    )}
+                    Buscar
+                  </Button>
+                </div>
+                <div className="md:col-span-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => void handleClear()}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    Limpar
+                  </Button>
+                </div>
+                <div className="md:col-span-1">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full md:h-10"
+                      aria-label={filtersOpen ? 'Ocultar filtros avançados' : 'Exibir filtros avançados'}
+                    >
+                      {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+              </div>
+
+              <CollapsibleContent>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end pt-1">
+                  <div className="md:col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Marca
+                    </label>
+                    <Input
+                      value={filters.marca}
+                      onChange={(e) => updateFilter('marca', e.target.value)}
+                      placeholder="Filtrar por marca"
+                    />
+                  </div>
+
+                  <div className="md:col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Flags
+                    </label>
+                    <div className="flex flex-wrap items-center gap-4 rounded-md border px-3 py-2 min-h-10">
+                      <label className="flex items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={filters.possuiFoto === true}
+                          onCheckedChange={(v) => updateFilter('possuiFoto', v ? true : undefined)}
+                        />
+                        Possui foto
+                      </label>
+                      <label className="flex items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={filters.permiteVendaB2b === true}
+                          onCheckedChange={(v) => updateFilter('permiteVendaB2b', v ? true : undefined)}
+                        />
+                        B2B
+                      </label>
+                      <label className="flex items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={filters.permiteVendaB2c === true}
+                          onCheckedChange={(v) => updateFilter('permiteVendaB2c', v ? true : undefined)}
+                        />
+                        B2C
+                      </label>
+                      <label className="flex items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={filters.lancamento === true}
+                          onCheckedChange={(v) => updateFilter('lancamento', v ? true : undefined)}
+                        />
+                        Lançamento
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Fornecedor
+                    </label>
+                    <Select value={filters.fornecedor} onValueChange={(v) => updateFilter('fornecedor', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {fornecedores.map((f) => (
+                          <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
+                            {f.nome_fornecedor} - {f.fornecedor_id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Divisão
+                    </label>
+                    <Select value={filters.divisao} onValueChange={(v) => updateFilter('divisao', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {divisoes.map((d) => (
+                          <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
+                            {d.descricao_divisao}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CollapsibleContent>
             </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium mb-1 block">Status</label>
-              <Select value={status} onValueChange={(v: 'ativos' | 'inativos' | 'todos') => setStatus(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativos">Ativos</SelectItem>
-                  <SelectItem value="inativos">Inativos</SelectItem>
-                  <SelectItem value="todos">Todos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-1">
-              <Button onClick={() => void handleSearch()} disabled={loading} className="w-full">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-            <div className="md:col-span-2">
-              <Button variant="outline" onClick={() => void handleClear()} className="w-full">
-                Limpar
-              </Button>
-            </div>
-          </div>
+          </Collapsible>
         </CardContent>
       </Card>
 

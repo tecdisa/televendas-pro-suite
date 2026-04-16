@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, UserRoundCog, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Search, UserRoundCog, Plus, Pencil, Trash2, Loader2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,8 +37,11 @@ export function UsuariosTab() {
   const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [editId, setEditId] = useState<number | null>(null);
+  const [viewUsuario, setViewUsuario] = useState<UsuarioCadastro | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<UsuarioCadastroFormData>(initialFormData);
@@ -115,6 +118,24 @@ export function UsuariosTab() {
       setEditOpen(false);
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const openView = async (usuario: UsuarioCadastro) => {
+    setViewOpen(true);
+    setViewLoading(true);
+    setViewUsuario(usuario);
+
+    try {
+      const detail = await usersService.getById(usuario.usuario_id);
+      if (!detail) throw new Error('Usuario nao encontrado');
+      setViewUsuario(detail);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao carregar usuario');
+      setViewOpen(false);
+      setViewUsuario(null);
+    } finally {
+      setViewLoading(false);
     }
   };
 
@@ -333,6 +354,80 @@ export function UsuariosTab() {
     </div>
   );
 
+  const viewFormContent = (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Usuario</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.usuario ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.nome ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.email ?? ''} disabled />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+          <Input className="h-8 text-sm" value={statusLabel(viewUsuario?.ativo)} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Perfil</label>
+          <Input
+            className="h-8 text-sm"
+            value={perfilLabel(viewUsuario?.admin, viewUsuario?.admin_master)}
+            disabled
+          />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">
+            Forca de vendas
+          </label>
+          <Input
+            className="h-8 text-sm"
+            value={viewUsuario?.forca_de_vendas ? 'Sim' : 'Nao'}
+            disabled
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.fone ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.whatsapp ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">CEP</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.cep ?? ''} disabled />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-1 md:col-span-6">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereco</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.endereco ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Numero</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.numero ?? ''} disabled />
+        </div>
+        <div className="col-span-1 md:col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Complemento</label>
+          <Input className="h-8 text-sm" value={viewUsuario?.complemento ?? ''} disabled />
+        </div>
+      </div>
+    </div>
+  );
+
   const isInitialLoading = loading && usuarios.length === 0;
   const isLoadingMore = loading && usuarios.length > 0;
 
@@ -399,7 +494,7 @@ export function UsuariosTab() {
                     <TableHead>Status</TableHead>
                     <TableHead>Perfil</TableHead>
                     <TableHead>Forca de vendas</TableHead>
-                    <TableHead className="w-24 text-right">Acoes</TableHead>
+                    <TableHead className="w-36 text-right">Acoes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -415,6 +510,22 @@ export function UsuariosTab() {
                       <TableCell>{usuario.forca_de_vendas ? 'Sim' : 'Nao'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => openView(usuario)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Visualizar usuario</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -526,6 +637,44 @@ export function UsuariosTab() {
             <Button onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={viewOpen}
+        onOpenChange={(open) => {
+          setViewOpen(open);
+          if (!open) {
+            setViewUsuario(null);
+            setViewLoading(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Visualizar Usuario</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            {viewLoading ? (
+              <div className="flex items-center justify-center py-6 text-sm text-muted-foreground gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando usuario...
+              </div>
+            ) : (
+              viewFormContent
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setViewOpen(false);
+                setViewUsuario(null);
+              }}
+            >
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

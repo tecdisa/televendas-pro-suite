@@ -41,6 +41,18 @@ interface StockResponse {
   total: number;
 }
 
+export interface StockListFilters {
+  status?: 'ativos' | 'inativos' | 'todos';
+  search?: string;
+  fornecedorId?: number;
+  divisaoId?: number;
+  marca?: string;
+  possuiFoto?: boolean;
+  permiteVendaB2b?: boolean;
+  permiteVendaB2c?: boolean;
+  lancamento?: boolean;
+}
+
 export interface StockInput {
   produto_id: number;
   estoque?: number | null;
@@ -169,19 +181,35 @@ function getEmpresaId(): number {
 
 export const stocksService = {
   async getAll(
-    search?: string,
+    filtersOrSearch?: string | StockListFilters,
     page = 1,
     limit = 100,
     status: 'ativos' | 'inativos' | 'todos' = 'ativos',
   ): Promise<{ data: StockEntry[]; total: number }> {
     const empresaId = getEmpresaId();
+    const filters: StockListFilters =
+      typeof filtersOrSearch === 'string'
+        ? { search: filtersOrSearch, status }
+        : { ...(filtersOrSearch ?? {}) };
+    const resolvedStatus = filters.status ?? status;
     const params = new URLSearchParams();
     params.set('empresaId', String(empresaId));
     params.set('page', String(page));
     params.set('limit', String(limit));
-    params.set('status', status);
-    if (status === 'todos') params.set('incluirInativos', 'true');
-    if (search?.trim()) params.set('q', search.trim());
+    params.set('status', resolvedStatus);
+    if (resolvedStatus === 'todos') params.set('incluirInativos', 'true');
+    if (filters.search?.trim()) params.set('q', filters.search.trim());
+    if (filters.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
+    if (filters.divisaoId) params.set('divisaoId', String(filters.divisaoId));
+    if (filters.marca?.trim()) params.set('marca', filters.marca.trim());
+    if (filters.lancamento !== undefined)
+      params.set('lancamento', String(Boolean(filters.lancamento)));
+    if (filters.possuiFoto !== undefined)
+      params.set('possuiFoto', String(Boolean(filters.possuiFoto)));
+    if (filters.permiteVendaB2b !== undefined)
+      params.set('permiteVendaB2b', String(Boolean(filters.permiteVendaB2b)));
+    if (filters.permiteVendaB2c !== undefined)
+      params.set('permiteVendaB2c', String(Boolean(filters.permiteVendaB2c)));
 
     const response = await apiClient.fetch(`${API_BASE}/api/estoques?${params.toString()}`);
     if (!response.ok) {

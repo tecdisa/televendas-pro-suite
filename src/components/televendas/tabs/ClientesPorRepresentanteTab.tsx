@@ -38,7 +38,7 @@ export function ClientesPorRepresentanteTab() {
   const [importFilters, setImportFilters] = useState({
     segmentoId: 'all',
     uf: 'all',
-    cidade: 'all',
+    cidadeId: 'all',
     bairro: '',
     redeId: 'all',
     rotaId: 'all',
@@ -51,6 +51,7 @@ export function ClientesPorRepresentanteTab() {
   const [importLoading, setImportLoading] = useState(false);
   const [importPreview, setImportPreview] = useState<Client[]>([]);
   const [importPreviewLoading, setImportPreviewLoading] = useState(false);
+  const [importHasSearched, setImportHasSearched] = useState(false);
   const [importSelectedIds, setImportSelectedIds] = useState<Set<number>>(new Set());
 
   // Copy modal
@@ -163,8 +164,9 @@ export function ClientesPorRepresentanteTab() {
   // === IMPORT MODAL ===
   const openImportModal = async () => {
     setImportOpen(true);
-    setImportFilters({ segmentoId: 'all', uf: 'all', cidade: 'all', bairro: '', redeId: 'all', rotaId: 'all' });
+    setImportFilters({ segmentoId: 'all', uf: 'all', cidadeId: 'all', bairro: '', redeId: 'all', rotaId: 'all' });
     setImportPreview([]);
+    setImportHasSearched(false);
     setImportSelectedIds(new Set());
     // Load metadata for import filters
     try {
@@ -192,13 +194,20 @@ export function ClientesPorRepresentanteTab() {
 
   const handleImportSearch = async () => {
     setImportPreviewLoading(true);
+    setImportHasSearched(true);
     setImportSelectedIds(new Set());
     try {
       const f = importFilters;
       const searchFilters: any = {};
-      if (f.segmentoId && f.segmentoId !== 'all') searchFilters.segmentoId = Number(f.segmentoId);
+      searchFilters.status = 'todos';
+      if (f.segmentoId && f.segmentoId !== 'all') searchFilters.classeId = Number(f.segmentoId);
       if (f.uf && f.uf !== 'all') searchFilters.uf = f.uf;
-      if (f.cidade && f.cidade !== 'all') searchFilters.cidade = f.cidade;
+      if (f.cidadeId && f.cidadeId !== 'all') {
+        const cidadeId = Number(f.cidadeId);
+        searchFilters.cidadeId = cidadeId;
+        const cidadeSel = importCidades.find((c) => c.cidade_id === cidadeId);
+        if (cidadeSel?.nome_cidade) searchFilters.cidade = cidadeSel.nome_cidade;
+      }
       if (f.bairro) searchFilters.bairro = f.bairro;
       if (f.redeId && f.redeId !== 'all') searchFilters.redeId = Number(f.redeId);
       if (f.rotaId && f.rotaId !== 'all') searchFilters.rotaId = Number(f.rotaId);
@@ -493,7 +502,7 @@ export function ClientesPorRepresentanteTab() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">UF</label>
-                <Select value={importFilters.uf} onValueChange={v => setImportFilters({ ...importFilters, uf: v, cidade: 'all' })}>
+                <Select value={importFilters.uf} onValueChange={v => setImportFilters({ ...importFilters, uf: v, cidadeId: 'all' })}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -503,11 +512,11 @@ export function ClientesPorRepresentanteTab() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade</label>
-                <Select value={importFilters.cidade} onValueChange={v => setImportFilters({ ...importFilters, cidade: v })} disabled={importFilters.uf === 'all'}>
+                <Select value={importFilters.cidadeId} onValueChange={v => setImportFilters({ ...importFilters, cidadeId: v })} disabled={importFilters.uf === 'all'}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
-                    {importCidades.map(c => <SelectItem key={c.cidade_id} value={c.nome_cidade}>{c.nome_cidade}</SelectItem>)}
+                    {importCidades.map(c => <SelectItem key={c.cidade_id} value={String(c.cidade_id)}>{c.nome_cidade}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -567,6 +576,12 @@ export function ClientesPorRepresentanteTab() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {importHasSearched && !importPreviewLoading && importPreview.length === 0 && (
+              <div className="text-sm text-muted-foreground border rounded p-4 text-center">
+                Nenhum cliente encontrado para os filtros informados.
               </div>
             )}
           </div>

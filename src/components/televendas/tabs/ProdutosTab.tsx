@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -85,6 +85,8 @@ const PINNABLE_PRODUCT_COLUMNS = PRODUCTS_GRID_COLUMNS.filter(
 );
 
 type StatusType = 'ativos' | 'inativos' | 'todos';
+type RequiredProductField = 'descricao' | 'unidade' | 'fornecedorId' | 'divisaoId';
+type RequiredProductErrors = Partial<Record<RequiredProductField, string>>;
 
 interface ProductFormState {
   id: number;
@@ -370,6 +372,28 @@ function mapFormToPayload(form: ProductFormState): ProductCadastroInput {
   return payload;
 }
 
+function validateRequiredProductFields(form: ProductFormState): RequiredProductErrors {
+  const errors: RequiredProductErrors = {};
+
+  if (!form.descricao.trim()) {
+    errors.descricao = 'Descrição é obrigatória';
+  }
+
+  if (!form.unidade.trim()) {
+    errors.unidade = 'Unidade é obrigatória';
+  }
+
+  if (!Number(form.fornecedorId)) {
+    errors.fornecedorId = 'Fornecedor é obrigatório';
+  }
+
+  if (!Number(form.divisaoId)) {
+    errors.divisaoId = 'Divisão é obrigatória';
+  }
+
+  return errors;
+}
+
 export function ProdutosTab() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -409,6 +433,8 @@ export function ProdutosTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormState>(initialFormData);
+  const [requiredErrors, setRequiredErrors] = useState<RequiredProductErrors>({});
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [kitItens, setKitItens] = useState<ProductKitFormItem[]>([]);
@@ -417,6 +443,8 @@ export function ProdutosTab() {
   const [kitSearchResults, setKitSearchResults] = useState<Product[]>([]);
   const [selectedKitProductId, setSelectedKitProductId] = useState('none');
   const [kitQuantity, setKitQuantity] = useState(1);
+  const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
+  const kitSnapshotRef = useRef<string>(JSON.stringify([] as ProductKitFormItem[]));
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
   const empresaCadastroId =
@@ -650,10 +678,53 @@ export function ProdutosTab() {
     await loadProdutos(resetFilters);
   };
 
+  const setFormSnapshot = (nextForm: ProductFormState, nextKitItens: ProductKitFormItem[]) => {
+    formSnapshotRef.current = JSON.stringify(nextForm);
+    kitSnapshotRef.current = JSON.stringify(nextKitItens);
+  };
+
+  const isFormDirty = () =>
+    JSON.stringify(formData) !== formSnapshotRef.current ||
+    JSON.stringify(kitItens) !== kitSnapshotRef.current;
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setRequiredErrors({});
+    setShowConfirmClose(false);
+  };
+
+  const requestCloseDialog = () => {
+    if (isFormDirty()) {
+      setShowConfirmClose(true);
+      return;
+    }
+    closeDialog();
+  };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      requestCloseDialog();
+      return;
+    }
+    setDialogOpen(true);
+  };
+
+  const handleConfirmClose = () => {
+    closeDialog();
+  };
+
+  const handleCancelClose = () => {
+    setShowConfirmClose(false);
+  };
+
   const openCreate = () => {
+    const nextForm = { ...initialFormData };
+    const nextKitItens: ProductKitFormItem[] = [];
     setEditingProduct(null);
-    setFormData({ ...initialFormData });
-    setKitItens([]);
+    setFormData(nextForm);
+    setRequiredErrors({});
+    setKitItens(nextKitItens);
+    setFormSnapshot(nextForm, nextKitItens);
     setKitSearch('');
     setKitSearchResults([]);
     setSelectedKitProductId('none');
@@ -669,9 +740,13 @@ export function ProdutosTab() {
         toast.error('Produto não encontrado');
         return;
       }
+      const nextForm = mapProductToForm(detail);
+      const nextKitItens = mapProductKitToFormItems(detail);
       setEditingProduct(detail);
-      setFormData(mapProductToForm(detail));
-      setKitItens(mapProductKitToFormItems(detail));
+      setFormData(nextForm);
+      setRequiredErrors({});
+      setKitItens(nextKitItens);
+      setFormSnapshot(nextForm, nextKitItens);
       setKitSearch('');
       setKitSearchResults([]);
       setSelectedKitProductId('none');
@@ -689,20 +764,10 @@ export function ProdutosTab() {
     const ean13 = onlyDigits(formData.ean13, 13);
     const dun14 = onlyDigits(formData.dun14, 14);
 
-    if (!formData.descricao.trim()) {
-      toast.error('Preencha a descrição do produto');
-      return;
-    }
-    if (!formData.unidade.trim()) {
-      toast.error('Preencha a unidade');
-      return;
-    }
-    if (!formData.fornecedorId) {
-      toast.error('Selecione o fornecedor');
-      return;
-    }
-    if (!formData.divisaoId) {
-      toast.error('Selecione a divisão');
+    const errors = validateRequiredProductFields(formData);
+    if (Object.keys(errors).length > 0) {
+      setRequiredErrors(errors);
+      toast.error('Preencha todos os campos obrigatórios (*)');
       return;
     }
     if (ean13.length > 13) {
@@ -728,7 +793,7 @@ export function ProdutosTab() {
         await productsService.createCadastro(payload);
         toast.success('Produto criado com sucesso');
       }
-      setDialogOpen(false);
+      closeDialog();
       await loadProdutos();
     } catch (error: any) {
       console.error('Erro ao salvar produto:', error);
@@ -758,6 +823,13 @@ export function ProdutosTab() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   const updateForm = (key: keyof ProductFormState, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
+  const clearRequiredError = (key: RequiredProductField) =>
+    setRequiredErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
 
   const handleSearchKitProducts = async () => {
     const term = kitSearch.trim();
@@ -1258,7 +1330,7 @@ export function ProdutosTab() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="w-[95vw] max-w-5xl max-h-[90dvh] overflow-hidden !flex !flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1305,24 +1377,53 @@ export function ProdutosTab() {
                   <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs font-semibold">Descrição *</Label>
                     <Input
-                      className="h-8 text-xs"
+                      required
+                      aria-invalid={Boolean(requiredErrors.descricao)}
+                      className={cn(
+                        'h-8 text-xs',
+                        requiredErrors.descricao && 'border-destructive focus-visible:ring-destructive',
+                      )}
                       value={formData.descricao}
-                      onChange={(e) => updateForm('descricao', e.target.value.toUpperCase())}
+                      onChange={(e) => {
+                        const nextValue = e.target.value.toUpperCase();
+                        updateForm('descricao', nextValue);
+                        if (nextValue.trim()) clearRequiredError('descricao');
+                      }}
                     />
+                    {requiredErrors.descricao ? (
+                      <p className="mt-1 text-[11px] text-destructive">{requiredErrors.descricao}</p>
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs font-semibold">Unidade *</Label>
-                    <Select value={formData.unidade} onValueChange={(v) => updateForm('unidade', v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <Select
+                      value={formData.unidade}
+                      onValueChange={(v) => {
+                        updateForm('unidade', v);
+                        if (v.trim()) clearRequiredError('unidade');
+                      }}
+                    >
+                      <SelectTrigger
+                        aria-invalid={Boolean(requiredErrors.unidade)}
+                        className={cn(
+                          'h-8 text-xs',
+                          requiredErrors.unidade && 'border-destructive focus:ring-destructive',
+                        )}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {UNIDADES.map((u) => (
                           <SelectItem key={u} value={u}>{u}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {requiredErrors.unidade ? (
+                      <p className="mt-1 text-[11px] text-destructive">{requiredErrors.unidade}</p>
+                    ) : null}
                   </div>
                   <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">EAN13</Label>
@@ -1367,9 +1468,20 @@ export function ProdutosTab() {
                     <Label className="text-xs font-semibold">Fornecedor *</Label>
                     <Select
                       value={formData.fornecedorId ? String(formData.fornecedorId) : 'none'}
-                      onValueChange={(v) => updateForm('fornecedorId', v === 'none' ? 0 : Number(v))}
+                      onValueChange={(v) => {
+                        updateForm('fornecedorId', v === 'none' ? 0 : Number(v));
+                        if (v !== 'none') clearRequiredError('fornecedorId');
+                      }}
                     >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectTrigger
+                        aria-invalid={Boolean(requiredErrors.fornecedorId)}
+                        className={cn(
+                          'h-8 text-xs',
+                          requiredErrors.fornecedorId && 'border-destructive focus:ring-destructive',
+                        )}
+                      >
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Selecione</SelectItem>
                         {fornecedoresDisponiveis.map((f) => (
@@ -1379,14 +1491,28 @@ export function ProdutosTab() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {requiredErrors.fornecedorId ? (
+                      <p className="mt-1 text-[11px] text-destructive">{requiredErrors.fornecedorId}</p>
+                    ) : null}
                   </div>
                   <div className="col-span-1 md:col-span-6">
                     <Label className="text-xs font-semibold">Divisão *</Label>
                     <Select
                       value={formData.divisaoId ? String(formData.divisaoId) : 'none'}
-                      onValueChange={(v) => updateForm('divisaoId', v === 'none' ? 0 : Number(v))}
+                      onValueChange={(v) => {
+                        updateForm('divisaoId', v === 'none' ? 0 : Number(v));
+                        if (v !== 'none') clearRequiredError('divisaoId');
+                      }}
                     >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectTrigger
+                        aria-invalid={Boolean(requiredErrors.divisaoId)}
+                        className={cn(
+                          'h-8 text-xs',
+                          requiredErrors.divisaoId && 'border-destructive focus:ring-destructive',
+                        )}
+                      >
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Selecione</SelectItem>
                         {divisoes.map((d) => (
@@ -1396,6 +1522,9 @@ export function ProdutosTab() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {requiredErrors.divisaoId ? (
+                      <p className="mt-1 text-[11px] text-destructive">{requiredErrors.divisaoId}</p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -1974,7 +2103,7 @@ export function ProdutosTab() {
           </Tabs>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            <Button variant="outline" onClick={requestCloseDialog} disabled={submitting}>
               Cancelar
             </Button>
             <Button onClick={() => void handleSave()} disabled={submitting}>
@@ -1984,6 +2113,21 @@ export function ProdutosTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as alterações não salvas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelClose}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={Boolean(deleteProduct)} onOpenChange={(open) => !open && setDeleteProduct(null)}>
         <AlertDialogContent>
