@@ -37,7 +37,14 @@ export const getApiBase = (): string => {
 
   // Prefer build-time Vite env when it is present and non-empty
   if (envBase) {
-    return normalizeBase(envBase);
+    const normalizedEnvBase = normalizeBase(envBase);
+    const pointsToLocalApi = /^https?:\/\/(localhost|127\.0\.0\.1|::1)(:\d+)?/i.test(
+      normalizedEnvBase,
+    );
+    if (!isLocalHost && pointsToLocalApi) {
+      return '';
+    }
+    return normalizedEnvBase;
   }
 
   // Local default
