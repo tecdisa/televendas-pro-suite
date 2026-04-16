@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService, getEmpresaDisplayName } from '@/services/authService';
+import { usersService, type UsuarioPermissao } from '@/services/usersService';
 import { Button } from '@/components/ui/button';
 import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog, User } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -59,6 +60,82 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'clientes-representante': { title: 'Clientes por Representante', icon: Users },
 };
 
+const TAB_TO_FUNCAO: Record<string, string | null> = {
+  dashboard: null,
+  perfil: null,
+  dados: null,
+  itinerarios: null,
+  visitas: null,
+  pesquisa: 'PEDIDOS',
+  clientes: 'CLIENTES',
+  'clientes-representante': 'CLIENTES_REPRESENTANTES',
+  fornecedores: 'FORNECEDORES',
+  representantes: 'FORCA_DE_VENDAS',
+  usuarios: 'USUARIOS',
+  cidades: 'CIDADES',
+  grupos: 'GRUPOS',
+  divisoes: 'DIVISOES',
+  redes: 'REDES',
+  prazos: 'PRAZOS',
+  'formas-pagamento': 'FORMAS_PAGAMENTO',
+  segmentos: 'SEGMENTOS_VENDA',
+  rotas: 'ROTAS_CLIENTES',
+  produtos: 'PRODUTOS',
+  estoques: 'ESTOQUES',
+};
+
+function normalizeFuncaoKey(value: string | null | undefined): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function buildAllowedTabs(
+  isMasterAdmin: boolean,
+  canManageUsers: boolean,
+  permissoes: UsuarioPermissao[],
+): Set<string> {
+  const allTabs = Object.keys(pageTitles);
+  if (isMasterAdmin) return new Set(allTabs);
+
+  const canSelectByFuncao = new Map(
+    permissoes.map((item) => [
+      normalizeFuncaoKey(item.funcao),
+      Boolean(item.can_select),
+    ]),
+  );
+
+  const allowed = new Set<string>();
+  allTabs.forEach((tab) => {
+    if (tab === 'usuarios' && !canManageUsers) {
+      return;
+    }
+    const funcao = normalizeFuncaoKey(TAB_TO_FUNCAO[tab]);
+    if (!funcao) {
+      allowed.add(tab);
+      return;
+    }
+    if (canSelectByFuncao.get(funcao)) {
+      allowed.add(tab);
+    }
+  });
+
+  if (canManageUsers) {
+    allowed.add('usuarios');
+  }
+
+  if (!allowed.size) {
+    allowed.add('dashboard');
+    allowed.add('perfil');
+  }
+
+  return allowed;
+}
+
 const Televendas = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,19 +143,57 @@ const Televendas = () => {
   const [digitacaoOpen, setDigitacaoOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const [permissoesUsuario, setPermissoesUsuario] = useState<UsuarioPermissao[]>([]);
+  const [permissionsReady, setPermissionsReady] = useState(false);
+  const isMasterAdmin = authService.isMasterAdmin();
   const canManageUsers = authService.isAdmin();
-  const availableNavGroups = useMemo(
-    () => getNavGroups(canManageUsers),
-    [canManageUsers],
+  const allowedTabs = useMemo(
+    () => buildAllowedTabs(isMasterAdmin, canManageUsers, permissoesUsuario),
+    [isMasterAdmin, canManageUsers, permissoesUsuario],
   );
-  const effectiveTab = activeTab === 'usuarios' && !canManageUsers ? 'dashboard' : activeTab;
+  const availableNavGroups = useMemo(
+    () => getNavGroups({ canManageUsers, allowedTabs }),
+    [canManageUsers, allowedTabs],
+  );
+  const effectiveTab = allowedTabs.has(activeTab) ? activeTab : 'dashboard';
 
   useEffect(() => {
-    if (activeTab === 'usuarios' && !canManageUsers) {
-      toast.error('Acesso permitido somente para administradores');
+    let cancelled = false;
+    const loadPermissions = async () => {
+      try {
+        if (isMasterAdmin) {
+          if (!cancelled) {
+            setPermissoesUsuario([]);
+            setPermissionsReady(true);
+          }
+          return;
+        }
+        const permissoes = await usersService.getMyPermissions();
+        if (!cancelled) {
+          setPermissoesUsuario(permissoes);
+          setPermissionsReady(true);
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          setPermissoesUsuario([]);
+          setPermissionsReady(true);
+          toast.error(error?.message || 'Erro ao carregar permissoes do usuario');
+        }
+      }
+    };
+    loadPermissions();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMasterAdmin]);
+
+  useEffect(() => {
+    if (!permissionsReady) return;
+    if (!allowedTabs.has(activeTab)) {
+      toast.error('Você não possui permissão para acessar este módulo');
       setSearchParams({ tab: 'dashboard' });
     }
-  }, [activeTab, canManageUsers, setSearchParams]);
+  }, [activeTab, allowedTabs, permissionsReady, setSearchParams]);
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });

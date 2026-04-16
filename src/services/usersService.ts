@@ -57,6 +57,17 @@ export interface UsuarioCadastroFormData {
   atualizado_em?: string | null;
 }
 
+export interface UsuarioPermissao {
+  funcao_sistema_id: number;
+  funcao: string;
+  obs?: string | null;
+  can_select: boolean;
+  can_insert: boolean;
+  can_update: boolean;
+  can_delete: boolean;
+  personalizado?: boolean;
+}
+
 export interface UsuarioCreateResult {
   usuario: UsuarioCadastro;
   email_delivery?: {
@@ -91,7 +102,7 @@ function toBoolean(value: any, fallback = false): boolean {
   if (value === undefined || value === null || value === '') return fallback;
   if (typeof value === 'boolean') return value;
   const normalized = String(value).trim().toLowerCase();
-  return ['true', '1', 'on', 'yes', 'sim'].includes(normalized);
+  return ['true', '1', 't', 'on', 'yes', 'y', 'sim', 's'].includes(normalized);
 }
 
 function toNumberArray(value: any): number[] {
@@ -152,6 +163,19 @@ function normalizeUsuario(raw: any): UsuarioCadastro {
     empresa_ids: toNumberArray(raw?.empresa_ids ?? raw?.empresas ?? []),
     criado_em: raw?.criado_em ? String(raw.criado_em) : null,
     atualizado_em: raw?.atualizado_em ? String(raw.atualizado_em) : null,
+  };
+}
+
+function normalizePermissao(raw: any): UsuarioPermissao {
+  return {
+    funcao_sistema_id: Number(raw?.funcao_sistema_id ?? 0),
+    funcao: String(raw?.funcao ?? '').trim(),
+    obs: toNullableText(raw?.obs),
+    can_select: toBoolean(raw?.can_select ?? raw?.select, false),
+    can_insert: toBoolean(raw?.can_insert ?? raw?.insert, false),
+    can_update: toBoolean(raw?.can_update ?? raw?.update, false),
+    can_delete: toBoolean(raw?.can_delete ?? raw?.delete, false),
+    personalizado: toBoolean(raw?.personalizado, false),
   };
 }
 
@@ -448,5 +472,84 @@ export const usersService = {
     if (!res.ok && res.status !== 204) {
       throw new Error(await parseErrorMessage(res, 'Falha ao excluir usuario'));
     }
+  },
+
+  async getPermissions(id: number): Promise<UsuarioPermissao[]> {
+    const empresaId = await getEmpresaId();
+    const url = `${API_BASE}/api/usuarios/${id}/permissoes?empresaId=${empresaId}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        await parseErrorMessage(res, 'Falha ao buscar permissoes do usuario'),
+      );
+    }
+
+    const json = await res.json();
+    const arr = Array.isArray(json?.permissoes) ? json.permissoes : [];
+    return arr.map(normalizePermissao);
+  },
+
+  async getMyPermissions(): Promise<UsuarioPermissao[]> {
+    const res = await apiClient.fetch(`${API_BASE}/api/usuarios/me/permissoes`, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        await parseErrorMessage(res, 'Falha ao buscar permissoes do usuario logado'),
+      );
+    }
+
+    const json = await res.json();
+    const arr = Array.isArray(json?.permissoes) ? json.permissoes : [];
+    return arr.map(normalizePermissao);
+  },
+
+  async updatePermissions(
+    id: number,
+    permissoes: Array<{
+      funcao_sistema_id: number;
+      can_select: boolean;
+      can_insert: boolean;
+      can_update: boolean;
+      can_delete: boolean;
+    }>,
+  ): Promise<UsuarioPermissao[]> {
+    const empresaId = await getEmpresaId();
+    const url = `${API_BASE}/api/usuarios/${id}/permissoes?empresaId=${empresaId}`;
+    const payload = {
+      data: {
+        replaceAll: true,
+        permissoes: permissoes.map((item) => ({
+          funcao_sistema_id: Number(item.funcao_sistema_id),
+          can_select: Boolean(item.can_select),
+          can_insert: Boolean(item.can_insert),
+          can_update: Boolean(item.can_update),
+          can_delete: Boolean(item.can_delete),
+        })),
+      },
+    };
+
+    const res = await apiClient.fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        await parseErrorMessage(res, 'Falha ao atualizar permissoes do usuario'),
+      );
+    }
+
+    const json = await res.json();
+    const arr = Array.isArray(json?.permissoes) ? json.permissoes : [];
+    return arr.map(normalizePermissao);
   },
 };

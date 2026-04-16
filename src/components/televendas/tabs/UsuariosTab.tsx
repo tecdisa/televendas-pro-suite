@@ -9,7 +9,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { usersService, type UsuarioCadastro, type UsuarioCadastroFormData } from '@/services/usersService';
+import {
+  usersService,
+  type UsuarioCadastro,
+  type UsuarioCadastroFormData,
+  type UsuarioPermissao,
+} from '@/services/usersService';
 
 const PAGE_LIMIT = 100;
 
@@ -42,6 +47,7 @@ export function UsuariosTab() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [formData, setFormData] = useState<UsuarioCadastroFormData>(initialFormData);
+  const [permissoes, setPermissoes] = useState<UsuarioPermissao[]>([]);
 
   const loadUsuarios = async (reset = false) => {
     if (loading) return;
@@ -83,6 +89,7 @@ export function UsuariosTab() {
 
   const resetForm = () => {
     setFormData(initialFormData);
+    setPermissoes([]);
     setEditId(null);
   };
 
@@ -98,7 +105,10 @@ export function UsuariosTab() {
     setFormLoading(true);
 
     try {
-      const detail = await usersService.getById(usuario.usuario_id);
+      const [detail, permissoesUsuario] = await Promise.all([
+        usersService.getById(usuario.usuario_id),
+        usersService.getPermissions(usuario.usuario_id),
+      ]);
       if (!detail) throw new Error('Usuario nao encontrado');
 
       setFormData({
@@ -110,6 +120,7 @@ export function UsuariosTab() {
         admin: detail.admin ?? false,
         forca_de_vendas: detail.forca_de_vendas ?? false,
       });
+      setPermissoes(permissoesUsuario);
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao carregar usuario');
       setEditOpen(false);
@@ -215,6 +226,16 @@ export function UsuariosTab() {
         admin: formData.admin ?? false,
         forca_de_vendas: formData.forca_de_vendas ?? false,
       });
+      await usersService.updatePermissions(
+        editId,
+        permissoes.map((item) => ({
+          funcao_sistema_id: item.funcao_sistema_id,
+          can_select: item.can_select,
+          can_insert: item.can_insert,
+          can_update: item.can_update,
+          can_delete: item.can_delete,
+        })),
+      );
       toast.success('Vinculo do usuario atualizado com sucesso');
       setEditOpen(false);
       resetForm();
@@ -247,6 +268,20 @@ export function UsuariosTab() {
     if (element.scrollTop + element.clientHeight >= element.scrollHeight - 24) {
       loadUsuarios();
     }
+  };
+
+  const togglePermissao = (
+    funcaoSistemaId: number,
+    field: 'can_select' | 'can_insert' | 'can_update' | 'can_delete',
+    checked: boolean,
+  ) => {
+    setPermissoes((prev) =>
+      prev.map((item) =>
+        item.funcao_sistema_id === funcaoSistemaId
+          ? { ...item, [field]: checked }
+          : item,
+      ),
+    );
   };
 
   const inviteFormContent = (
@@ -329,6 +364,124 @@ export function UsuariosTab() {
           />
           Forca de vendas
         </label>
+      </div>
+
+      <div className="border-b border-primary/50 pb-1 mt-4">
+        <span className="text-sm font-medium text-primary">Permissoes por Modulo</span>
+      </div>
+
+      <div className="rounded-md border max-h-[38vh] overflow-auto">
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-background">
+            <TableRow>
+              <TableHead>Modulo</TableHead>
+              <TableHead className="w-20 text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">C</span>
+                    </TooltipTrigger>
+                    <TooltipContent>Consultar (Select)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="w-20 text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">I</span>
+                    </TooltipTrigger>
+                    <TooltipContent>Inserir (Insert)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="w-20 text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">A</span>
+                    </TooltipTrigger>
+                    <TooltipContent>Alterar (Update)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="w-20 text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">E</span>
+                    </TooltipTrigger>
+                    <TooltipContent>Excluir (Delete)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {permissoes.map((item) => (
+              <TableRow key={item.funcao_sistema_id}>
+                <TableCell className="font-medium">
+                  {item.obs?.trim() || item.funcao}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={item.can_select}
+                    onCheckedChange={(checked) =>
+                      togglePermissao(
+                        item.funcao_sistema_id,
+                        'can_select',
+                        Boolean(checked),
+                      )
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={item.can_insert}
+                    onCheckedChange={(checked) =>
+                      togglePermissao(
+                        item.funcao_sistema_id,
+                        'can_insert',
+                        Boolean(checked),
+                      )
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={item.can_update}
+                    onCheckedChange={(checked) =>
+                      togglePermissao(
+                        item.funcao_sistema_id,
+                        'can_update',
+                        Boolean(checked),
+                      )
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={item.can_delete}
+                    onCheckedChange={(checked) =>
+                      togglePermissao(
+                        item.funcao_sistema_id,
+                        'can_delete',
+                        Boolean(checked),
+                      )
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+            {!permissoes.length && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">
+                  Nenhum modulo de permissao encontrado
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

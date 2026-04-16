@@ -85,30 +85,42 @@ const baseNavGroups: NavGroup[] = [
   },
 ];
 
-export function getNavGroups(canManageUsers = true): NavGroup[] {
-  if (canManageUsers) return baseNavGroups;
+function filterNavNode(
+  child: NavChild,
+  options: { canManageUsers: boolean; allowedTabs?: Set<string> },
+): NavChild | null {
+  if (child.tab === 'usuarios' && !options.canManageUsers) return null;
+
+  if (child.tab && options.allowedTabs && !options.allowedTabs.has(child.tab)) {
+    return null;
+  }
+
+  if (!child.children) return child;
+
+  const filteredChildren = child.children
+    .map((subChild) => filterNavNode(subChild, options))
+    .filter((subChild): subChild is NavChild => subChild !== null);
+
+  if (!filteredChildren.length) return null;
+  return { ...child, children: filteredChildren };
+}
+
+export function getNavGroups(
+  options: { canManageUsers?: boolean; allowedTabs?: Set<string> } = {},
+): NavGroup[] {
+  const canManageUsers = options.canManageUsers ?? true;
 
   return baseNavGroups
     .map((group) => ({
       ...group,
       children: group.children
-        .map((child) => {
-          if (child.tab === 'usuarios') return null;
-          if (!child.children) return child;
-
-          const filteredChildren = child.children.filter(
-            (subChild) => subChild.tab !== 'usuarios',
-          );
-          return filteredChildren.length
-            ? { ...child, children: filteredChildren }
-            : null;
-        })
+        .map((child) => filterNavNode(child, { canManageUsers, allowedTabs: options.allowedTabs }))
         .filter((child): child is NavChild => child !== null),
     }))
     .filter((group) => group.children.length > 0);
 }
 
-export const navGroups: NavGroup[] = getNavGroups(true);
+export const navGroups: NavGroup[] = getNavGroups({ canManageUsers: true });
 
 interface TopNavbarProps {
   activeTab: string;
