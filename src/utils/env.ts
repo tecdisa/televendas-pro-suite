@@ -1,8 +1,10 @@
 export const getApiBase = (): string => {
   const protocol = typeof window !== 'undefined' ? window.location.protocol || '' : '';
   const host = typeof window !== 'undefined' ? window.location.hostname || '' : '';
+  const isDev = Boolean((import.meta as any)?.env?.DEV);
   const envBaseRaw = (import.meta as any)?.env?.VITE_API_BASE;
   const envBase = typeof envBaseRaw === 'string' ? envBaseRaw.trim() : '';
+  const ADS_PROD_API_BASE = 'http://adsvendas-b.adsapi.com.br:3000';
   const isLocalHost =
     host === 'localhost' ||
     host === '127.0.0.1' ||
@@ -35,6 +37,11 @@ export const getApiBase = (): string => {
     return 'https://adsvendas.adsapi.com.br';
   }
 
+  // Frontend hospedado no domínio adsapi deve falar com a API backend fixa.
+  if (!isLocalHost && host.endsWith('adsapi.com.br')) {
+    return ADS_PROD_API_BASE;
+  }
+
   // Prefer build-time Vite env when it is present and non-empty
   if (envBase) {
     const normalizedEnvBase = normalizeBase(envBase);
@@ -42,16 +49,16 @@ export const getApiBase = (): string => {
       normalizedEnvBase,
     );
     if (!isLocalHost && pointsToLocalApi) {
-      return '';
+      return ADS_PROD_API_BASE;
     }
     return normalizedEnvBase;
   }
 
   // Local default
-  if (isLocalHost || protocol === 'http:') return 'http://localhost:3000';
+  if (isLocalHost || isDev || protocol === 'file:') return 'http://localhost:3000';
 
-  // Produção sem env explícita: same-origin (Nginx/Proxy encaminha /api)
-  return '';
+  // Produção sem env explícita
+  return ADS_PROD_API_BASE;
 };
 
 export const API_BASE = getApiBase();
