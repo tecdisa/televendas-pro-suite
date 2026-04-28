@@ -27,6 +27,7 @@ export function ClientesPorRepresentanteTab() {
   const [clientsLoadingMore, setClientsLoadingMore] = useState(false);
   const [clientsPage, setClientsPage] = useState(1);
   const [clientsHasMore, setClientsHasMore] = useState(false);
+  const [clientsTotal, setClientsTotal] = useState(0);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -116,8 +117,9 @@ export function ClientesPorRepresentanteTab() {
     setSelectedClientIds(new Set());
     setClientsPage(1);
     setClientsHasMore(false);
+    setClientsTotal(0);
     try {
-      const batch = await clientsService.getByRepresentante({
+      const result = await clientsService.getByRepresentante({
         representanteId: selectedRep.representante_id,
         q: f.search || undefined,
         uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
@@ -126,9 +128,10 @@ export function ClientesPorRepresentanteTab() {
         page: 1,
         limit: PAGE_LIMIT,
       });
-      setClients(batch);
+      setClients(result.data);
+      setClientsTotal(result.total);
       setClientsPage(2);
-      setClientsHasMore(batch.length === PAGE_LIMIT);
+      setClientsHasMore(result.data.length === PAGE_LIMIT);
     } catch {
       toast.error('Erro ao carregar clientes do representante');
     } finally {
@@ -142,7 +145,7 @@ export function ClientesPorRepresentanteTab() {
     setClientsLoadingMore(true);
     const f = activeFiltersRef.current;
     try {
-      const batch = await clientsService.getByRepresentante({
+      const result = await clientsService.getByRepresentante({
         representanteId: selectedRep.representante_id,
         q: f.search || undefined,
         uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
@@ -151,9 +154,9 @@ export function ClientesPorRepresentanteTab() {
         page: clientsPage,
         limit: PAGE_LIMIT,
       });
-      setClients(prev => [...prev, ...batch]);
+      setClients(prev => [...prev, ...result.data]);
       setClientsPage(prev => prev + 1);
-      setClientsHasMore(batch.length === PAGE_LIMIT);
+      setClientsHasMore(result.data.length === PAGE_LIMIT);
     } catch {
       toast.error('Erro ao carregar mais clientes');
     } finally {
@@ -438,7 +441,7 @@ export function ClientesPorRepresentanteTab() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                Clientes de {selectedRep.codigo_representante} - {selectedRep.nome_representante} ({clients.length})
+                Clientes de {selectedRep.codigo_representante} - {selectedRep.nome_representante} ({clientsTotal})
               </CardTitle>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={openImportModal}>
@@ -540,7 +543,7 @@ export function ClientesPorRepresentanteTab() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Registro: {clients.length}{clientsHasMore ? '+' : ''}
+              Carregados: {clients.length} / Total: {clientsTotal}
             </p>
           </CardContent>
         </Card>

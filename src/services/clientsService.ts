@@ -996,7 +996,7 @@ export const clientsService = {
     bairro?: string;
     page?: number;
     limit?: number;
-  }): Promise<Client[]> => {
+  }): Promise<{ data: Client[]; total: number }> => {
     const empresa = authService.getEmpresa();
     if (!empresa) return Promise.reject('Empresa não selecionada');
     const token = authService.getToken();
@@ -1026,9 +1026,10 @@ export const clientsService = {
         try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
         return Promise.reject(message);
       }
-      const data = await res.json();
-      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-      return arr.map(normalizeClient);
+      const raw = await res.json();
+      const arr = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+      const total = typeof raw?.total === 'number' ? raw.total : arr.length;
+      return { data: arr.map(normalizeClient), total };
     } catch {
       return Promise.reject('Erro de conexão com o servidor');
     }
