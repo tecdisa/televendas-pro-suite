@@ -1368,14 +1368,6 @@ export function ProdutosTab() {
               <TabsContent value="caracteristicas" className="mt-0 space-y-4 px-1 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-2">
-                    <Label className="text-xs">ID</Label>
-                    <Input
-                      className="h-8 text-xs bg-muted"
-                      value={formData.id ? String(formData.id) : ''}
-                      readOnly
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
                     <Label className="text-xs">Código produto</Label>
                     <Input
                       className="h-8 text-xs bg-muted"

@@ -27,12 +27,14 @@ import { situacoes } from '@/mocks/data';
 import { metadataService, type Operacao } from '@/services/metadataService';
 import { representativesService, type Representative } from '@/services/representativesService';
 import { formatCurrency } from '@/utils/format';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 interface PesquisaTabProps {
   onNavigateToDigitacao?: () => void;
 }
 
 export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
+  const { canInsert } = useModuleCrudPermission('PEDIDOS');
   const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
   const today = getTodayStr();
   const ORDER_LIMIT = 100;
@@ -228,6 +230,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   };
 
   const handleNovoPedido = () => {
+    if (!canInsert) return;
     setCurrentOrder(null);
     if (onNavigateToDigitacao) onNavigateToDigitacao();
   };
@@ -799,7 +802,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
 
       {/* Botões de ação - filtros */}
       <div className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-        <Button variant="outline" onClick={handleNovoPedido} className="w-full sm:w-auto">
+        <Button variant="outline" onClick={handleNovoPedido} className="w-full sm:w-auto" disabled={!canInsert}>
           <FileEdit className="h-4 w-4 mr-2" />
           Digitar Pedido
         </Button>

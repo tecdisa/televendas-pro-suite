@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapPinned, Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react';
+import { MapPinned, Plus, Pencil, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -39,7 +39,7 @@ export function CidadesTab() {
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+
   const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
@@ -173,20 +173,6 @@ export function CidadesTab() {
       toast.error(error?.message || 'Erro ao atualizar cidade');
     } finally {
       setFormLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir esta cidade?')) return;
-    setDeleteLoading(id);
-    try {
-      await citiesRegistryService.delete(id);
-      toast.success('Cidade excluída com sucesso');
-      loadCidades(true);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao excluir cidade');
-    } finally {
-      setDeleteLoading(null);
     }
   };
 
@@ -364,24 +350,6 @@ export function CidadesTab() {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>Editar cidade</TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-destructive"
-                                      onClick={() => handleDelete(cidade.cidade_id)}
-                                      disabled={deleteLoading === cidade.cidade_id}
-                                    >
-                                      {deleteLoading === cidade.cidade_id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Trash2 className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Excluir cidade</TooltipContent>
                                 </Tooltip>
                               </div>
                             </TooltipProvider>

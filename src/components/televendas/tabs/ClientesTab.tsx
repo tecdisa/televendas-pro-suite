@@ -466,6 +466,7 @@ export const ClientesTab = () => {
   const [selectedOperacao, setSelectedOperacao] = useState('');
   const [ajusteGeralOpen, setAjusteGeralOpen] = useState(false);
   const [ajusteGeralLoading, setAjusteGeralLoading] = useState(false);
+  const [ajusteGeralAlvo, setAjusteGeralAlvo] = useState<'selecionados' | 'view' | 'todos'>('selecionados');
   const [ajusteGeralForm, setAjusteGeralForm] = useState<AjusteGeralFormData>(
     createEmptyAjusteGeralForm(),
   );
@@ -1047,10 +1048,46 @@ export const ClientesTab = () => {
     }
   };
 
+  const buildClientSearchFilters = (active: typeof filters) => {
+    const trimmedSearch = active.search.trim();
+    const effectiveStatus = active.todos ? 'todos' : active.status;
+    const limiteCredito = active.limiteCredito ? parseDecimalInput(active.limiteCredito) : undefined;
+    const cidadeId =
+      active.filtrarCidades && active.cidade !== 'all'
+        ? filterCidades.find((c) => c.nome_cidade === active.cidade)?.cidade_id
+        : undefined;
+    return {
+      query: trimmedSearch || undefined,
+      tipoBusca: active.searchMode,
+      buscarEmTodos: true,
+      clientesB2b: active.clientesB2b ? true : undefined,
+      pessoa: active.tipoPessoa === 'fisica' ? 'F' : active.tipoPessoa === 'juridica' ? 'J' : 'todos',
+      uf: active.filtrarCidades && active.uf !== 'all' ? active.uf : undefined,
+      cidade: active.filtrarCidades && active.cidade !== 'all' ? active.cidade : undefined,
+      cidadeId,
+      bairro: active.bairro ? active.bairro.trim() : undefined,
+      classeId: active.classe !== 'all' ? Number(active.classe) : undefined,
+      formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
+      prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
+      boletoBancario: active.boletoBancario ? true : undefined,
+      tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
+      rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
+      redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
+      limite: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
+      limiteMin: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
+      situacaoCredito: active.situacaoCredito,
+      dependencia: active.dependencia.trim() || undefined,
+      naoPositivadoDesde: active.naoPositivadoDesde || undefined,
+      cadastradosDe: active.cadastroDe || undefined,
+      cadastradosAte: active.cadastroAte || undefined,
+      status: effectiveStatus,
+    } as const;
+  };
+
   const loadClients = async (nextFilters?: typeof filters, reset = false) => {
     if (clientsLoading) return;
     const active = nextFilters ?? filters;
-    
+
     const nextPage = reset ? 1 : clientsPage + 1;
     if (reset) {
       setClients([]);
@@ -1060,41 +1097,9 @@ export const ClientesTab = () => {
     setClientsLoading(true);
     const requestId = ++clientsRequestId.current;
     try {
-      const trimmedSearch = active.search.trim();
-      const effectiveStatus = active.todos ? 'todos' : active.status;
-      const limiteCredito = active.limiteCredito
-        ? parseDecimalInput(active.limiteCredito)
-        : undefined;
-      const cidadeId =
-        active.filtrarCidades && active.cidade !== 'all'
-          ? filterCidades.find((c) => c.nome_cidade === active.cidade)?.cidade_id
-          : undefined;
-      const data = await clientsService.search({
-        query: trimmedSearch || undefined,
-        tipoBusca: active.searchMode,
-        buscarEmTodos: true,
-        clientesB2b: active.clientesB2b ? true : undefined,
-        pessoa: active.tipoPessoa === 'fisica' ? 'F' : active.tipoPessoa === 'juridica' ? 'J' : 'todos',
-        uf: active.filtrarCidades && active.uf !== 'all' ? active.uf : undefined,
-        cidade: active.filtrarCidades && active.cidade !== 'all' ? active.cidade : undefined,
-        cidadeId,
-        bairro: active.bairro ? active.bairro.trim() : undefined,
-        classeId: active.classe !== 'all' ? Number(active.classe) : undefined,
-        formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
-        prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
-        boletoBancario: active.boletoBancario ? true : undefined,
-        tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
-        rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
-        redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
-        limite: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
-        limiteMin: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
-        situacaoCredito: active.situacaoCredito,
-        dependencia: active.dependencia.trim() || undefined,
-        naoPositivadoDesde: active.naoPositivadoDesde || undefined,
-        cadastradosDe: active.cadastroDe || undefined,
-        cadastradosAte: active.cadastroAte || undefined,
-        status: effectiveStatus,
-      }, undefined, nextPage, CLIENT_LIMIT);
+      const data = await clientsService.search(
+        buildClientSearchFilters(active), undefined, nextPage, CLIENT_LIMIT,
+      );
       if (requestId !== clientsRequestId.current) return;
       setClients((prev) => (reset ? data : [...prev, ...data]));
       setClientsPage(nextPage);
@@ -1217,16 +1222,13 @@ export const ClientesTab = () => {
   };
 
   const openAjusteGeralDialog = () => {
-    if (selectedClients.length === 0) {
-      toast.error('Selecione pelo menos um cliente');
-      return;
-    }
+    setAjusteGeralAlvo(selectedClients.length > 0 ? 'selecionados' : 'view');
     setAjusteGeralForm(createEmptyAjusteGeralForm());
     setAjusteGeralOpen(true);
   };
 
   const handleProcessAjusteGeral = async () => {
-    if (selectedClients.length === 0) {
+    if (ajusteGeralAlvo === 'selecionados' && selectedClients.length === 0) {
       toast.error('Selecione pelo menos um cliente');
       return;
     }
@@ -1314,11 +1316,32 @@ export const ClientesTab = () => {
 
     setAjusteGeralLoading(true);
     try {
-      const result = await clientsService.bulkAdjust({
-        clienteIds: selectedClients,
-        data,
-      });
-      const totalAtualizados = Number(result?.totalAtualizados ?? selectedClients.length);
+      let clienteIds: number[];
+      if (ajusteGeralAlvo === 'selecionados') {
+        clienteIds = selectedClients;
+      } else if (ajusteGeralAlvo === 'view') {
+        clienteIds = clients.map((c) => c.id);
+      } else {
+        // Busca todas as páginas com os filtros ativos
+        const searchFilters = buildClientSearchFilters(filters);
+        const all: Client[] = [];
+        let page = 1;
+        while (true) {
+          const batch = await clientsService.search(searchFilters, undefined, page, CLIENT_LIMIT);
+          all.push(...batch);
+          if (batch.length < CLIENT_LIMIT) break;
+          page++;
+        }
+        clienteIds = all.map((c) => c.id);
+      }
+
+      if (clienteIds.length === 0) {
+        toast.error('Nenhum cliente encontrado para aplicar o ajuste.');
+        return;
+      }
+
+      const result = await clientsService.bulkAdjust({ clienteIds, data });
+      const totalAtualizados = Number(result?.totalAtualizados ?? clienteIds.length);
       toast.success(`Ajuste aplicado em ${totalAtualizados} cliente(s).`);
       setAjusteGeralOpen(false);
       setSelectedClients([]);
@@ -2602,7 +2625,30 @@ const validateFormData = (data: ClientFormData): string[] => {
           <DialogHeader>
             <DialogTitle>Ajuste Geral</DialogTitle>
           </DialogHeader>
-          <div className="max-h-[70vh] overflow-auto pr-1">
+          <div className="border rounded-md p-3 bg-muted/40">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Aplicar para</p>
+            <RadioGroup
+              value={ajusteGeralAlvo}
+              onValueChange={(v) => setAjusteGeralAlvo(v as typeof ajusteGeralAlvo)}
+              className="flex flex-col sm:flex-row gap-3"
+            >
+              <label className="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem value="selecionados" disabled={selectedClients.length === 0} />
+                <span className="text-sm">
+                  Selecionados{selectedClients.length > 0 ? ` (${selectedClients.length})` : ''}
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem value="view" />
+                <span className="text-sm">Todos na view ({clients.length}{clientsHasMore ? '+' : ''})</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <RadioGroupItem value="todos" />
+                <span className="text-sm">Todos os filtrados</span>
+              </label>
+            </RadioGroup>
+          </div>
+          <div className="max-h-[60vh] overflow-auto pr-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

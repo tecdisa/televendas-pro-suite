@@ -211,8 +211,17 @@ export function ClientesPorRepresentanteTab() {
       if (f.bairro) searchFilters.bairro = f.bairro;
       if (f.redeId && f.redeId !== 'all') searchFilters.redeId = Number(f.redeId);
       if (f.rotaId && f.rotaId !== 'all') searchFilters.rotaId = Number(f.rotaId);
-      const result = await clientsService.search(searchFilters, undefined, 1, 200);
-      setImportPreview(result);
+      // Backend caps at 100/page — paginate until all records are fetched
+      const PAGE_SIZE = 100;
+      let currentPage = 1;
+      const all: Client[] = [];
+      while (true) {
+        const batch = await clientsService.search(searchFilters, undefined, currentPage, PAGE_SIZE);
+        all.push(...batch);
+        if (batch.length < PAGE_SIZE) break;
+        currentPage++;
+      }
+      setImportPreview(all);
     } catch (e: any) {
       toast.error('Erro ao buscar clientes para importar');
     } finally {
