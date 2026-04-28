@@ -1,0 +1,319 @@
+import { apiClient } from '@/utils/apiClient';
+import { authService } from '@/services/authService';
+import { API_BASE } from '@/utils/env';
+
+export interface TabelaPreco {
+  tabela_preco_id: number;
+  empresa_id: number;
+  codigo_tabela_preco: string;
+  descricao_tabela_preco: string;
+  prazo_medio: number | null;
+  somente_venda_avista: boolean;
+  pedido_minimo: number;
+  indice_financeiro: number;
+  validade: string | null;
+  forma_pagto_id: number | null;
+  prazo_pagto_id: number | null;
+  inativo: boolean;
+}
+
+export interface TabelaPrecoItem {
+  tabela_preco_id: number;
+  produto_id: number;
+  codigo_produto: string;
+  descricao_produto: string;
+  preco: number;
+  desconto_maximo: number;
+  comissao: number;
+  permite_bonificacao: boolean;
+  permite_debito_credito: boolean;
+  permite_venda_especial: boolean;
+  produto_em_promocao: boolean;
+  quantidade_minima: number;
+  pvs: number;
+}
+
+function normalizeTabelaPreco(raw: any): TabelaPreco {
+  return {
+    tabela_preco_id: Number(raw?.tabela_preco_id ?? 0),
+    empresa_id: Number(raw?.empresa_id ?? 0),
+    codigo_tabela_preco: String(raw?.codigo_tabela_preco ?? '').trim(),
+    descricao_tabela_preco: String(raw?.descricao_tabela_preco ?? '').trim(),
+    prazo_medio: raw?.prazo_medio != null ? Number(raw.prazo_medio) : null,
+    somente_venda_avista: Boolean(raw?.somente_venda_avista ?? false),
+    pedido_minimo: Number(raw?.pedido_minimo ?? 0),
+    indice_financeiro: Number(raw?.indice_financeiro ?? 0),
+    validade: raw?.validade ? String(raw.validade) : null,
+    forma_pagto_id: raw?.forma_pagto_id != null ? Number(raw.forma_pagto_id) : null,
+    prazo_pagto_id: raw?.prazo_pagto_id != null ? Number(raw.prazo_pagto_id) : null,
+    inativo: Boolean(raw?.inativo ?? false),
+  };
+}
+
+function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
+  return {
+    tabela_preco_id: Number(raw?.tabela_preco_id ?? 0),
+    produto_id: Number(raw?.produto_id ?? 0),
+    codigo_produto: String(raw?.codigo_produto ?? '').trim(),
+    descricao_produto: String(raw?.descricao_produto ?? '').trim(),
+    preco: Number(raw?.preco ?? 0),
+    desconto_maximo: Number(raw?.desconto_maximo ?? 0),
+    comissao: Number(raw?.comissao ?? 0),
+    permite_bonificacao: Boolean(raw?.permite_bonificacao ?? false),
+    permite_debito_credito: Boolean(raw?.permite_debito_credito ?? false),
+    permite_venda_especial: Boolean(raw?.permite_venda_especial ?? false),
+    produto_em_promocao: Boolean(raw?.produto_em_promocao ?? false),
+    quantidade_minima: Number(raw?.quantidade_minima ?? 0),
+    pvs: Number(raw?.pvs ?? 0),
+  };
+}
+
+export const tabelasPrecoService = {
+  async getAll(
+    query?: string,
+    page = 1,
+    limit = 100,
+    status: 'ativos' | 'inativos' | 'todos' = 'ativos',
+  ): Promise<{ data: TabelaPreco[]; total: number }> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+
+    if (!empresaId) {
+      console.warn('tabelasPrecoService.getAll: empresaId não encontrado');
+      return { data: [], total: 0 };
+    }
+
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    params.set('status', status);
+    if (status === 'todos') params.set('incluirInativos', 'true');
+    if (query?.trim()) params.set('q', query.trim());
+
+    try {
+      const response = await apiClient.fetch(`${API_BASE}/api/tabelas-precos?${params.toString()}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      const arr = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      return {
+        data: arr.map(normalizeTabelaPreco),
+        total: result?.total ?? arr.length,
+      };
+    } catch (error) {
+      console.error('Erro ao buscar tabelas de preço:', error);
+      return { data: [], total: 0 };
+    }
+  },
+
+  async getById(id: number): Promise<TabelaPreco | null> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) return null;
+
+    try {
+      const response = await apiClient.fetch(
+        `${API_BASE}/api/tabelas-precos/${id}?empresaId=${empresaId}`,
+      );
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      return normalizeTabelaPreco(result);
+    } catch (error) {
+      console.error('Erro ao buscar tabela de preço:', error);
+      return null;
+    }
+  },
+
+  async create(data: {
+    descricao_tabela_preco: string;
+    codigo_tabela_preco?: string;
+    prazo_medio?: number | null;
+    somente_venda_avista?: boolean;
+    pedido_minimo?: number;
+    indice_financeiro?: number;
+    validade?: string | null;
+    forma_pagto_id?: number | null;
+    prazo_pagto_id?: number | null;
+    inativo?: boolean;
+  }): Promise<TabelaPreco> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(`${API_BASE}/api/tabelas-precos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresaId, data }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao criar tabela de preço');
+    }
+    return normalizeTabelaPreco(await response.json());
+  },
+
+  async update(
+    id: number,
+    data: Partial<{
+      descricao_tabela_preco: string;
+      codigo_tabela_preco: string;
+      prazo_medio: number | null;
+      somente_venda_avista: boolean;
+      pedido_minimo: number;
+      indice_financeiro: number;
+      validade: string | null;
+      forma_pagto_id: number | null;
+      prazo_pagto_id: number | null;
+      inativo: boolean;
+    }>,
+  ): Promise<TabelaPreco> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${id}?empresaId=${empresaId}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar tabela de preço');
+    }
+    return normalizeTabelaPreco(await response.json());
+  },
+
+  async delete(id: number): Promise<void> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${id}?empresaId=${empresaId}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok && response.status !== 204) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir tabela de preço');
+    }
+  },
+
+  async getItens(
+    tabelaId: number,
+    query?: string,
+    page = 1,
+    limit = 100,
+  ): Promise<{ data: TabelaPrecoItem[]; total: number }> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) return { data: [], total: 0 };
+
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (query?.trim()) params.set('q', query.trim());
+
+    try {
+      const response = await apiClient.fetch(
+        `${API_BASE}/api/tabelas-precos/${tabelaId}/itens?${params.toString()}`,
+      );
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      const arr = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      return {
+        data: arr.map(normalizeTabelaPrecoItem),
+        total: result?.total ?? arr.length,
+      };
+    } catch (error) {
+      console.error('Erro ao buscar itens da tabela de preço:', error);
+      return { data: [], total: 0 };
+    }
+  },
+
+  async upsertItem(
+    tabelaId: number,
+    data: {
+      produto_id: number;
+      preco?: number;
+      desconto_maximo?: number;
+      comissao?: number;
+      permite_bonificacao?: boolean;
+      permite_debito_credito?: boolean;
+      permite_venda_especial?: boolean;
+      produto_em_promocao?: boolean;
+      quantidade_minima?: number;
+      pvs?: number;
+    },
+  ): Promise<TabelaPrecoItem> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/itens`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, data }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao salvar item');
+    }
+    return normalizeTabelaPrecoItem(await response.json());
+  },
+
+  async updateItem(
+    tabelaId: number,
+    produtoId: number,
+    data: Partial<{
+      preco: number;
+      desconto_maximo: number;
+      comissao: number;
+      permite_bonificacao: boolean;
+      permite_debito_credito: boolean;
+      permite_venda_especial: boolean;
+      produto_em_promocao: boolean;
+      quantidade_minima: number;
+      pvs: number;
+    }>,
+  ): Promise<TabelaPrecoItem> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/itens/${produtoId}?empresaId=${empresaId}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar item');
+    }
+    return normalizeTabelaPrecoItem(await response.json());
+  },
+
+  async deleteItem(tabelaId: number, produtoId: number): Promise<void> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/itens/${produtoId}?empresaId=${empresaId}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok && response.status !== 204) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir item');
+    }
+  },
+};

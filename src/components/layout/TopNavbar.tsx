@@ -72,6 +72,7 @@ const baseNavGroups: NavGroup[] = [
           { title: 'Grupos', tab: 'grupos', icon: Layers },
           { title: 'Divisões', tab: 'divisoes', icon: Grid3X3 },
           { title: 'Estoques', tab: 'estoques', icon: Package },
+          { title: 'Tabelas de Preço', tab: 'tabelas-preco', icon: CreditCard },
         ],
       },
     ],

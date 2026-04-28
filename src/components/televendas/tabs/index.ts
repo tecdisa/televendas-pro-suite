@@ -19,3 +19,4 @@ export { RotasClientesTab } from './RotasClientesTab';
 export { ClientesPorRepresentanteTab } from './ClientesPorRepresentanteTab';
 export { ProdutosTab } from './ProdutosTab';
 export { EstoquesTab } from './EstoquesTab';
+export { TabelasPrecoTab } from './TabelasPrecoTab';
