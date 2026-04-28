@@ -243,15 +243,15 @@ export function ClientesPorRepresentanteTab() {
     }
     setImportLoading(true);
     try {
-      await clientsService.bulkAdjust({
-        clienteIds: Array.from(importSelectedIds),
-        data: { representanteId: String(selectedRep.representante_id) },
-      });
-      toast.success(`${importSelectedIds.size} cliente(s) importado(s) com sucesso`);
+      const result = await representativesService.importarClientes(
+        selectedRep.representante_id,
+        Array.from(importSelectedIds),
+      );
+      toast.success(`${result.totalCriados} cliente(s) importado(s)${result.totalIgnorados ? ` (${result.totalIgnorados} já vinculados)` : ''}`);
       setImportOpen(false);
       loadClients();
     } catch (e: any) {
-      toast.error('Erro ao importar clientes');
+      toast.error(e?.message || 'Erro ao importar clientes');
     } finally {
       setImportLoading(false);
     }

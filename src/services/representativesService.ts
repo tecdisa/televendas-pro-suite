@@ -525,6 +525,38 @@ export const representativesService = {
     return true;
   },
 
+  async importarClientes(
+    representanteId: number | string,
+    clienteIds: number[]
+  ): Promise<{ totalSolicitados: number; totalCriados: number; totalIgnorados: number }> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/importar-clientes?${params.toString()}`;
+
+    const res = await apiClient.fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ clienteIds }),
+    });
+
+    if (!res.ok) {
+      let message = 'Falha ao importar clientes';
+      try {
+        const err = await res.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    return {
+      totalSolicitados: Number(json?.totalSolicitados ?? 0),
+      totalCriados: Number(json?.totalCriados ?? 0),
+      totalIgnorados: Number(json?.totalIgnorados ?? 0),
+    };
+  },
+
   async copyClientes(
     representanteDestinoId: number | string,
     representanteOrigemId: number | string
