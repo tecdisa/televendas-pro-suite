@@ -183,22 +183,22 @@ export function EstoquesTab() {
     if (loading) return;
     setLoading(true);
     try {
+      const has = (key: keyof StockListFilters) =>
+        overrideFilters != null && Object.prototype.hasOwnProperty.call(overrideFilters, key);
       const params: StockListFilters = {
-        status: overrideFilters?.status ?? filters.status,
-        search: overrideFilters?.search ?? filters.search,
-        fornecedorId:
-          overrideFilters?.fornecedorId ??
-          (filters.fornecedor !== 'all' ? Number(filters.fornecedor) : undefined),
-        divisaoId:
-          overrideFilters?.divisaoId ??
-          (filters.divisao !== 'all' ? Number(filters.divisao) : undefined),
-        marca: overrideFilters?.marca ?? filters.marca,
-        possuiFoto: overrideFilters?.possuiFoto ?? filters.possuiFoto,
-        permiteVendaB2b:
-          overrideFilters?.permiteVendaB2b ?? filters.permiteVendaB2b,
-        permiteVendaB2c:
-          overrideFilters?.permiteVendaB2c ?? filters.permiteVendaB2c,
-        lancamento: overrideFilters?.lancamento ?? filters.lancamento,
+        status: has('status') ? overrideFilters!.status : filters.status,
+        search: has('search') ? overrideFilters!.search : filters.search,
+        fornecedorId: has('fornecedorId')
+          ? overrideFilters!.fornecedorId
+          : (filters.fornecedor !== 'all' ? Number(filters.fornecedor) : undefined),
+        divisaoId: has('divisaoId')
+          ? overrideFilters!.divisaoId
+          : (filters.divisao !== 'all' ? Number(filters.divisao) : undefined),
+        marca: has('marca') ? overrideFilters!.marca : filters.marca,
+        possuiFoto: has('possuiFoto') ? overrideFilters!.possuiFoto : filters.possuiFoto,
+        permiteVendaB2b: has('permiteVendaB2b') ? overrideFilters!.permiteVendaB2b : filters.permiteVendaB2b,
+        permiteVendaB2c: has('permiteVendaB2c') ? overrideFilters!.permiteVendaB2c : filters.permiteVendaB2c,
+        lancamento: has('lancamento') ? overrideFilters!.lancamento : filters.lancamento,
       };
       const result = await stocksService.getAll(params, 1, 500);
       setStocks(result.data || []);
@@ -255,8 +255,8 @@ export function EstoquesTab() {
   };
 
   const handleClear = async () => {
-    const resetFilters = {
-      status: 'ativos' as StatusType,
+    setFilters({
+      status: 'ativos',
       search: '',
       fornecedor: 'all',
       divisao: 'all',
@@ -265,9 +265,18 @@ export function EstoquesTab() {
       permiteVendaB2b: undefined,
       permiteVendaB2c: undefined,
       lancamento: undefined,
-    };
-    setFilters(resetFilters);
-    await loadStocks({ status: 'ativos', search: '' });
+    });
+    await loadStocks({
+      status: 'ativos',
+      search: '',
+      fornecedorId: undefined,
+      divisaoId: undefined,
+      marca: '',
+      possuiFoto: undefined,
+      permiteVendaB2b: undefined,
+      permiteVendaB2c: undefined,
+      lancamento: undefined,
+    });
   };
 
   const updateFilter = (key: string, value: any) =>
