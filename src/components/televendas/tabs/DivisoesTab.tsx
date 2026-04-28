@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -22,6 +23,7 @@ const initialFormData = {
 };
 
 export function DivisoesTab() {
+  const { canInsert } = useModuleCrudPermission('DIVISOES');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
@@ -95,6 +97,7 @@ export function DivisoesTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -247,7 +250,7 @@ export function DivisoesTab() {
               <Grid3X3 className="h-5 w-5" />
               Divisões de Produtos ({divisoes.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Divisão
             </Button>

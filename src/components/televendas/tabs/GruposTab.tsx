@@ -10,6 +10,7 @@ import { Search, Layers, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { groupsService, Grupo } from '@/services/groupsService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -20,6 +21,7 @@ const initialFormData = {
 };
 
 export function GruposTab() {
+  const { canInsert } = useModuleCrudPermission('GRUPOS');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
@@ -73,6 +75,7 @@ export function GruposTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -195,7 +198,7 @@ export function GruposTab() {
               <Layers className="h-5 w-5" />
               Grupos de Produtos ({grupos.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Grupo
             </Button>

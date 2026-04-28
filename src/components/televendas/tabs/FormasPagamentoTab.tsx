@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner';
 import { formasPagamentoService, FormaPagamento, FormaPagamentoFormData } from '@/services/formasPagamentoService';
 import { prazosPagamentosService, PrazoPagamento } from '@/services/prazosPagamentosService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -31,6 +32,7 @@ const initialFormData: FormaPagamentoFormData = {
 };
 
 export function FormasPagamentoTab() {
+  const { canInsert } = useModuleCrudPermission('FORMAS_PAGAMENTO');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
@@ -95,6 +97,7 @@ export function FormasPagamentoTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -336,7 +339,7 @@ export function FormasPagamentoTab() {
               <CreditCard className="h-5 w-5" />
               Formas de Pagamento ({formas.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Forma
             </Button>

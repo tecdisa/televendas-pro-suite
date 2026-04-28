@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner';
 import { prazosPagamentosService, PrazoPagamento, PrazoPagamentoFormData } from '@/services/prazosPagamentosService';
 import { metadataService, type FormaPagamento as MetadataFormaPagamento } from '@/services/metadataService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -33,6 +34,7 @@ const initialFormData: PrazoPagamentoFormData = {
 };
 
 export function PrazosPagamentosTab() {
+  const { canInsert } = useModuleCrudPermission('PRAZOS');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [prazos, setPrazos] = useState<PrazoPagamento[]>([]);
@@ -110,6 +112,7 @@ export function PrazosPagamentosTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -450,7 +453,7 @@ export function PrazosPagamentosTab() {
               <Clock className="h-5 w-5" />
               Prazos de Pagamento ({prazos.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Prazo
             </Button>

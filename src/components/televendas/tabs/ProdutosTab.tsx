@@ -35,6 +35,7 @@ import {
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { cn } from '@/lib/utils';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const UNIDADES = ['UN', 'CX', 'PC', 'KG', 'LT', 'DP', 'FR', 'TB', 'CT'];
 const PRODUTOS_PINNED_COLUMNS_STORAGE_KEY = 'televendas:produtos:pinnedColumns';
@@ -85,7 +86,13 @@ const PINNABLE_PRODUCT_COLUMNS = PRODUCTS_GRID_COLUMNS.filter(
 );
 
 type StatusType = 'ativos' | 'inativos' | 'todos';
-type RequiredProductField = 'descricao' | 'unidade' | 'fornecedorId' | 'divisaoId';
+type RequiredProductField =
+  | 'descricao'
+  | 'unidade'
+  | 'fornecedorId'
+  | 'divisaoId'
+  | 'fatorCompra'
+  | 'fatorVenda';
 type RequiredProductErrors = Partial<Record<RequiredProductField, string>>;
 
 interface ProductFormState {
@@ -170,8 +177,8 @@ const initialFormData: ProductFormState = {
   fornecedorId: 0,
   divisaoId: 0,
   produtoSimilar: 0,
-  fatorCompra: 0,
-  fatorVenda: 0,
+  fatorCompra: 1,
+  fatorVenda: 1,
   multiploDeVendas: 0,
   pesoBruto: 0,
   pesoLiquido: 0,
@@ -391,10 +398,19 @@ function validateRequiredProductFields(form: ProductFormState): RequiredProductE
     errors.divisaoId = 'Divisão é obrigatória';
   }
 
+  if (!Number.isInteger(Number(form.fatorCompra)) || Number(form.fatorCompra) <= 0) {
+    errors.fatorCompra = 'Fator compra deve ser maior que zero';
+  }
+
+  if (!Number.isInteger(Number(form.fatorVenda)) || Number(form.fatorVenda) <= 0) {
+    errors.fatorVenda = 'Fator venda deve ser maior que zero';
+  }
+
   return errors;
 }
 
 export function ProdutosTab() {
+  const { canInsert } = useModuleCrudPermission('PRODUTOS');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [produtos, setProdutos] = useState<Product[]>([]);
@@ -718,6 +734,7 @@ export function ProdutosTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     const nextForm = { ...initialFormData };
     const nextKitItens: ProductKitFormItem[] = [];
     setEditingProduct(null);
@@ -1241,7 +1258,7 @@ export function ProdutosTab() {
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button size="sm" onClick={openCreate} className="flex-1 sm:flex-none">
+              <Button size="sm" onClick={openCreate} className="flex-1 sm:flex-none" disabled={!canInsert}>
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Produto</span>
               </Button>
@@ -1583,22 +1600,48 @@ export function ProdutosTab() {
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">Fator compra</Label>
+                    <Label className="text-xs">Fator compra *</Label>
                     <Input
                       type="number"
-                      className="h-8 text-xs"
+                      min={1}
+                      step={1}
+                      aria-invalid={Boolean(requiredErrors.fatorCompra)}
+                      className={cn(
+                        'h-8 text-xs',
+                        requiredErrors.fatorCompra && 'border-destructive focus-visible:ring-destructive',
+                      )}
                       value={formData.fatorCompra}
-                      onChange={(e) => updateForm('fatorCompra', Number(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const nextValue = Number(e.target.value);
+                        updateForm('fatorCompra', Number.isFinite(nextValue) ? nextValue : 0);
+                        if (nextValue > 0) clearRequiredError('fatorCompra');
+                      }}
                     />
+                    {requiredErrors.fatorCompra ? (
+                      <p className="mt-1 text-[11px] text-destructive">{requiredErrors.fatorCompra}</p>
+                    ) : null}
                   </div>
                   <div className="col-span-1 md:col-span-3">
-                    <Label className="text-xs">Fator venda</Label>
+                    <Label className="text-xs">Fator venda *</Label>
                     <Input
                       type="number"
-                      className="h-8 text-xs"
+                      min={1}
+                      step={1}
+                      aria-invalid={Boolean(requiredErrors.fatorVenda)}
+                      className={cn(
+                        'h-8 text-xs',
+                        requiredErrors.fatorVenda && 'border-destructive focus-visible:ring-destructive',
+                      )}
                       value={formData.fatorVenda}
-                      onChange={(e) => updateForm('fatorVenda', Number(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const nextValue = Number(e.target.value);
+                        updateForm('fatorVenda', Number.isFinite(nextValue) ? nextValue : 0);
+                        if (nextValue > 0) clearRequiredError('fatorVenda');
+                      }}
                     />
+                    {requiredErrors.fatorVenda ? (
+                      <p className="mt-1 text-[11px] text-destructive">{requiredErrors.fatorVenda}</p>
+                    ) : null}
                   </div>
                 </div>
 

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { citiesRegistryService, type CidadeCadastro } from '@/services/citiesRegistryService';
 import { metadataService, type Uf } from '@/services/metadataService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const PAGE_LIMIT = 100;
 
@@ -25,6 +26,7 @@ const toUpperValue = (value: string | number | null | undefined) =>
   String(value ?? '').toUpperCase();
 
 export function CidadesTab() {
+  const { canInsert } = useModuleCrudPermission('CIDADES');
   const [loading, setLoading] = useState(false);
   const [ufsLoading, setUfsLoading] = useState(false);
   const [ufsApi, setUfsApi] = useState<Uf[]>([]);
@@ -93,6 +95,7 @@ export function CidadesTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -277,7 +280,7 @@ export function CidadesTab() {
               <MapPinned className="h-5 w-5" />
               Cidades ({cidades.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Cidade
             </Button>

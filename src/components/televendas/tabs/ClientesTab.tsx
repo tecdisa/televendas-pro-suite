@@ -38,6 +38,7 @@ import {
   isNumericCnpj,
   normalizeCnpjCpf,
 } from '@/utils/cnpjCpf';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 300) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -413,6 +414,7 @@ const FormField = ({ label, value, onChange, type = 'text', className = '', uppe
 );
 
 export const ClientesTab = () => {
+  const { canInsert } = useModuleCrudPermission('CLIENTES');
   const CLIENT_LIMIT = 100;
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
@@ -1437,6 +1439,7 @@ const validateFormData = (data: ClientFormData): string[] => {
   return errors;
 };
   const openCreateDialog = () => {
+    if (!canInsert) return;
     setFormErrors([]);
     setExistingClientByCnpj(null);
     setCnpjDuplicateLoading(false);
@@ -2107,7 +2110,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <Pencil className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Ajuste Geral ({selectedClients.length})</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={openCreateDialog} className="flex-1 sm:flex-none">
+              <Button variant="outline" size="sm" onClick={openCreateDialog} className="flex-1 sm:flex-none" disabled={!canInsert}>
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo</span>
               </Button>

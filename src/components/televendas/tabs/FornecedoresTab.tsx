@@ -39,6 +39,7 @@ import {
   isNumericCnpj,
   normalizeCnpjCpf,
 } from '@/utils/cnpjCpf';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 const normalizeCityKey = (value: string | null | undefined) =>
@@ -142,6 +143,7 @@ const createInitialFormData = () => ({
 });
 
 export function FornecedoresTab() {
+  const { canInsert } = useModuleCrudPermission('FORNECEDORES');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -532,6 +534,7 @@ export function FornecedoresTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm(true);
     setCreateOpen(true);
   };
@@ -1083,7 +1086,7 @@ export function FornecedoresTab() {
               <Truck className="h-5 w-5" />
               Fornecedores ({fornecedores.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Fornecedor
             </Button>

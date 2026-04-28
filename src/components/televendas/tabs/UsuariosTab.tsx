@@ -15,6 +15,7 @@ import {
   type UsuarioCadastroFormData,
   type UsuarioPermissao,
 } from '@/services/usersService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const PAGE_LIMIT = 100;
 
@@ -34,6 +35,7 @@ const perfilLabel = (admin?: boolean, adminMaster?: boolean) => {
 };
 
 export function UsuariosTab() {
+  const { canInsert } = useModuleCrudPermission('USUARIOS');
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioCadastro[]>([]);
   const [page, setPage] = useState(1);
@@ -97,6 +99,7 @@ export function UsuariosTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setInviteEmail('');
     setCreateOpen(true);
@@ -593,7 +596,7 @@ export function UsuariosTab() {
               <UserRoundCog className="h-5 w-5" />
               Usuarios ({usuarios.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Cadastrar Login
             </Button>

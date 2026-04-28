@@ -10,6 +10,7 @@ import { Search, Target, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { segmentosVendasService, SegmentoVenda, SegmentoVendaFormData } from '@/services/segmentosVendasService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -20,6 +21,7 @@ const initialFormData: SegmentoVendaFormData = {
 };
 
 export function SegmentosVendasTab() {
+  const { canInsert } = useModuleCrudPermission('SEGMENTOS_VENDA');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [segmentos, setSegmentos] = useState<SegmentoVenda[]>([]);
@@ -73,6 +75,7 @@ export function SegmentosVendasTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -191,7 +194,7 @@ export function SegmentosVendasTab() {
               <Target className="h-5 w-5" />
               Segmentos de Venda ({segmentos.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Segmento
             </Button>

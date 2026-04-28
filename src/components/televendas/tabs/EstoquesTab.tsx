@@ -14,6 +14,7 @@ import { Product, productsService } from '@/services/productsService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { StockEntry, StockListFilters, stocksService } from '@/services/stocksService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 interface StockFormData {
   produto_id: number;
@@ -107,6 +108,7 @@ const toFixedNumber = (value: number, decimals = 3) =>
 type StatusType = 'ativos' | 'inativos' | 'todos';
 
 export function EstoquesTab() {
+  const { canInsert } = useModuleCrudPermission('ESTOQUES');
   const [loading, setLoading] = useState(false);
   const [stocks, setStocks] = useState<StockEntry[]>([]);
   const [totalStocks, setTotalStocks] = useState(0);
@@ -224,6 +226,7 @@ export function EstoquesTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setDialogOpen(true);
   };
@@ -387,7 +390,7 @@ export function EstoquesTab() {
               <Package className="h-5 w-5" />
               Estoques ({totalStocks})
             </CardTitle>
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onClick={openCreate} disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Estoque
             </Button>

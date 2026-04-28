@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner';
 import { redesService, Rede, RedeFormData } from '@/services/redesService';
 import { metadataService, Uf, Cidade } from '@/services/metadataService';
+import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const toUpperValue = (value: string | number | null | undefined) => String(value ?? '').toUpperCase();
 
@@ -28,6 +29,7 @@ const initialFormData: ExtendedFormData = {
 };
 
 export function RedesTab() {
+  const { canInsert } = useModuleCrudPermission('REDES');
   const PAGE_LIMIT = 100;
   const [loading, setLoading] = useState(false);
   const [redes, setRedes] = useState<Rede[]>([]);
@@ -109,6 +111,7 @@ export function RedesTab() {
   };
 
   const openCreate = () => {
+    if (!canInsert) return;
     resetForm();
     setCreateOpen(true);
   };
@@ -289,7 +292,7 @@ export function RedesTab() {
               <Network className="h-5 w-5" />
               Redes ({redes.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm">
+            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Rede
             </Button>
