@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,12 @@ export function ClientesPorRepresentanteTab() {
   // Client listing for selected representative
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsLoadingMore, setClientsLoadingMore] = useState(false);
+  const [clientsPage, setClientsPage] = useState(1);
+  const [clientsHasMore, setClientsHasMore] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const activeFiltersRef = useRef(filters);
 
   // Filters
   const [filters, setFilters] = useState({ search: '', uf: 'all', cidade: 'all', bairro: '' });
@@ -101,42 +106,79 @@ export function ClientesPorRepresentanteTab() {
     }
   }, [filters.uf]);
 
-  // Load clients for the selected representative using dedicated endpoint
+  // Load first page of clients (resets list)
   const loadClients = async (overrideFilters?: typeof filters) => {
     if (!selectedRep) return;
-    setClientsLoading(true);
-    setSelectedClientIds(new Set());
     const f = overrideFilters ?? filters;
+    activeFiltersRef.current = f;
+    setClientsLoading(true);
+    setClients([]);
+    setSelectedClientIds(new Set());
+    setClientsPage(1);
+    setClientsHasMore(false);
     try {
-      const all: import('@/services/clientsService').Client[] = [];
-      let page = 1;
-      while (true) {
-        const batch = await clientsService.getByRepresentante({
-          representanteId: selectedRep.representante_id,
-          q: f.search || undefined,
-          uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
-          cidade: f.cidade && f.cidade !== 'all' ? f.cidade : undefined,
-          bairro: f.bairro || undefined,
-          page,
-          limit: PAGE_LIMIT,
-        });
-        all.push(...batch);
-        if (batch.length < PAGE_LIMIT) break;
-        page++;
-      }
-      setClients(all);
-    } catch (e: any) {
+      const batch = await clientsService.getByRepresentante({
+        representanteId: selectedRep.representante_id,
+        q: f.search || undefined,
+        uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
+        cidade: f.cidade && f.cidade !== 'all' ? f.cidade : undefined,
+        bairro: f.bairro || undefined,
+        page: 1,
+        limit: PAGE_LIMIT,
+      });
+      setClients(batch);
+      setClientsPage(2);
+      setClientsHasMore(batch.length === PAGE_LIMIT);
+    } catch {
       toast.error('Erro ao carregar clientes do representante');
     } finally {
       setClientsLoading(false);
     }
   };
 
+  // Load next page and append
+  const loadMoreClients = useCallback(async () => {
+    if (!selectedRep || clientsLoadingMore || !clientsHasMore) return;
+    setClientsLoadingMore(true);
+    const f = activeFiltersRef.current;
+    try {
+      const batch = await clientsService.getByRepresentante({
+        representanteId: selectedRep.representante_id,
+        q: f.search || undefined,
+        uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
+        cidade: f.cidade && f.cidade !== 'all' ? f.cidade : undefined,
+        bairro: f.bairro || undefined,
+        page: clientsPage,
+        limit: PAGE_LIMIT,
+      });
+      setClients(prev => [...prev, ...batch]);
+      setClientsPage(prev => prev + 1);
+      setClientsHasMore(batch.length === PAGE_LIMIT);
+    } catch {
+      toast.error('Erro ao carregar mais clientes');
+    } finally {
+      setClientsLoadingMore(false);
+    }
+  }, [selectedRep, clientsPage, clientsHasMore, clientsLoadingMore]);
+
+  // IntersectionObserver para scroll infinito
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMoreClients(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMoreClients]);
+
   useEffect(() => {
     if (selectedRep) {
       loadClients();
     } else {
       setClients([]);
+      setClientsHasMore(false);
     }
   }, [selectedRep]);
 
@@ -462,37 +504,44 @@ export function ClientesPorRepresentanteTab() {
               ) : clients.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhum cliente encontrado</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox checked={selectedClientIds.size === clients.length && clients.length > 0} onCheckedChange={toggleAllClients} />
-                      </TableHead>
-                      <TableHead className="w-20">ID</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead className="w-24">Cidade</TableHead>
-                      <TableHead className="w-12">UF</TableHead>
-                      <TableHead className="w-28">Bairro</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clients.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell>
-                          <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
-                        </TableCell>
-                        <TableCell className="text-xs">{c.codigoCliente || c.id}</TableCell>
-                        <TableCell className="text-xs">{c.nome}</TableCell>
-                        <TableCell className="text-xs">{c.cidade}</TableCell>
-                        <TableCell className="text-xs">{c.uf}</TableCell>
-                        <TableCell className="text-xs">{c.bairro}</TableCell>
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox checked={selectedClientIds.size === clients.length && clients.length > 0} onCheckedChange={toggleAllClients} />
+                        </TableHead>
+                        <TableHead className="w-20">ID</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="w-24">Cidade</TableHead>
+                        <TableHead className="w-12">UF</TableHead>
+                        <TableHead className="w-28">Bairro</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {clients.map(c => (
+                        <TableRow key={c.id}>
+                          <TableCell>
+                            <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
+                          </TableCell>
+                          <TableCell className="text-xs">{c.codigoCliente || c.id}</TableCell>
+                          <TableCell className="text-xs">{c.nome}</TableCell>
+                          <TableCell className="text-xs">{c.cidade}</TableCell>
+                          <TableCell className="text-xs">{c.uf}</TableCell>
+                          <TableCell className="text-xs">{c.bairro}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div ref={sentinelRef} className="py-2 flex justify-center">
+                    {clientsLoadingMore && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  </div>
+                </>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Registro: {clients.length}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Registro: {clients.length}{clientsHasMore ? '+' : ''}
+            </p>
           </CardContent>
         </Card>
       )}
