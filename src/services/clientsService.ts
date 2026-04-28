@@ -470,6 +470,8 @@ type BulkAdjustPayload = {
     credito: number;
     aberto: number;
     disponivel: number;
+    representanteId: string;
+    representanteIds: string[];
   }>;
 };
 

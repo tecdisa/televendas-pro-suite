@@ -108,16 +108,23 @@ export function ClientesPorRepresentanteTab() {
     setSelectedClientIds(new Set());
     const f = overrideFilters ?? filters;
     try {
-      const result = await clientsService.getByRepresentante({
-        representanteId: selectedRep.representante_id,
-        q: f.search || undefined,
-        uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
-        cidade: f.cidade && f.cidade !== 'all' ? f.cidade : undefined,
-        bairro: f.bairro || undefined,
-        page: 1,
-        limit: PAGE_LIMIT,
-      });
-      setClients(result);
+      const all: import('@/services/clientsService').Client[] = [];
+      let page = 1;
+      while (true) {
+        const batch = await clientsService.getByRepresentante({
+          representanteId: selectedRep.representante_id,
+          q: f.search || undefined,
+          uf: f.uf && f.uf !== 'all' ? f.uf : undefined,
+          cidade: f.cidade && f.cidade !== 'all' ? f.cidade : undefined,
+          bairro: f.bairro || undefined,
+          page,
+          limit: PAGE_LIMIT,
+        });
+        all.push(...batch);
+        if (batch.length < PAGE_LIMIT) break;
+        page++;
+      }
+      setClients(all);
     } catch (e: any) {
       toast.error('Erro ao carregar clientes do representante');
     } finally {
@@ -236,11 +243,10 @@ export function ClientesPorRepresentanteTab() {
     }
     setImportLoading(true);
     try {
-      // For each selected client, update their representanteId
-      const promises = Array.from(importSelectedIds).map(clientId =>
-        clientsService.update(clientId, { representanteId: String(selectedRep.representante_id) })
-      );
-      await Promise.all(promises);
+      await clientsService.bulkAdjust({
+        clienteIds: Array.from(importSelectedIds),
+        data: { representanteId: String(selectedRep.representante_id) },
+      });
       toast.success(`${importSelectedIds.size} cliente(s) importado(s) com sucesso`);
       setImportOpen(false);
       loadClients();
