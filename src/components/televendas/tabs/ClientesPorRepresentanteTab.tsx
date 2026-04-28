@@ -29,10 +29,10 @@ export function ClientesPorRepresentanteTab() {
   const [clientsHasMore, setClientsHasMore] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const activeFiltersRef = useRef(filters);
 
   // Filters
   const [filters, setFilters] = useState({ search: '', uf: 'all', cidade: 'all', bairro: '' });
+  const activeFiltersRef = useRef(filters);
   const [filterUfs, setFilterUfs] = useState<Uf[]>([]);
   const [filterCidades, setFilterCidades] = useState<Cidade[]>([]);
   const [ufsLoading, setUfsLoading] = useState(false);
