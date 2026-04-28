@@ -3778,12 +3778,10 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado *</label>
                     <Select
-                      value={formData.prazo}
+                      value={formData.prazoPagtoId ? String(formData.prazoPagtoId) : ''}
                       onValueChange={(v) => {
-                        const match =
-                          prazos.find((p) => p.descricao === v) ||
-                          prazos.find((p) => String(p.codigo || '').trim() === String(v).trim());
-                        setFormData({ ...formData, prazo: v, prazoPagtoId: match ? ensurePositiveId(match.id, 0) : 0 });
+                        const match = prazos.find((p) => String(p.id) === v);
+                        setFormData({ ...formData, prazoPagtoId: match ? ensurePositiveId(match.id, 0) : 0, prazo: match ? String(match.descricao) : '' });
                       }}
                       disabled={prazosLoading || !!prazosError}
                     >
@@ -3792,7 +3790,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
                         {prazos.map((p) => (
-                          <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.descricao)}>
+                          <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.id)}>
                             {p.descricao}
                           </SelectItem>
                         ))}
@@ -4595,12 +4593,10 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <div className="col-span-1 md:col-span-6">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo máximo liberado *</label>
                       <Select
-                        value={formData.prazo}
+                        value={formData.prazoPagtoId ? String(formData.prazoPagtoId) : ''}
                         onValueChange={(v) => {
-                          const match =
-                            prazos.find((p) => p.descricao === v) ||
-                            prazos.find((p) => String(p.codigo || '').trim() === String(v).trim());
-                          setFormData({ ...formData, prazo: v, prazoPagtoId: match ? ensurePositiveId(match.id, 0) : 0 });
+                          const match = prazos.find((p) => String(p.id) === v);
+                          setFormData({ ...formData, prazoPagtoId: match ? ensurePositiveId(match.id, 0) : 0, prazo: match ? String(match.descricao) : '' });
                         }}
                         disabled={prazosLoading || !!prazosError}
                       >
@@ -4609,7 +4605,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
                           {prazos.map((p) => (
-                            <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.descricao)}>
+                            <SelectItem key={`${p.id}-${p.codigo || p.descricao}`} value={String(p.id)}>
                               {p.descricao}
                             </SelectItem>
                           ))}
