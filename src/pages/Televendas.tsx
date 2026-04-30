@@ -84,7 +84,7 @@ const TAB_TO_FUNCAO: Record<string, string | null> = {
   rotas: 'ROTAS_CLIENTES',
   produtos: 'PRODUTOS',
   estoques: 'ESTOQUES',
-  'tabelas-preco': 'TABELAS_PRECO',
+  'tabelas-preco': null,
 };
 
 function normalizeFuncaoKey(value: string | null | undefined): string {
