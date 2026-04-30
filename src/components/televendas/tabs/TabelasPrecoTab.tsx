@@ -439,16 +439,7 @@ export function TabelasPrecoTab() {
   const formContent = (
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div className="col-span-1 md:col-span-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Código</label>
-          <Input
-            className="h-8 text-sm"
-            placeholder="Auto-gerado"
-            value={formData.codigo_tabela_preco}
-            onChange={(e) => setFormData({ ...formData, codigo_tabela_preco: e.target.value.toUpperCase() })}
-          />
-        </div>
-        <div className="col-span-1 md:col-span-8">
+        <div className="col-span-1 md:col-span-12">
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição *</label>
           <Input
             className="h-8 text-sm"
