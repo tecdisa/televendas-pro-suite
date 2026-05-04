@@ -22,6 +22,9 @@ export interface TabelaPrecoItem {
   produto_id: number;
   codigo_produto: string;
   descricao_produto: string;
+  apresentacao: string;
+  custo: number;
+  produto_inativo: boolean;
   preco: number;
   desconto_maximo: number;
   comissao: number;
@@ -31,6 +34,11 @@ export interface TabelaPrecoItem {
   produto_em_promocao: boolean;
   quantidade_minima: number;
   pvs: number;
+  markup: number;
+  despesa: number;
+  lucro: number;
+  frete: number;
+  majoracao: number;
 }
 
 function normalizeTabelaPreco(raw: any): TabelaPreco {
@@ -56,6 +64,9 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     produto_id: Number(raw?.produto_id ?? 0),
     codigo_produto: String(raw?.codigo_produto ?? '').trim(),
     descricao_produto: String(raw?.descricao_produto ?? '').trim(),
+    apresentacao: String(raw?.apresentacao ?? '').trim(),
+    custo: Number(raw?.custo ?? 0),
+    produto_inativo: Boolean(raw?.produto_inativo ?? false),
     preco: Number(raw?.preco ?? 0),
     desconto_maximo: Number(raw?.desconto_maximo ?? 0),
     comissao: Number(raw?.comissao ?? 0),
@@ -65,6 +76,11 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     produto_em_promocao: Boolean(raw?.produto_em_promocao ?? false),
     quantidade_minima: Number(raw?.quantidade_minima ?? 0),
     pvs: Number(raw?.pvs ?? 0),
+    markup: Number(raw?.markup ?? 0),
+    despesa: Number(raw?.despesa ?? 0),
+    lucro: Number(raw?.lucro ?? 0),
+    frete: Number(raw?.frete ?? 0),
+    majoracao: Number(raw?.majoracao ?? 0),
   };
 }
 
@@ -247,6 +263,11 @@ export const tabelasPrecoService = {
       produto_em_promocao?: boolean;
       quantidade_minima?: number;
       pvs?: number;
+      markup?: number;
+      despesa?: number;
+      lucro?: number;
+      frete?: number;
+      majoracao?: number;
     },
   ): Promise<TabelaPrecoItem> {
     const empresa = authService.getEmpresa();
@@ -281,6 +302,11 @@ export const tabelasPrecoService = {
       produto_em_promocao: boolean;
       quantidade_minima: number;
       pvs: number;
+      markup: number;
+      despesa: number;
+      lucro: number;
+      frete: number;
+      majoracao: number;
     }>,
   ): Promise<TabelaPrecoItem> {
     const empresa = authService.getEmpresa();
