@@ -758,7 +758,7 @@ export function TabelasPrecoTab() {
     return (
       <div className="flex items-center gap-1">
         <span className="text-xs text-muted-foreground whitespace-nowrap">{label}</span>
-        <Input className="h-6 text-xs w-16 text-right px-1" value={value}
+        <Input className="h-6 text-xs w-20 text-right px-1" value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') onApply(); }} />
         <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={onApply}>OK</Button>
