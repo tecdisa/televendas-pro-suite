@@ -186,6 +186,34 @@ export function TabelasPrecoTab() {
   const [itensB2b, setItensB2b] = useState(false);
   const [itensB2c, setItensB2c] = useState(false);
 
+  // Refs que sempre apontam para os valores mais recentes dos filtros
+  // (atualizados sincronamente no render — evita closure stale em loadItens)
+  const itensStatusRef = useRef(itensStatus);
+  const itensFornecedorRef = useRef(itensFornecedor);
+  const itensDivisaoRef = useRef(itensDivisao);
+  const itensMarcaRef = useRef(itensMarca);
+  const itensLancamentoRef = useRef(itensLancamento);
+  const itensPossuiFotoRef = useRef(itensPossuiFoto);
+  const itensB2bRef = useRef(itensB2b);
+  const itensB2cRef = useRef(itensB2c);
+  const itensSearchRef = useRef(itensSearch);
+  const itensTabelaRef = useRef(itensTabela);
+  const itensPageRef = useRef(itensPage);
+  const itensLoadingRef = useRef(false);
+
+  // Sync refs — roda durante o render (antes de qualquer handler)
+  itensStatusRef.current = itensStatus;
+  itensFornecedorRef.current = itensFornecedor;
+  itensDivisaoRef.current = itensDivisao;
+  itensMarcaRef.current = itensMarca;
+  itensLancamentoRef.current = itensLancamento;
+  itensPossuiFotoRef.current = itensPossuiFoto;
+  itensB2bRef.current = itensB2b;
+  itensB2cRef.current = itensB2c;
+  itensSearchRef.current = itensSearch;
+  itensTabelaRef.current = itensTabela;
+  itensPageRef.current = itensPage;
+
   // Itens filters (client-side)
   const [filterPromocao, setFilterPromocao] = useState(false);
   const [filterComissaoZerada, setFilterComissaoZerada] = useState(false);
@@ -351,38 +379,55 @@ export function TabelasPrecoTab() {
   };
 
   // ── Items view ──────────────────────────────────────────────────────────
-  const loadItens = async (reset = false) => {
-    if (!itensTabela) return;
-    if (itensLoading) return;
+  // useCallback sem deps: lê APENAS de refs, nunca de closure stale
+  const loadItens = useCallback(async (reset = false) => {
+    if (!itensTabelaRef.current) return;
+    if (itensLoadingRef.current) return;
+    itensLoadingRef.current = true;
     setItensLoading(true);
     if (reset) { setItens([]); setItensPage(1); setItensHasMore(true); }
     try {
-      const nextPage = reset ? 1 : itensPage + 1;
+      const nextPage = reset ? 1 : itensPageRef.current + 1;
+      const filters = {
+        status: itensStatusRef.current as 'ativos' | 'inativos' | 'todos',
+        fornecedorId: itensFornecedorRef.current !== 'all' ? Number(itensFornecedorRef.current) : undefined,
+        divisaoId: itensDivisaoRef.current !== 'all' ? Number(itensDivisaoRef.current) : undefined,
+        marca: itensMarcaRef.current || undefined,
+        lancamento: itensLancamentoRef.current || undefined,
+        possuiFoto: itensPossuiFotoRef.current || undefined,
+        permiteVendaB2b: itensB2bRef.current || undefined,
+        permiteVendaB2c: itensB2cRef.current || undefined,
+      };
+      console.debug('[loadItens] tabelaId=%d page=%d filters=%o', itensTabelaRef.current.tabela_preco_id, nextPage, filters);
       const result = await tabelasPrecoService.getItens(
-        itensTabela.tabela_preco_id,
-        itensSearch,
+        itensTabelaRef.current.tabela_preco_id,
+        itensSearchRef.current,
         nextPage,
         PAGE_LIMIT,
-        {
-          status: itensStatus,
-          fornecedorId: itensFornecedor !== 'all' ? Number(itensFornecedor) : undefined,
-          divisaoId: itensDivisao !== 'all' ? Number(itensDivisao) : undefined,
-          marca: itensMarca || undefined,
-          lancamento: itensLancamento || undefined,
-          possuiFoto: itensPossuiFoto || undefined,
-          permiteVendaB2b: itensB2b || undefined,
-          permiteVendaB2c: itensB2c || undefined,
-        },
+        filters,
       );
       setItens((prev) => (reset ? result.data : [...prev, ...result.data]));
       setItensPage(nextPage);
+      itensPageRef.current = nextPage;
       const total = result.total ?? 0;
       setItensHasMore(total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT);
     } catch { toast.error('Erro ao carregar itens da tabela'); }
-    finally { setItensLoading(false); }
-  };
+    finally {
+      itensLoadingRef.current = false;
+      setItensLoading(false);
+    }
+  }, []);
 
   const resetItensFilters = () => {
+    itensStatusRef.current = 'todos';
+    itensFornecedorRef.current = 'all';
+    itensDivisaoRef.current = 'all';
+    itensMarcaRef.current = '';
+    itensLancamentoRef.current = false;
+    itensPossuiFotoRef.current = false;
+    itensB2bRef.current = false;
+    itensB2cRef.current = false;
+    itensSearchRef.current = '';
     setItensStatus('todos');
     setItensFornecedor('all');
     setItensDivisao('all');
@@ -397,6 +442,9 @@ export function TabelasPrecoTab() {
   };
 
   const openItens = (t: TabelaPreco) => {
+    itensTabelaRef.current = t;
+    itensPageRef.current = 1;
+    itensLoadingRef.current = false;
     setItensTabela(t);
     setItens([]);
     setItensSearch('');
@@ -425,6 +473,8 @@ export function TabelasPrecoTab() {
     if (Object.keys(pendingChanges).length > 0) {
       if (!confirm('Há alterações não salvas. Deseja sair sem salvar?')) return;
     }
+    itensLoadingRef.current = false;
+    itensTabelaRef.current = null;
     setItensView(false);
     setItensTabela(null);
     setPendingChanges({});
