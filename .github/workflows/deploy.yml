@@ -156,7 +156,7 @@ jobs:
           if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
             DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
           fi
-          if command -v apt-get >/dev/null 2>&1; then
+          if [ "$(id -u)" = "0" ] && command -v apt-get >/dev/null 2>&1; then
             apt_safe update -y
             apt_safe install -y ca-certificates curl git rsync ufw
           fi
@@ -262,7 +262,7 @@ jobs:
             exit 1
           fi
 
-          $COMPOSE -f docker-compose.prod.yml up -d --build --remove-orphans
+          $COMPOSE -f docker-compose.prod.yml up -d --build --force-recreate --remove-orphans
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
