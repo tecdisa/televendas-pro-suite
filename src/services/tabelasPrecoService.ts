@@ -222,6 +222,16 @@ export const tabelasPrecoService = {
     query?: string,
     page = 1,
     limit = 100,
+    filters?: {
+      status?: 'ativos' | 'inativos' | 'todos';
+      fornecedorId?: number;
+      divisaoId?: number;
+      marca?: string;
+      lancamento?: boolean;
+      possuiFoto?: boolean;
+      permiteVendaB2b?: boolean;
+      permiteVendaB2c?: boolean;
+    },
   ): Promise<{ data: TabelaPrecoItem[]; total: number }> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
@@ -232,6 +242,14 @@ export const tabelasPrecoService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (query?.trim()) params.set('q', query.trim());
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
+    if (filters?.divisaoId) params.set('divisaoId', String(filters.divisaoId));
+    if (filters?.marca?.trim()) params.set('marca', filters.marca.trim());
+    if (filters?.lancamento) params.set('lancamento', 'true');
+    if (filters?.possuiFoto) params.set('possuiFoto', 'true');
+    if (filters?.permiteVendaB2b) params.set('permiteVendaB2b', 'true');
+    if (filters?.permiteVendaB2c) params.set('permiteVendaB2c', 'true');
 
     try {
       const response = await apiClient.fetch(

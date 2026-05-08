@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem } from '@/services/tabelasPrecoService';
 import { metadataService, FormaPagamento, PrazoPagto } from '@/services/metadataService';
 import { productsService, Product } from '@/services/productsService';
+import { suppliersService, Fornecedor } from '@/services/suppliersService';
+import { divisionsService, Divisao } from '@/services/divisionsService';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const PAGE_LIMIT = 100;
@@ -174,10 +176,24 @@ export function TabelasPrecoTab() {
   const [itensPage, setItensPage] = useState(1);
   const [itensHasMore, setItensHasMore] = useState(true);
 
-  // Filters
+  // Itens filters (server-side)
+  const [itensStatus, setItensStatus] = useState<'ativos' | 'inativos' | 'todos'>('todos');
+  const [itensFornecedor, setItensFornecedor] = useState('all');
+  const [itensDivisao, setItensDivisao] = useState('all');
+  const [itensMarca, setItensMarca] = useState('');
+  const [itensLancamento, setItensLancamento] = useState(false);
+  const [itensPossuiFoto, setItensPossuiFoto] = useState(false);
+  const [itensB2b, setItensB2b] = useState(false);
+  const [itensB2c, setItensB2c] = useState(false);
+
+  // Itens filters (client-side)
   const [filterPromocao, setFilterPromocao] = useState(false);
   const [filterComissaoZerada, setFilterComissaoZerada] = useState(false);
   const [filterSemPreco, setFilterSemPreco] = useState(false);
+
+  // Listas para dropdowns de filtro
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [divisoes, setDivisoes] = useState<Divisao[]>([]);
 
   // Inline edit: pending changes per produto_id
   const [pendingChanges, setPendingChanges] = useState<Record<number, PendingChange>>({});
@@ -213,12 +229,16 @@ export function TabelasPrecoTab() {
   // ── Metadata ────────────────────────────────────────────────────────────
   const loadMetadata = useCallback(async () => {
     try {
-      const [fp, pz] = await Promise.all([
+      const [fp, pz, fornRes, divRes] = await Promise.all([
         metadataService.getFormasPagamento(),
         metadataService.getPrazos(),
+        suppliersService.getAll(undefined, 1, 500, 'ativos', true),
+        divisionsService.getAll(undefined, undefined, 1, 500, 'ativos'),
       ]);
       setFormasPagamento(fp);
       setPrazos(pz);
+      setFornecedores(fornRes.data || []);
+      setDivisoes(divRes.data || []);
     } catch { /* silent */ }
   }, []);
 
@@ -338,13 +358,42 @@ export function TabelasPrecoTab() {
     if (reset) { setItens([]); setItensPage(1); setItensHasMore(true); }
     try {
       const nextPage = reset ? 1 : itensPage + 1;
-      const result = await tabelasPrecoService.getItens(itensTabela.tabela_preco_id, itensSearch, nextPage, PAGE_LIMIT);
+      const result = await tabelasPrecoService.getItens(
+        itensTabela.tabela_preco_id,
+        itensSearch,
+        nextPage,
+        PAGE_LIMIT,
+        {
+          status: itensStatus,
+          fornecedorId: itensFornecedor !== 'all' ? Number(itensFornecedor) : undefined,
+          divisaoId: itensDivisao !== 'all' ? Number(itensDivisao) : undefined,
+          marca: itensMarca || undefined,
+          lancamento: itensLancamento || undefined,
+          possuiFoto: itensPossuiFoto || undefined,
+          permiteVendaB2b: itensB2b || undefined,
+          permiteVendaB2c: itensB2c || undefined,
+        },
+      );
       setItens((prev) => (reset ? result.data : [...prev, ...result.data]));
       setItensPage(nextPage);
       const total = result.total ?? 0;
       setItensHasMore(total ? nextPage * PAGE_LIMIT < total : result.data.length === PAGE_LIMIT);
     } catch { toast.error('Erro ao carregar itens da tabela'); }
     finally { setItensLoading(false); }
+  };
+
+  const resetItensFilters = () => {
+    setItensStatus('todos');
+    setItensFornecedor('all');
+    setItensDivisao('all');
+    setItensMarca('');
+    setItensLancamento(false);
+    setItensPossuiFoto(false);
+    setItensB2b(false);
+    setItensB2c(false);
+    setFilterPromocao(false);
+    setFilterComissaoZerada(false);
+    setFilterSemPreco(false);
   };
 
   const openItens = (t: TabelaPreco) => {
@@ -355,9 +404,7 @@ export function TabelasPrecoTab() {
     setItensHasMore(true);
     setPendingChanges({});
     setSelectedRows(new Set());
-    setFilterPromocao(false);
-    setFilterComissaoZerada(false);
-    setFilterSemPreco(false);
+    resetItensFilters();
     setItensView(true);
   };
 
@@ -810,41 +857,98 @@ export function TabelasPrecoTab() {
         </div>
 
         {/* Filter bar */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1.5 bg-muted/30 border-x border-b">
-          <div className="flex items-center gap-1">
+        <div className="border-x border-b bg-muted/20">
+          {/* Row 1: busca + status + fornecedor + divisão + marca */}
+          <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-dashed">
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-7 text-xs w-44"
+                placeholder="Buscar produto..."
+                value={itensSearch}
+                onChange={(e) => setItensSearch(e.target.value)}
+                onKeyDown={handleItensKeyDown}
+              />
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleItensSearch} disabled={itensLoading}>
+                <Search className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            <Select value={itensStatus} onValueChange={(v) => setItensStatus(v as 'ativos' | 'inativos' | 'todos')}>
+              <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativos">Ativos</SelectItem>
+                <SelectItem value="inativos">Inativos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={itensFornecedor} onValueChange={setItensFornecedor}>
+              <SelectTrigger className="h-7 text-xs w-44">
+                <SelectValue placeholder="Fornecedor..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos fornecedores</SelectItem>
+                {fornecedores.map((f) => (
+                  <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
+                    {f.nome_fornecedor}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={itensDivisao} onValueChange={setItensDivisao}>
+              <SelectTrigger className="h-7 text-xs w-40">
+                <SelectValue placeholder="Divisão..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas divisões</SelectItem>
+                {divisoes.map((d) => (
+                  <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
+                    {d.descricao_divisao}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Input
-              className="h-7 text-xs w-52"
-              placeholder="Buscar produto..."
-              value={itensSearch}
-              onChange={(e) => setItensSearch(e.target.value)}
+              className="h-7 text-xs w-28"
+              placeholder="Marca..."
+              value={itensMarca}
+              onChange={(e) => setItensMarca(e.target.value)}
               onKeyDown={handleItensKeyDown}
             />
-            <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleItensSearch} disabled={itensLoading}>
-              <Search className="h-3.5 w-3.5" />
+
+            <Button size="sm" className="h-7 px-3 text-xs" onClick={handleItensSearch} disabled={itensLoading}>
+              Pesquisar
             </Button>
-          </div>
-          <div className="flex items-center gap-1">
-            <Checkbox id="f-promo" checked={filterPromocao} onCheckedChange={(c) => setFilterPromocao(c === true)} />
-            <label htmlFor="f-promo" className="text-xs cursor-pointer">Promoção</label>
-          </div>
-          <div className="flex items-center gap-1">
-            <Checkbox id="f-comzero" checked={filterComissaoZerada} onCheckedChange={(c) => setFilterComissaoZerada(c === true)} />
-            <label htmlFor="f-comzero" className="text-xs cursor-pointer">Comissão zerada</label>
-          </div>
-          <div className="flex items-center gap-1">
-            <Checkbox id="f-sempreco" checked={filterSemPreco} onCheckedChange={(c) => setFilterSemPreco(c === true)} />
-            <label htmlFor="f-sempreco" className="text-xs cursor-pointer">Sem preço</label>
-          </div>
-          {(filterPromocao || filterComissaoZerada || filterSemPreco) && (
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1"
-              onClick={() => { setFilterPromocao(false); setFilterComissaoZerada(false); setFilterSemPreco(false); }}>
+            <Button size="sm" variant="outline" className="h-7 px-3 text-xs gap-1" onClick={() => { resetItensFilters(); }}>
               <X className="h-3 w-3" />
-              Limpar filtros
+              Limpar
             </Button>
-          )}
-          <span className="text-xs text-muted-foreground ml-auto">
-            {visibleItens.length} item(s){selectedRows.size > 0 ? `, ${selectedRows.size} selecionado(s)` : ''}
-          </span>
+          </div>
+
+          {/* Row 2: flags booleanas */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1.5">
+            {([
+              ['f-lancamento', 'Lançamento',      itensLancamento,    setItensLancamento],
+              ['f-foto',       'Possui foto',      itensPossuiFoto,    setItensPossuiFoto],
+              ['f-b2b',        'Permite B2B',      itensB2b,           setItensB2b],
+              ['f-b2c',        'Permite B2C',      itensB2c,           setItensB2c],
+              ['f-promo',      'Em promoção',      filterPromocao,     setFilterPromocao],
+              ['f-comzero',    'Comissão zerada',  filterComissaoZerada, setFilterComissaoZerada],
+              ['f-sempreco',   'Sem preço',        filterSemPreco,     setFilterSemPreco],
+            ] as [string, string, boolean, (v: boolean) => void][]).map(([id, label, checked, setter]) => (
+              <div key={id} className="flex items-center gap-1">
+                <Checkbox id={id} checked={checked}
+                  onCheckedChange={(c) => setter(c === true)} />
+                <label htmlFor={id} className="text-xs cursor-pointer">{label}</label>
+              </div>
+            ))}
+
+            <span className="text-xs text-muted-foreground ml-auto">
+              {visibleItens.length} item(s){selectedRows.size > 0 ? `, ${selectedRows.size} selecionado(s)` : ''}
+            </span>
+          </div>
         </div>
 
         {/* Grid */}
