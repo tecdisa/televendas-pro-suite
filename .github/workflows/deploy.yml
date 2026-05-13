@@ -193,24 +193,20 @@ jobs:
         run: |
           TARGET_USER="${SSH_USER:-root}"
           TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
+          RSYNC_OPTS="-avz --checksum --delete \
+            --exclude '.git/' \
+            --exclude 'node_modules/' \
+            --exclude 'dist/' \
+            --exclude '.env' \
+            --exclude '.env.*'"
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
             ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" "mkdir -p ${TARGET_DIR}"
-            rsync -az --delete \
-              --exclude '.git/' \
-              --exclude 'node_modules/' \
-              --exclude 'dist/' \
-              --exclude '.env' \
-              --exclude '.env.*' \
+            rsync $RSYNC_OPTS \
               -e "$RSYNC_RSH" \
               ./ "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/"
           else
             sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" "mkdir -p ${TARGET_DIR}"
-            sshpass -e rsync -az --delete \
-              --exclude '.git/' \
-              --exclude 'node_modules/' \
-              --exclude 'dist/' \
-              --exclude '.env' \
-              --exclude '.env.*' \
+            sshpass -e rsync $RSYNC_OPTS \
               -e "$RSYNC_RSH" \
               ./ "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/"
           fi
@@ -262,7 +258,8 @@ jobs:
             exit 1
           fi
 
-          $COMPOSE -f docker-compose.prod.yml up -d --build --force-recreate --remove-orphans
+          $COMPOSE -f docker-compose.prod.yml build --no-cache
+          $COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
