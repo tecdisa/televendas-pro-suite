@@ -15,6 +15,8 @@ export interface TabelaPreco {
   forma_pagto_id: number | null;
   prazo_pagto_id: number | null;
   inativo: boolean;
+  tabela_referencia_id: number | null;
+  tabela_referencia_percentual: number | null;
 }
 
 export interface TabelaPrecoItem {
@@ -55,6 +57,8 @@ function normalizeTabelaPreco(raw: any): TabelaPreco {
     forma_pagto_id: raw?.forma_pagto_id != null ? Number(raw.forma_pagto_id) : null,
     prazo_pagto_id: raw?.prazo_pagto_id != null ? Number(raw.prazo_pagto_id) : null,
     inativo: Boolean(raw?.inativo ?? false),
+    tabela_referencia_id: raw?.tabela_referencia_id != null ? Number(raw.tabela_referencia_id) : null,
+    tabela_referencia_percentual: raw?.tabela_referencia_percentual != null ? Number(raw.tabela_referencia_percentual) : null,
   };
 }
 
@@ -151,6 +155,8 @@ export const tabelasPrecoService = {
     forma_pagto_id?: number | null;
     prazo_pagto_id?: number | null;
     inativo?: boolean;
+    tabela_referencia_id?: number | null;
+    tabela_referencia_percentual?: number | null;
   }): Promise<TabelaPreco> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
@@ -181,6 +187,8 @@ export const tabelasPrecoService = {
       forma_pagto_id: number | null;
       prazo_pagto_id: number | null;
       inativo: boolean;
+      tabela_referencia_id: number | null;
+      tabela_referencia_percentual: number | null;
     }>,
   ): Promise<TabelaPreco> {
     const empresa = authService.getEmpresa();
@@ -344,6 +352,36 @@ export const tabelasPrecoService = {
       throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar item');
     }
     return normalizeTabelaPrecoItem(await response.json());
+  },
+
+  async copiarItens(
+    origemId: number,
+    destinoTabelaId: number,
+    filters?: { fornecedorId?: number; divisaoId?: number; marca?: string },
+  ): Promise<{ total: number; copiados: number; ignorados: number }> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${origemId}/copiar-itens`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empresaId,
+          destinoTabelaId,
+          fornecedorId: filters?.fornecedorId ?? null,
+          divisaoId: filters?.divisaoId ?? null,
+          marca: filters?.marca ?? null,
+        }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao copiar itens');
+    }
+    return response.json();
   },
 
   async deleteItem(tabelaId: number, produtoId: number): Promise<void> {

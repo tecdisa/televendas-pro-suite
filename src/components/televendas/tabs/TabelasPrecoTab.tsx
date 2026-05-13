@@ -6,15 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X } from 'lucide-react';
+import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem } from '@/services/tabelasPrecoService';
 import { metadataService, FormaPagamento, PrazoPagto } from '@/services/metadataService';
-import { productsService, Product } from '@/services/productsService';
+import { type Product } from '@/services/productsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
+import { ProductSearchDialog } from '@/components/televendas/overlays/ProductSearchDialog';
 
 const PAGE_LIMIT = 100;
 
@@ -45,6 +46,8 @@ const initialFormData = {
   forma_pagto_id: '',
   prazo_pagto_id: '',
   inativo: false,
+  tabela_referencia_id: '',
+  tabela_referencia_percentual: '',
 };
 
 const initialItemFormData = {
@@ -230,13 +233,21 @@ export function TabelasPrecoTab() {
   // Row selection
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
 
-  // Add item dialog
+  // Add item dialog (product search modal)
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [importingItems, setImportingItems] = useState(false);
+
+  // Copiar itens dialog
+  const [copiarOpen, setCopiarOpen] = useState(false);
+  const [copiarFornecedor, setCopiarFornecedor] = useState('all');
+  const [copiarDivisao, setCopiarDivisao] = useState('all');
+  const [copiarMarca, setCopiarMarca] = useState('');
+  const [copiarDestino, setCopiarDestino] = useState('');
+  const [copiarLoading, setCopiarLoading] = useState(false);
+
+  // Edit item dialog
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TabelaPrecoItem | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productSearch, setProductSearch] = useState('');
-  const [productResults, setProductResults] = useState<Product[]>([]);
-  const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [itemFormData, setItemFormData] = useState<ItemFormData>(initialItemFormData);
   const [itemFormLoading, setItemFormLoading] = useState(false);
   const [deleteItemLoading, setDeleteItemLoading] = useState<number | null>(null);
@@ -323,6 +334,8 @@ export function TabelasPrecoTab() {
           forma_pagto_id: detail.forma_pagto_id != null ? String(detail.forma_pagto_id) : '',
           prazo_pagto_id: detail.prazo_pagto_id != null ? String(detail.prazo_pagto_id) : '',
           inativo: detail.inativo || false,
+          tabela_referencia_id: detail.tabela_referencia_id != null ? String(detail.tabela_referencia_id) : '',
+          tabela_referencia_percentual: detail.tabela_referencia_percentual != null ? String(detail.tabela_referencia_percentual) : '',
         });
       }
     } catch {
@@ -342,6 +355,8 @@ export function TabelasPrecoTab() {
     forma_pagto_id: formData.forma_pagto_id !== '' ? Number(formData.forma_pagto_id) : null,
     prazo_pagto_id: formData.prazo_pagto_id !== '' ? Number(formData.prazo_pagto_id) : null,
     inativo: formData.inativo,
+    tabela_referencia_id: formData.tabela_referencia_id !== '' ? Number(formData.tabela_referencia_id) : null,
+    tabela_referencia_percentual: formData.tabela_referencia_percentual !== '' ? Number(formData.tabela_referencia_percentual) : null,
   });
 
   const handleCreate = async () => {
@@ -601,21 +616,61 @@ export function TabelasPrecoTab() {
     loadItens(true);
   };
 
-  // ── Add / Edit item dialog ───────────────────────────────────────────────
+  // ── Add item via product search dialog ─────────────────────────────────
   const openAddItem = () => {
-    setEditingItem(null);
-    setSelectedProduct(null);
-    setProductSearch('');
-    setProductResults([]);
-    setItemFormData(initialItemFormData);
-    setAddItemOpen(true);
+    setProductSearchOpen(true);
   };
+
+  const handleImportProducts = async (selectedProducts: Product[]) => {
+    if (!itensTabela) return;
+    setImportingItems(true);
+    let errors = 0;
+    for (const p of selectedProducts) {
+      try {
+        await tabelasPrecoService.upsertItem(itensTabela.tabela_preco_id, {
+          produto_id: p.id,
+          preco: p.preco ?? 0,
+        });
+      } catch { errors++; }
+    }
+    setImportingItems(false);
+    if (errors > 0) toast.error(`${errors} produto(s) não puderam ser adicionados`);
+    else toast.success(`${selectedProducts.length} produto(s) importado(s) com sucesso`);
+    loadItens(true);
+  };
+
+  const handleCopiarItens = async () => {
+    if (!itensTabela || !copiarDestino) { toast.error('Selecione a tabela destino'); return; }
+    setCopiarLoading(true);
+    try {
+      const result = await tabelasPrecoService.copiarItens(
+        itensTabela.tabela_preco_id,
+        Number(copiarDestino),
+        {
+          fornecedorId: copiarFornecedor !== 'all' ? Number(copiarFornecedor) : undefined,
+          divisaoId: copiarDivisao !== 'all' ? Number(copiarDivisao) : undefined,
+          marca: copiarMarca.trim() || undefined,
+        },
+      );
+      toast.success(
+        `${result.copiados} item(s) copiado(s)${result.ignorados > 0 ? ` · ${result.ignorados} já existente(s) ignorado(s)` : ''}`,
+      );
+      setCopiarOpen(false);
+      setCopiarFornecedor('all');
+      setCopiarDivisao('all');
+      setCopiarMarca('');
+      setCopiarDestino('');
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao copiar itens');
+    } finally {
+      setCopiarLoading(false);
+    }
+  };
+
+  // ── Edit item dialog ─────────────────────────────────────────────────────
 
   const openEditItem = (item: TabelaPrecoItem) => {
     setEditingItem(item);
-    setSelectedProduct({ id: item.produto_id, descricao: item.descricao_produto, codigoProduto: item.codigo_produto, un: '', preco: item.preco });
-    setProductSearch('');
-    setProductResults([]);
     setItemFormData({
       preco: item.preco ? String(item.preco) : '',
       desconto_maximo: item.desconto_maximo ? String(item.desconto_maximo) : '',
@@ -635,32 +690,12 @@ export function TabelasPrecoTab() {
     setAddItemOpen(true);
   };
 
-  const searchProducts = async (q: string) => {
-    if (!q.trim()) { setProductResults([]); return; }
-    setProductSearchLoading(true);
-    try {
-      const results = await productsService.search({ descricao: q.trim() }, 1, 20);
-      setProductResults(results);
-    } catch { setProductResults([]); }
-    finally { setProductSearchLoading(false); }
-  };
-
-  const selectProduct = (p: Product) => {
-    setSelectedProduct(p);
-    setProductResults([]);
-    setProductSearch('');
-    if (!itemFormData.preco && p.preco) {
-      setItemFormData((prev) => ({ ...prev, preco: String(p.preco) }));
-    }
-  };
-
   const handleSaveItem = async () => {
-    if (!itensTabela) return;
-    if (!selectedProduct) { toast.error('Selecione um produto'); return; }
+    if (!itensTabela || !editingItem) return;
     setItemFormLoading(true);
     try {
       const payload = {
-        produto_id: selectedProduct.id,
+        produto_id: editingItem.produto_id,
         preco: itemFormData.preco !== '' ? Number(itemFormData.preco) : undefined,
         desconto_maximo: itemFormData.desconto_maximo !== '' ? Number(itemFormData.desconto_maximo) : undefined,
         comissao: itemFormData.comissao !== '' ? Number(itemFormData.comissao) : undefined,
@@ -676,13 +711,8 @@ export function TabelasPrecoTab() {
         permite_venda_especial: itemFormData.permite_venda_especial,
         produto_em_promocao: itemFormData.produto_em_promocao,
       };
-      if (editingItem) {
-        await tabelasPrecoService.updateItem(itensTabela.tabela_preco_id, editingItem.produto_id, payload);
-        toast.success('Item atualizado');
-      } else {
-        await tabelasPrecoService.upsertItem(itensTabela.tabela_preco_id, payload);
-        toast.success('Item adicionado');
-      }
+      await tabelasPrecoService.updateItem(itensTabela.tabela_preco_id, editingItem.produto_id, payload);
+      toast.success('Item atualizado');
       setAddItemOpen(false);
       loadItens(true);
     } catch (e: any) { toast.error(e?.message || 'Erro ao salvar item'); }
@@ -751,6 +781,33 @@ export function TabelasPrecoTab() {
           </Select>
         </div>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="col-span-8">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de referência</label>
+          <Select
+            value={formData.tabela_referencia_id}
+            onValueChange={(v) => setFormData({ ...formData, tabela_referencia_id: v === '__none__' ? '' : v })}
+          >
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Nenhuma</SelectItem>
+              {tabelas
+                .filter((t) => editId == null || t.tabela_preco_id !== editId)
+                .map((t) => (
+                  <SelectItem key={String(t.tabela_preco_id)} value={String(t.tabela_preco_id)}>
+                    {t.codigo_tabela_preco} — {t.descricao_tabela_preco}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">% Referência</label>
+          <Input className="h-8 text-sm" type="number" min="0" step="0.01"
+            value={formData.tabela_referencia_percentual}
+            onChange={(e) => setFormData({ ...formData, tabela_referencia_percentual: e.target.value })} />
+        </div>
+      </div>
       <div className="flex items-center gap-6 pt-1">
         <div className="flex items-center gap-2">
           <Checkbox checked={formData.somente_venda_avista}
@@ -766,49 +823,9 @@ export function TabelasPrecoTab() {
     </div>
   );
 
-  // ── Add item form content ────────────────────────────────────────────────
+  // ── Edit item form content ────────────────────────────────────────────────
   const addItemFormContent = (
     <div className="space-y-3">
-      {!editingItem && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Produto *</label>
-          {selectedProduct ? (
-            <div className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
-              <div>
-                <span className="text-xs text-muted-foreground mr-2">{selectedProduct.codigoProduto}</span>
-                <span className="text-sm font-medium">{selectedProduct.descricao}</span>
-              </div>
-              <Button variant="ghost" size="sm" className="h-6 text-xs"
-                onClick={() => { setSelectedProduct(null); setItemFormData((p) => ({ ...p, preco: '' })); }}>
-                Trocar
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input className="h-8 text-sm flex-1" placeholder="Buscar produto..."
-                  value={productSearch} onChange={(e) => setProductSearch(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') searchProducts(productSearch); }} />
-                <Button size="sm" className="h-8" onClick={() => searchProducts(productSearch)} disabled={productSearchLoading}>
-                  {productSearchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                </Button>
-              </div>
-              {productResults.length > 0 && (
-                <div className="border rounded-md max-h-40 overflow-auto">
-                  {productResults.map((p) => (
-                    <button key={p.id} type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex items-center gap-2 border-b last:border-b-0"
-                      onClick={() => selectProduct(p)}>
-                      <span className="text-xs text-muted-foreground w-20 shrink-0">{p.codigoProduto}</span>
-                      <span className="truncate">{p.descricao}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
       {editingItem && (
         <div className="p-2 border rounded-md bg-muted/30">
           <span className="text-xs text-muted-foreground mr-2">{editingItem.codigo_produto}</span>
@@ -885,9 +902,13 @@ export function TabelasPrecoTab() {
             {hasPending && (
               <span className="text-xs text-amber-600 font-medium">{pendingCount} alt. pendente(s)</span>
             )}
-            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={openAddItem}>
-              <Plus className="h-3.5 w-3.5" />
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={openAddItem} disabled={importingItems}>
+              {importingItems ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               Incluir produto
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setCopiarOpen(true)}>
+              <Copy className="h-3.5 w-3.5" />
+              Copiar itens
             </Button>
             {selectedRows.size > 0 && (
               <Button size="sm" variant="destructive" className="h-7 gap-1 text-xs" onClick={handleDeleteSelected}>
@@ -1170,11 +1191,102 @@ export function TabelasPrecoTab() {
           </div>
         </div>
 
-        {/* Add/Edit item dialog */}
+        {/* Copiar itens dialog */}
+        <Dialog open={copiarOpen} onOpenChange={(v) => {
+          setCopiarOpen(v);
+          if (!v) { setCopiarFornecedor('all'); setCopiarDivisao('all'); setCopiarMarca(''); setCopiarDestino(''); }
+        }}>
+          <DialogContent className="w-[95vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle>Copiar Itens para Tabela</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Fornecedor</label>
+                <Select value={copiarFornecedor} onValueChange={setCopiarFornecedor}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {fornecedores.map((f) => (
+                      <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
+                        {f.nome_fornecedor}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Divisão</label>
+                <Select value={copiarDivisao} onValueChange={setCopiarDivisao}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {divisoes.map((d) => (
+                      <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
+                        {d.descricao_divisao}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Marca</label>
+                <Input
+                  className="h-8 text-sm"
+                  placeholder="Todas"
+                  value={copiarMarca}
+                  onChange={(e) => setCopiarMarca(e.target.value)}
+                />
+              </div>
+              <div className="border-t pt-3 grid grid-cols-[100px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Origem</label>
+                <div className="h-8 flex items-center px-3 border rounded-md bg-muted/40 text-sm text-muted-foreground truncate">
+                  {itensTabela?.codigo_tabela_preco} — {itensTabela?.descricao_tabela_preco}
+                </div>
+              </div>
+              <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Destino</label>
+                <Select value={copiarDestino} onValueChange={setCopiarDestino}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tabelas
+                      .filter((t) => t.tabela_preco_id !== itensTabela?.tabela_preco_id)
+                      .map((t) => (
+                        <SelectItem key={t.tabela_preco_id} value={String(t.tabela_preco_id)}>
+                          {t.codigo_tabela_preco} — {t.descricao_tabela_preco}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCopiarOpen(false)}>Cancelar</Button>
+              <Button onClick={handleCopiarItens} disabled={copiarLoading || !copiarDestino}>
+                {copiarLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                <Copy className="h-4 w-4 mr-2" />
+                Copiar para destino
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Product search dialog for adding items */}
+        <ProductSearchDialog
+          open={productSearchOpen}
+          onOpenChange={setProductSearchOpen}
+          multiSelect
+          onSelectProducts={handleImportProducts}
+          selectedTabelaId={itensTabela?.tabela_preco_id ? String(itensTabela.tabela_preco_id) : undefined}
+        />
+
+        {/* Edit item dialog */}
         <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
           <DialogContent className="w-[95vw] max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingItem ? 'Editar Item' : 'Incluir Produto'}</DialogTitle>
+              <DialogTitle>Editar Item</DialogTitle>
             </DialogHeader>
             {addItemFormContent}
             <DialogFooter>

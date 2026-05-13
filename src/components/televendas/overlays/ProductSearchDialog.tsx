@@ -57,7 +57,9 @@ const emptyFilters: ProductFilters = {
 interface ProductSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectProduct: (product: Product) => void;
+  onSelectProduct?: (product: Product) => void;
+  onSelectProducts?: (products: Product[]) => void;
+  multiSelect?: boolean;
   trigger?: React.ReactNode;
   selectedTabelaId?: string;
   availableTabelas?: Tabela[];
@@ -67,6 +69,8 @@ export const ProductSearchDialog = ({
   open,
   onOpenChange,
   onSelectProduct,
+  onSelectProducts,
+  multiSelect = false,
   trigger,
   selectedTabelaId,
   availableTabelas,
@@ -87,7 +91,8 @@ export const ProductSearchDialog = ({
   const [priceTablesModalOpen, setPriceTablesModalOpen] = useState(false);
   const [selectedProductForPrices, setSelectedProductForPrices] = useState<Product | null>(null);
   const [priceTablesData, setPriceTablesData] = useState<ProductPriceTableEntry[]>([]);
-  const [loadingPriceTables, setLoadingPriceTables] = useState<number | null>(null); // stores productId being loaded
+  const [loadingPriceTables, setLoadingPriceTables] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const handleOpenPriceTables = async (e: React.MouseEvent, product: Product) => {
     e.stopPropagation(); // Prevent row selection
@@ -156,10 +161,13 @@ export const ProductSearchDialog = ({
     loadMetadata();
   }, [availableTabelas]);
 
-  // Initialize filter with selected tabela when dialog opens
+  // Initialize filter with selected tabela when dialog opens; reset multi-selection
   useEffect(() => {
-    if (open && selectedTabelaId) {
-      setFilters(prev => ({ ...prev, tabela: selectedTabelaId }));
+    if (open) {
+      setSelectedIds(new Set());
+      if (selectedTabelaId) {
+        setFilters(prev => ({ ...prev, tabela: selectedTabelaId }));
+      }
     }
   }, [open, selectedTabelaId]);
 
@@ -224,7 +232,32 @@ export const ProductSearchDialog = ({
   };
 
   const handleSelectProduct = (product: Product) => {
-    onSelectProduct(product);
+    if (multiSelect) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+        return next;
+      });
+    } else {
+      onSelectProduct?.(product);
+      onOpenChange(false);
+    }
+  };
+
+  const allSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  };
+
+  const handleImportSelected = () => {
+    const selected = products.filter((p) => selectedIds.has(p.id));
+    if (selected.length === 0) { toast.error('Selecione ao menos um produto'); return; }
+    onSelectProducts?.(selected);
     onOpenChange(false);
   };
 
@@ -243,10 +276,22 @@ export const ProductSearchDialog = ({
           <DialogTitle>Pesquisa Produtos</DialogTitle>
         </DialogHeader>
         
-        {/* Collapsible Filters Section */}
-        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        {/* Accordion Filters Section */}
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="border rounded-lg flex-shrink-0">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-2 bg-muted/30 hover:bg-muted/50 transition-colors rounded-lg data-[state=open]:rounded-b-none"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Filter className="h-4 w-4" />
+                Filtros
+              </span>
+              {filtersOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+          </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="border rounded-lg p-4 bg-muted/30 flex-shrink-0">
+            <div className="p-4 bg-muted/30 border-t rounded-b-lg">
               <div className="grid grid-cols-[1fr_1fr_auto] gap-6">
                 {/* Column 1 - Text inputs */}
                 <div className="flex flex-col gap-2">
@@ -462,20 +507,6 @@ export const ProductSearchDialog = ({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Filter toggle */}
-        <div className="flex justify-end flex-shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setFiltersOpen(!filtersOpen)}
-            className="h-9"
-          >
-            <Filter className="h-4 w-4 mr-1" />
-            Filtros
-            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-          </Button>
-        </div>
-
         {/* Products Table */}
         <div className="flex-1 min-h-[250px] border rounded-lg overflow-hidden flex flex-col">
           {loading && products.length === 0 ? (
@@ -491,7 +522,12 @@ export const ProductSearchDialog = ({
               <Table className="min-w-[2300px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px] text-xs">Ações</TableHead>
+                    {multiSelect && (
+                      <TableHead className="w-[40px] text-xs text-center">
+                        <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                      </TableHead>
+                    )}
+                    {!multiSelect && <TableHead className="w-[50px] text-xs">Ações</TableHead>}
                     <TableHead className="w-[80px] text-xs">Código</TableHead>
                     <TableHead className="text-xs min-w-[220px]">Descrição</TableHead>
                     <TableHead className="w-[110px] text-xs text-right">Preço</TableHead>
@@ -515,25 +551,35 @@ export const ProductSearchDialog = ({
                   {products.map((product) => (
                     <TableRow
                       key={product.id}
-                      className="cursor-pointer hover:bg-primary/10"
+                      className={`cursor-pointer hover:bg-primary/10 ${multiSelect && selectedIds.has(product.id) ? 'bg-primary/5' : ''}`}
                       onClick={() => handleSelectProduct(product)}
                     >
-                      <TableCell className="py-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => handleOpenPriceTables(e, product)}
-                          title="Ver tabelas de preços"
-                          disabled={loadingPriceTables === product.id}
-                        >
-                          {loadingPriceTables === product.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          ) : (
-                            <DollarSign className="h-4 w-4 text-primary" />
-                          )}
-                        </Button>
-                      </TableCell>
+                      {multiSelect && (
+                        <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(product.id)}
+                            onCheckedChange={() => handleSelectProduct(product)}
+                          />
+                        </TableCell>
+                      )}
+                      {!multiSelect && (
+                        <TableCell className="py-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(e) => handleOpenPriceTables(e, product)}
+                            title="Ver tabelas de preços"
+                            disabled={loadingPriceTables === product.id}
+                          >
+                            {loadingPriceTables === product.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                              <DollarSign className="h-4 w-4 text-primary" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      )}
                       <TableCell className="font-mono text-xs py-2">
                         {product.codigoProduto ?? product.id}
                       </TableCell>
@@ -574,6 +620,23 @@ export const ProductSearchDialog = ({
             </div>
           )}
         </div>
+
+        {/* Multi-select footer */}
+        {multiSelect && (
+          <div className="flex items-center justify-between pt-2 border-t flex-shrink-0">
+            <span className="text-sm text-muted-foreground">
+              {selectedIds.size > 0 ? `${selectedIds.size} produto(s) selecionado(s)` : 'Nenhum produto selecionado'}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleImportSelected} disabled={selectedIds.size === 0}>
+                Importar {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Price Tables Modal */}
         <ProductPriceTablesModal
