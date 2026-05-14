@@ -240,161 +240,114 @@ jobs:
           PUBLIC_URL: ${{ vars.PUBLIC_URL || 'https://adsvendas-f.adsapi.com.br' }}
         run: |
           TARGET_USER="${SSH_USER:-root}"
-          REMOTE_SCRIPT=$(cat <<EOF
-          set -euo pipefail
+          # heredoc com aspas evita interpolacao do runner; tudo abaixo roda no servidor
+          REMOTE_SCRIPT=$(cat <<'REMOTE_EOF'
+          set -uo pipefail
 
-          PUBLIC_URL="${PUBLIC_URL}"
-
-          if [[ "\${DEPLOY_DIR:-}" == "~/"* ]]; then
-            DEPLOY_DIR="\$HOME/\${DEPLOY_DIR#~/}"
+          : "${DEPLOY_DIR:=~/apps/televendas-pro-suite}"
+          : "${PUBLIC_URL:=https://adsvendas-f.adsapi.com.br}"
+          if [[ "$DEPLOY_DIR" == "~/"* ]]; then
+            DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
           fi
-
-          cd "\$DEPLOY_DIR"
+          cd "$DEPLOY_DIR"
 
           if docker compose version >/dev/null 2>&1; then
             COMPOSE="docker compose"
           elif docker-compose --version >/dev/null 2>&1; then
             COMPOSE="docker-compose"
           else
-            echo "Docker Compose not found on VPS."
-            exit 1
+            echo "Docker Compose not found on VPS."; exit 1
           fi
 
-          # ===========================================================
-          # 1. Descobrir o nome do bundle atual (gerado neste build)
-          # ===========================================================
-          NEW_BUNDLE=\$(ls "\$DEPLOY_DIR/dist/assets/"index-*.js 2>/dev/null | head -1 | xargs -r basename)
-          if [ -z "\$NEW_BUNDLE" ]; then
-            echo "ERRO: bundle JS nao encontrado em dist/assets/"
-            exit 1
-          fi
-          echo ">>> Bundle desta versao: \$NEW_BUNDLE"
+          # 1) Bundle atual
+          NEW_BUNDLE=$(ls "$DEPLOY_DIR/dist/assets/"index-*.js 2>/dev/null | head -1 | xargs -r basename)
+          [ -n "$NEW_BUNDLE" ] || { echo "ERRO: bundle nao encontrado em dist/assets/"; exit 1; }
+          echo ">>> Bundle desta versao: $NEW_BUNDLE"
 
-          # ===========================================================
-          # 2. Recriar Docker container (porta 8081) com dist/ novo
-          # ===========================================================
+          # 2) Atualizar webroot do nginx do sistema
+          NGINX_WEBROOT="/var/www/adsvendas/frontend"
+          if [ -d "$NGINX_WEBROOT" ] && [ -w "$NGINX_WEBROOT" ]; then
+            echo ">>> Sincronizando $NGINX_WEBROOT ..."
+            rsync -a --checksum --delete "$DEPLOY_DIR/dist/." "$NGINX_WEBROOT/"
+            echo "    index.html agora aponta para: $(grep -oE 'src="/assets/index-[^"]+\.js"' "$NGINX_WEBROOT/index.html" | head -1)"
+          else
+            echo ">>> AVISO: $NGINX_WEBROOT nao acessivel para escrita"
+          fi
+
+          # 3) Recriar Docker container (porta 8081)
           docker pull nginx:1.27-alpine >/dev/null
-          \$COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+          $COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
           docker exec tecdisa-frontend nginx -s reload 2>/dev/null || true
 
-          # ===========================================================
-          # 3. Procurar TODOS os index.html no servidor que apontam
-          #    para um bundle DIFERENTE do nosso atual e atualiza-los.
-          #    Isso garante que qualquer webroot servido pelo nginx do
-          #    sistema seja descoberto e atualizado, mesmo que esteja
-          #    em um caminho que nao conhecemos.
-          # ===========================================================
-          echo ">>> Procurando webroots que servem versao antiga..."
-          UPDATED_DIRS=""
-          # Limitar busca a diretorios web conhecidos para evitar permission errors
-          # e tornar a busca rapida. find pode retornar exit != 0 com 2>/dev/null,
-          # entao usamos || true para nao matar o script.
-          set +e
-          HTML_FILES=\$(find /var/www /var/lib/casaos /srv /opt /home 2>/dev/null -maxdepth 8 -type f -name "index.html" 2>/dev/null)
-          set -e
-          while IFS= read -r HTML; do
-            [ -n "\$HTML" ] || continue
-            [ -r "\$HTML" ] || continue
-            CURRENT_SRC=\$(grep -oE 'src="/assets/index-[^"]+\.js"' "\$HTML" 2>/dev/null | head -1)
-            [ -n "\$CURRENT_SRC" ] || continue
-            # Se ja aponta pro bundle novo, nada a fazer
-            if echo "\$CURRENT_SRC" | grep -q "\$NEW_BUNDLE"; then
-              echo "    OK (ja atualizado): \$HTML"
-              continue
-            fi
-            DIR=\$(dirname "\$HTML")
-            # Pular o nosso proprio DEPLOY_DIR/dist (origem)
-            case "\$DIR" in
-              "\$DEPLOY_DIR/dist"*) continue ;;
-            esac
-            echo "    Webroot desatualizado: \$HTML  (aponta para \$CURRENT_SRC)"
-            if [ -w "\$DIR" ]; then
-              echo "    Atualizando \$DIR via rsync..."
-              rsync -a --checksum --delete "\$DEPLOY_DIR/dist/." "\$DIR/" || echo "      rsync falhou para \$DIR"
-              UPDATED_DIRS="\$UPDATED_DIRS \$DIR"
-            else
-              echo "    SEM permissao de escrita em \$DIR (precisa rodar como dono ou via sudo)"
-            fi
-          done <<< "\$HTML_FILES"
-
-          # ===========================================================
-          # 4. Atualizar /var/www/adsvendas/frontend (caso o find acima nao o tenha pegado por causa de permissoes ou symlinks)
-          # ===========================================================
-          for KNOWN in /var/www/adsvendas/frontend /var/www/html/adsvendas /var/www/adsvendas-f; do
-            if [ -d "\$KNOWN" ] && [ -w "\$KNOWN" ]; then
-              case " \$UPDATED_DIRS " in
-                *" \$KNOWN "*) ;;
-                *)
-                  echo ">>> Garantindo atualizacao de webroot conhecido: \$KNOWN"
-                  rsync -a --checksum --delete "\$DEPLOY_DIR/dist/." "\$KNOWN/"
-                  UPDATED_DIRS="\$UPDATED_DIRS \$KNOWN"
-                  ;;
-              esac
-            fi
-          done
-
-          # ===========================================================
-          # 5. Reload do nginx do sistema (limpa open_file_cache e
-          #    proxy_cache em memoria). Tenta varios metodos.
-          # ===========================================================
+          # 4) Reload do nginx do sistema (limpa open_file_cache / proxy_cache)
           echo ">>> Tentando reload do nginx do sistema..."
           RELOAD_OK=0
           if sudo -n nginx -s reload 2>/dev/null; then
-            echo "    nginx -s reload via sudo: OK"
-            RELOAD_OK=1
+            echo "    sudo nginx -s reload: OK"; RELOAD_OK=1
           elif sudo -n systemctl reload nginx 2>/dev/null; then
-            echo "    systemctl reload nginx via sudo: OK"
-            RELOAD_OK=1
+            echo "    sudo systemctl reload nginx: OK"; RELOAD_OK=1
           elif sudo -n service nginx reload 2>/dev/null; then
-            echo "    service nginx reload via sudo: OK"
-            RELOAD_OK=1
-          fi
-
-          # Fallback: tentar enviar SIGHUP via /proc se temos permissao
-          if [ "\$RELOAD_OK" = "0" ]; then
-            NGINX_PIDS=\$(pgrep -f 'nginx: master process' 2>/dev/null | head -3)
-            for PID in \$NGINX_PIDS; do
-              if kill -HUP "\$PID" 2>/dev/null; then
-                echo "    SIGHUP enviado para nginx master PID=\$PID: OK"
-                RELOAD_OK=1
-                break
+            echo "    sudo service nginx reload: OK"; RELOAD_OK=1
+          else
+            # Tenta SIGHUP no master (so funciona se o nginx for nosso ou processo do mesmo user)
+            for PID in $(pgrep -f 'nginx: master process' 2>/dev/null); do
+              if kill -HUP "$PID" 2>/dev/null; then
+                echo "    SIGHUP enviado para nginx master $PID: OK"; RELOAD_OK=1; break
               fi
             done
           fi
 
-          if [ "\$RELOAD_OK" = "0" ]; then
-            echo "    AVISO: nao foi possivel recarregar o nginx do sistema."
-            echo "    Para habilitar reload automatico no futuro, rode como ROOT no servidor:"
-            echo "      echo '\$(whoami) ALL=(ALL) NOPASSWD: /usr/sbin/nginx, /bin/systemctl reload nginx' | sudo tee /etc/sudoers.d/deploy-nginx"
-            echo "      sudo chmod 0440 /etc/sudoers.d/deploy-nginx"
-          fi
-
-          # ===========================================================
-          # 6. Verificacao final: o site publico esta servindo o bundle novo?
-          # ===========================================================
-          echo ">>> Verificando \$PUBLIC_URL ..."
+          # 5) Verificar resultado externamente
+          echo ">>> Verificando $PUBLIC_URL ..."
           sleep 2
-          REMOTE_BUNDLE=\$(curl -fsSL --max-time 10 "\$PUBLIC_URL/" 2>/dev/null | grep -oE 'src="/assets/index-[^"]+\.js"' | head -1 || echo "")
-          echo "    URL publica serve: \$REMOTE_BUNDLE"
-          echo "    Esperado:          src=\"/assets/\$NEW_BUNDLE\""
-          if echo "\$REMOTE_BUNDLE" | grep -q "\$NEW_BUNDLE"; then
-            echo "    OK! O site publico esta servindo a versao nova."
-          else
-            echo "    FALHA: o site publico ainda serve versao antiga."
-            echo "    Causa provavel: nginx do sistema NAO foi recarregado (cache de bytes ou open_file_cache)."
-            echo "    Solucao imediata: rode no servidor como root:  sudo nginx -s reload"
-            exit 2
+          REMOTE_HTML=$(curl -fsSL --max-time 15 "$PUBLIC_URL/" 2>/dev/null || true)
+          REMOTE_BUNDLE=$(echo "$REMOTE_HTML" | grep -oE 'src="/assets/index-[^"]+\.js"' | head -1)
+          echo "    URL publica serve: $REMOTE_BUNDLE"
+          echo "    Esperado:          src=\"/assets/$NEW_BUNDLE\""
+
+          if echo "$REMOTE_BUNDLE" | grep -q "$NEW_BUNDLE"; then
+            echo ">>> OK! Site publico atualizado."
+            exit 0
           fi
 
-          echo ">>> Deploy concluido com sucesso."
-          EOF
+          # Nao funcionou - imprimir guia de correcao
+          echo ""
+          echo "============================================================="
+          echo "FALHA: o site publico ainda serve versao antiga."
+          echo "============================================================="
+          if [ "$RELOAD_OK" = "0" ]; then
+            echo ""
+            echo "CAUSA: o nginx do sistema nao foi recarregado e mantem cache."
+            echo ""
+            echo "CORRECAO PERMANENTE (rode UMA VEZ no servidor como root):"
+            echo "  echo '$(whoami) ALL=(ALL) NOPASSWD: /usr/sbin/nginx, /bin/systemctl reload nginx, /usr/bin/systemctl reload nginx' | sudo tee /etc/sudoers.d/deploy-nginx"
+            echo "  sudo chmod 0440 /etc/sudoers.d/deploy-nginx"
+            echo ""
+            echo "Depois disso, o proximo deploy (git push) ja funciona sozinho."
+            echo ""
+            echo "CORRECAO IMEDIATA (so para este deploy, rode como root):"
+            echo "  sudo nginx -s reload"
+          else
+            echo ""
+            echo "Nginx do sistema FOI recarregado mas o site ainda nao atualizou."
+            echo "Investigar: pode haver proxy_cache configurado em outro caminho,"
+            echo "ou o webroot real do nginx eh diferente de $NGINX_WEBROOT."
+            echo ""
+            echo "Procure no servidor por outros index.html:"
+            echo "  sudo find / -name 'index.html' -size 3034c 2>/dev/null"
+          fi
+          echo "============================================================="
+          exit 2
+          REMOTE_EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
             ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
               DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+              PUBLIC_URL="${PUBLIC_URL}" \
               'bash -se' <<< "$REMOTE_SCRIPT"
           else
             sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
               DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+              PUBLIC_URL="${PUBLIC_URL}" \
               'bash -se' <<< "$REMOTE_SCRIPT"
           fi
