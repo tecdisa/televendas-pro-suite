@@ -96,6 +96,30 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
   };
 }
 
+export interface TabelaPrecoDivisao {
+  id: number;
+  empresa_id: number;
+  tabela_preco_id: number;
+  divisao_id: number;
+  percentual_ajuste: number;
+  codigo_divisao: string;
+  descricao_divisao: string;
+  codigo_tabela_preco: string;
+}
+
+function normalizeTabelaPrecoDivisao(raw: any): TabelaPrecoDivisao {
+  return {
+    id: Number(raw?.id ?? 0),
+    empresa_id: Number(raw?.empresa_id ?? 0),
+    tabela_preco_id: Number(raw?.tabela_preco_id ?? 0),
+    divisao_id: Number(raw?.divisao_id ?? 0),
+    percentual_ajuste: Number(raw?.percentual_ajuste ?? 0),
+    codigo_divisao: String(raw?.codigo_divisao ?? '').trim(),
+    descricao_divisao: String(raw?.descricao_divisao ?? '').trim(),
+    codigo_tabela_preco: String(raw?.codigo_tabela_preco ?? '').trim(),
+  };
+}
+
 export const tabelasPrecoService = {
   async getAll(
     query?: string,
@@ -404,6 +428,96 @@ export const tabelasPrecoService = {
     if (!response.ok && response.status !== 204) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir item');
+    }
+  },
+
+  // ── Divisões ────────────────────────────────────────────────────────────
+
+  async getDivisoes(
+    tabelaId: number,
+    query?: string,
+  ): Promise<{ data: TabelaPrecoDivisao[]; total: number }> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) return { data: [], total: 0 };
+
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    if (query?.trim()) params.set('q', query.trim());
+
+    try {
+      const response = await apiClient.fetch(
+        `${API_BASE}/api/tabelas-precos/${tabelaId}/divisoes?${params.toString()}`,
+      );
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      const arr = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
+      return { data: arr.map(normalizeTabelaPrecoDivisao), total: result?.total ?? arr.length };
+    } catch (error) {
+      console.error('Erro ao buscar divisões da tabela:', error);
+      return { data: [], total: 0 };
+    }
+  },
+
+  async createDivisao(
+    tabelaId: number,
+    data: { divisao_id: number; percentual_ajuste: number },
+  ): Promise<TabelaPrecoDivisao> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/divisoes`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, ...data }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao criar divisão');
+    }
+    return normalizeTabelaPrecoDivisao(await response.json());
+  },
+
+  async updateDivisao(
+    tabelaId: number,
+    divisaoId: number,
+    data: { percentual_ajuste: number },
+  ): Promise<TabelaPrecoDivisao> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/divisoes/${divisaoId}?empresaId=${empresaId}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar divisão');
+    }
+    return normalizeTabelaPrecoDivisao(await response.json());
+  },
+
+  async deleteDivisao(tabelaId: number, divisaoId: number): Promise<void> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/divisoes/${divisaoId}?empresaId=${empresaId}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok && response.status !== 204) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir divisão');
     }
   },
 };

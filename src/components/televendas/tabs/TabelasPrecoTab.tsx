@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy } from 'lucide-react';
+import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem } from '@/services/tabelasPrecoService';
+import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem, TabelaPrecoDivisao } from '@/services/tabelasPrecoService';
 import { metadataService, FormaPagamento, PrazoPagto } from '@/services/metadataService';
 import { type Product } from '@/services/productsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
@@ -244,6 +244,19 @@ export function TabelasPrecoTab() {
   const [copiarMarca, setCopiarMarca] = useState('');
   const [copiarDestino, setCopiarDestino] = useState('');
   const [copiarLoading, setCopiarLoading] = useState(false);
+
+  // Divisões dialog
+  const [divisoesOpen, setDivisoesOpen] = useState(false);
+  const [divisoesTabela, setDivisoesTabela] = useState<TabelaPreco | null>(null);
+  const [divisoesItems, setDivisoesItems] = useState<TabelaPrecoDivisao[]>([]);
+  const [divisoesLoading, setDivisoesLoading] = useState(false);
+  const [divisoesSearch, setDivisoesSearch] = useState('');
+  const [divisoesTab, setDivisoesTab] = useState<'pesquisa' | 'dados'>('pesquisa');
+  const [divisaoEditando, setDivisaoEditando] = useState<TabelaPrecoDivisao | null>(null);
+  const [divisaoFormDivisaoId, setDivisaoFormDivisaoId] = useState('');
+  const [divisaoFormPercentual, setDivisaoFormPercentual] = useState('');
+  const [divisaoFormLoading, setDivisaoFormLoading] = useState(false);
+  const [divisaoDeleteLoading, setDivisaoDeleteLoading] = useState<number | null>(null);
 
   // Edit item dialog
   const [addItemOpen, setAddItemOpen] = useState(false);
@@ -717,6 +730,85 @@ export function TabelasPrecoTab() {
       loadItens(true);
     } catch (e: any) { toast.error(e?.message || 'Erro ao salvar item'); }
     finally { setItemFormLoading(false); }
+  };
+
+  // ── Divisões dialog ─────────────────────────────────────────────────────
+  const loadDivisoes = async (tabela: TabelaPreco, q?: string) => {
+    setDivisoesLoading(true);
+    try {
+      const res = await tabelasPrecoService.getDivisoes(tabela.tabela_preco_id, q);
+      setDivisoesItems(res.data);
+    } catch { toast.error('Erro ao carregar divisões'); }
+    finally { setDivisoesLoading(false); }
+  };
+
+  const openDivisoes = (tabela: TabelaPreco) => {
+    setDivisoesTabela(tabela);
+    setDivisoesItems([]);
+    setDivisoesSearch('');
+    setDivisoesTab('pesquisa');
+    resetDivisaoForm();
+    setDivisoesOpen(true);
+    loadDivisoes(tabela);
+  };
+
+  const resetDivisaoForm = () => {
+    setDivisaoEditando(null);
+    setDivisaoFormDivisaoId('');
+    setDivisaoFormPercentual('');
+  };
+
+  const openNovaDivisao = () => {
+    resetDivisaoForm();
+    setDivisoesTab('dados');
+  };
+
+  const openEditDivisao = (d: TabelaPrecoDivisao) => {
+    setDivisaoEditando(d);
+    setDivisaoFormDivisaoId(String(d.divisao_id));
+    setDivisaoFormPercentual(String(d.percentual_ajuste));
+    setDivisoesTab('dados');
+  };
+
+  const handleSaveDivisao = async () => {
+    if (!divisoesTabela) return;
+    if (!divisaoFormDivisaoId) { toast.error('Selecione a divisão'); return; }
+    const percentual = parseFloat(divisaoFormPercentual.replace(',', '.'));
+    if (isNaN(percentual)) { toast.error('Percentual inválido'); return; }
+
+    setDivisaoFormLoading(true);
+    try {
+      if (divisaoEditando) {
+        await tabelasPrecoService.updateDivisao(
+          divisoesTabela.tabela_preco_id,
+          divisaoEditando.divisao_id,
+          { percentual_ajuste: percentual },
+        );
+        toast.success('Divisão atualizada');
+      } else {
+        await tabelasPrecoService.createDivisao(divisoesTabela.tabela_preco_id, {
+          divisao_id: Number(divisaoFormDivisaoId),
+          percentual_ajuste: percentual,
+        });
+        toast.success('Divisão adicionada');
+      }
+      resetDivisaoForm();
+      setDivisoesTab('pesquisa');
+      loadDivisoes(divisoesTabela, divisoesSearch);
+    } catch (e: any) { toast.error(e?.message || 'Erro ao salvar divisão'); }
+    finally { setDivisaoFormLoading(false); }
+  };
+
+  const handleDeleteDivisao = async (d: TabelaPrecoDivisao) => {
+    if (!divisoesTabela) return;
+    if (!confirm(`Excluir divisão "${d.descricao_divisao}"?`)) return;
+    setDivisaoDeleteLoading(d.id);
+    try {
+      await tabelasPrecoService.deleteDivisao(divisoesTabela.tabela_preco_id, d.divisao_id);
+      toast.success('Divisão excluída');
+      loadDivisoes(divisoesTabela, divisoesSearch);
+    } catch (e: any) { toast.error(e?.message || 'Erro ao excluir divisão'); }
+    finally { setDivisaoDeleteLoading(null); }
   };
 
   // ── Derived ─────────────────────────────────────────────────────────────
@@ -1463,12 +1555,205 @@ export function TabelasPrecoTab() {
           {formLoading && !formData.descricao_tabela_preco ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : formContent}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-            <Button onClick={handleUpdate} disabled={formLoading}>
-              {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Salvar
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between">
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => {
+                const t = tabelas.find((t) => t.tabela_preco_id === editId);
+                if (t) { setEditOpen(false); openDivisoes(t); }
+              }}
+              disabled={!editId}
+            >
+              <Percent className="h-4 w-4" />
+              Percentual por Divisões
             </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button onClick={handleUpdate} disabled={formLoading}>
+                {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Salvar
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Divisões dialog */}
+      <Dialog open={divisoesOpen} onOpenChange={(v) => { setDivisoesOpen(v); if (!v) resetDivisaoForm(); }}>
+        <DialogContent className="w-[95vw] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Percent className="h-4 w-4" />
+              Percentual por Divisões
+              {divisoesTabela && (
+                <span className="text-muted-foreground font-normal text-sm ml-1">
+                  — {divisoesTabela.codigo_tabela_preco} {divisoesTabela.descricao_tabela_preco}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Custom tab bar */}
+          <div className="flex border-b">
+            {(['pesquisa', 'dados'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => { setDivisoesTab(tab); if (tab === 'dados' && !divisaoEditando) resetDivisaoForm(); }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  divisoesTab === tab
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab === 'pesquisa' ? 'Pesquisa' : 'Dados da divisão'}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Aba Pesquisa ── */}
+          {divisoesTab === 'pesquisa' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium w-16 text-right shrink-0">Divisão</label>
+                <Input
+                  className="h-8 text-sm flex-1"
+                  placeholder="Pesquisar divisão..."
+                  value={divisoesSearch}
+                  onChange={(e) => setDivisoesSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && divisoesTabela) loadDivisoes(divisoesTabela, divisoesSearch);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={() => divisoesTabela && loadDivisoes(divisoesTabela, divisoesSearch)}
+                  disabled={divisoesLoading}
+                >
+                  {divisoesLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                  Pesquisar
+                </Button>
+              </div>
+
+              <div className="border rounded-md overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/60">
+                    <tr className="border-b">
+                      <th className="w-12 px-2 py-1.5 text-left">Id</th>
+                      <th className="w-20 px-2 py-1.5 text-left">Categoria</th>
+                      <th className="w-20 px-2 py-1.5 text-left">Divisão</th>
+                      <th className="px-2 py-1.5 text-left">Descrição</th>
+                      <th className="w-28 px-2 py-1.5 text-right">Percentual Ajuste</th>
+                      <th className="w-16 px-2 py-1.5 text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {divisoesLoading ? (
+                      <tr><td colSpan={6} className="text-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </td></tr>
+                    ) : divisoesItems.length === 0 ? (
+                      <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">
+                        Nenhuma divisão cadastrada
+                      </td></tr>
+                    ) : (
+                      divisoesItems.map((d) => (
+                        <tr
+                          key={d.id}
+                          className="border-b hover:bg-muted/30 cursor-pointer"
+                          onClick={() => openEditDivisao(d)}
+                        >
+                          <td className="px-2 py-1.5 font-mono">{d.id}</td>
+                          <td className="px-2 py-1.5">{d.codigo_tabela_preco || '-'}</td>
+                          <td className="px-2 py-1.5 font-mono">{d.codigo_divisao || '-'}</td>
+                          <td className="px-2 py-1.5">{d.descricao_divisao || '-'}</td>
+                          <td className="px-2 py-1.5 text-right font-mono">
+                            {Number(d.percentual_ajuste).toFixed(5)}
+                          </td>
+                          <td className="px-2 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost" size="icon" className="h-6 w-6"
+                              disabled={divisaoDeleteLoading === d.id}
+                              onClick={() => handleDeleteDivisao(d)}
+                            >
+                              {divisaoDeleteLoading === d.id
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : <Trash2 className="h-3 w-3" />}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                <span>Registros: {divisoesItems.length}</span>
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={openNovaDivisao}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Nova divisão
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Aba Dados da divisão ── */}
+          {divisoesTab === 'dados' && (
+            <div className="space-y-4 py-1">
+              <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Categoria</label>
+                <div className="h-8 flex items-center px-3 border rounded-md bg-muted/40 text-sm text-muted-foreground">
+                  {divisoesTabela?.codigo_tabela_preco} — {divisoesTabela?.descricao_tabela_preco}
+                </div>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Divisão</label>
+                <Select
+                  value={divisaoFormDivisaoId}
+                  onValueChange={setDivisaoFormDivisaoId}
+                  disabled={!!divisaoEditando}
+                >
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {divisoes.map((d) => (
+                      <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
+                        {d.descricao_divisao}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Percentual Ajuste</label>
+                <Input
+                  className="h-8 text-sm"
+                  type="number"
+                  step="0.00001"
+                  min="0"
+                  value={divisaoFormPercentual}
+                  onChange={(e) => setDivisaoFormPercentual(e.target.value)}
+                  placeholder="0.00000"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {divisoesTab === 'dados' ? (
+              <>
+                <Button variant="outline" onClick={() => { resetDivisaoForm(); setDivisoesTab('pesquisa'); }}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveDivisao} disabled={divisaoFormLoading}>
+                  {divisaoFormLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {divisaoEditando ? 'Atualizar' : 'Adicionar'}
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setDivisoesOpen(false)}>Fechar</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
