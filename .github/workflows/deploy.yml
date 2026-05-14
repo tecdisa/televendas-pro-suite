@@ -307,10 +307,12 @@ jobs:
           if [ -n "$JS_FILE" ]; then
             grep -c "Percentual por Divis" "$JS_FILE" && echo "BOTAO ENCONTRADO no bundle" || echo "BOTAO NAO ENCONTRADO no bundle!"
           fi
-          echo "=== Nginx do sistema: sites ativos ==="
-          ls /etc/nginx/sites-enabled/ 2>/dev/null || echo "sem sites-enabled"
-          echo "=== Config dos sites ativos ==="
-          for f in /etc/nginx/sites-enabled/*; do echo "--- $f ---"; cat "$f"; done 2>/dev/null || echo "nao encontrado"
+          echo "=== Nginx do sistema: nginx.conf ==="
+          cat /etc/nginx/nginx.conf 2>/dev/null | grep -v "^[[:space:]]*#" | grep -v "^$" || echo "nao encontrado"
+          echo "=== Nginx do sistema: conf.d/ ==="
+          for f in /etc/nginx/conf.d/*.conf; do echo "--- $f ---"; cat "$f" 2>/dev/null | grep -v "^[[:space:]]*#" | grep -v "^$"; done 2>/dev/null || echo "sem conf.d"
+          echo "=== Porta 80 - quem esta escutando ==="
+          ss -tlnp 2>/dev/null | grep -E ":80|:443" || netstat -tlnp 2>/dev/null | grep -E ":80|:443" || echo "nao disponivel"
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
