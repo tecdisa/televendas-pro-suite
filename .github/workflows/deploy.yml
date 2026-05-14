@@ -319,18 +319,14 @@ jobs:
           if [ -n "$JS_FILE" ]; then
             grep -c "Percentual por Divis" "$JS_FILE" && echo "BOTAO ENCONTRADO no bundle" || echo "BOTAO NAO ENCONTRADO no bundle!"
           fi
-          echo "=== Processo na porta 80 ==="
-          ss -tlnp | grep ':80' 2>/dev/null || echo "nao disponivel"
-          echo "=== CasaOS nginx config ==="
-          find /var/lib/casaos /etc/casaos 2>/dev/null -name "*.conf" | head -10
-          cat /var/lib/casaos/www/index.html 2>/dev/null | grep -o 'src="[^"]*\.js"' || echo "sem casaos index.html"
-          echo "=== index.html em /var/www/adsvendas/frontend ==="
-          ls -la /var/www/adsvendas/frontend/index.html 2>/dev/null
-          grep -o 'src="[^"]*\.js"' /var/www/adsvendas/frontend/index.html 2>/dev/null
-          echo "=== Todos nginx.conf no sistema ==="
-          find /etc /var/lib/casaos /usr/local 2>/dev/null -name "nginx.conf" | head -10
-          echo "=== nginx que responde na porta 80 (curl local) ==="
-          curl -s http://localhost/ 2>/dev/null | grep -o 'src="[^"]*\.js"' || echo "sem resposta local"
+          echo "=== Buscando o JS antigo que nginx serve (index-CLTPvyYJ.js) ==="
+          find / -name "index-CLTPvyYJ.js" 2>/dev/null | head -5 || echo "nao encontrado"
+          echo "=== Processo nginx args ==="
+          ps aux 2>/dev/null | grep "nginx" | grep -v grep | head -5
+          echo "=== Reload nginx via systemctl ==="
+          sudo systemctl reload nginx 2>/dev/null && echo "nginx reloaded OK" || echo "sem permissao para recarregar nginx"
+          echo "=== curl local porta 80 ==="
+          curl -s http://localhost/ 2>/dev/null | grep -o 'src="[^"]*\.js"' | head -3 || echo "sem resposta"
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
