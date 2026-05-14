@@ -307,6 +307,10 @@ jobs:
           if [ -n "$JS_FILE" ]; then
             grep -c "Percentual por Divis" "$JS_FILE" && echo "BOTAO ENCONTRADO no bundle" || echo "BOTAO NAO ENCONTRADO no bundle!"
           fi
+          echo "=== Nginx do sistema: sites ativos ==="
+          ls /etc/nginx/sites-enabled/ 2>/dev/null || echo "sem sites-enabled"
+          echo "=== Config dos sites ativos ==="
+          for f in /etc/nginx/sites-enabled/*; do echo "--- $f ---"; cat "$f"; done 2>/dev/null || echo "nao encontrado"
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
