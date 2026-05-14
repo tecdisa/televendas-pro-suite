@@ -231,7 +231,7 @@ jobs:
           fi
           rm -f .env.deploy
 
-      - name: Deploy (start or reload nginx)
+      - name: Deploy
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -257,26 +257,34 @@ jobs:
             exit 1
           fi
 
-          # Sincronizar dist/ para o webroot real do nginx do sistema
+          # Sincronizar dist/ para o webroot do nginx do sistema (CasaOS nginx na porta 80)
+          # O nginx do sistema serve de /var/www/adsvendas/frontend/ para o domínio público
           NGINX_WEBROOT="/var/www/adsvendas/frontend"
           if [ -d "$NGINX_WEBROOT" ]; then
             echo "Sincronizando dist/ para $NGINX_WEBROOT ..."
-            # rsync com --delete garante limpeza de arquivos antigos e sobrescreve index.html
-            rsync -av --checksum --delete "$DEPLOY_DIR/dist/." "$NGINX_WEBROOT/"
-            echo "--- index.html no webroot aponta para: ---"
-            grep -o 'src="[^"]*\.js"' "$NGINX_WEBROOT/index.html" || echo "FALHA ao ler index.html"
-          else
-            echo "AVISO: $NGINX_WEBROOT nao encontrado, pulando copia para nginx do sistema"
+            rsync -a --checksum --delete "$DEPLOY_DIR/dist/." "$NGINX_WEBROOT/"
+            echo "Webroot atualizado. index.html aponta para:"
+            grep -o 'src="[^"]*\.js"' "$NGINX_WEBROOT/index.html"
           fi
 
-          # Pull latest nginx image
+          # Recarregar nginx do sistema para limpar open_file_cache
+          # Requer: echo "USER ALL=(ALL) NOPASSWD: /usr/sbin/nginx -s reload" >> /etc/sudoers.d/deploy
+          # Ou:     echo "USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx" >> /etc/sudoers.d/deploy
+          if sudo nginx -s reload 2>/dev/null; then
+            echo "Nginx do sistema recarregado OK"
+          elif sudo systemctl reload nginx 2>/dev/null; then
+            echo "Nginx do sistema recarregado via systemctl OK"
+          else
+            echo "AVISO: sem permissao para recarregar nginx do sistema."
+            echo "Para habilitar: como root, execute:"
+            echo "  echo '$(whoami) ALL=(ALL) NOPASSWD: /usr/sbin/nginx -s reload' >> /etc/sudoers.d/deploy"
+          fi
+
+          # Docker container na porta 8081 (backup / acesso direto)
           docker pull nginx:1.27-alpine
-
-          # Always recreate so volume mounts and config changes take effect
           $COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+          docker exec tecdisa-frontend nginx -s reload 2>/dev/null || true
 
-          # Reload nginx in-place to pick up any nginx.conf changes (zero downtime)
-          docker exec tecdisa-frontend nginx -s reload
           echo "Deploy concluido."
           EOF
           )
@@ -288,53 +296,4 @@ jobs:
             sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
               DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
               'bash -se' <<< "$REMOTE_SCRIPT"
-          fi
-
-      - name: Verify deploy
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
-        run: |
-          TARGET_USER="${SSH_USER:-root}"
-          DIAG_SCRIPT=$(cat <<'EOF'
-          set -euo pipefail
-          if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
-            DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
-          fi
-          echo "=== DEPLOY_DIR: $DEPLOY_DIR ==="
-          echo "=== dist/assets/ ==="
-          ls -lh "$DEPLOY_DIR/dist/assets/" 2>/dev/null || echo "MISSING: dist/assets/ nao encontrado!"
-          echo "=== index.html src tag ==="
-          grep -o 'src="[^"]*\.js"' "$DEPLOY_DIR/dist/index.html" 2>/dev/null || echo "MISSING: index.html nao encontrado!"
-          echo "=== Containers em execucao ==="
-          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
-          echo "=== Volumes do container frontend ==="
-          docker inspect tecdisa-frontend --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' 2>/dev/null || echo "Container tecdisa-frontend nao encontrado"
-          echo "=== O que nginx serve (index.html) ==="
-          docker exec tecdisa-frontend wget -qO- http://localhost/index.html 2>/dev/null | grep -o 'src="[^"]*\.js"' || echo "Falha ao buscar index.html do container"
-          echo "=== Botao presente no JS? ==="
-          JS_FILE=$(ls "$DEPLOY_DIR/dist/assets/"*.js 2>/dev/null | head -1)
-          if [ -n "$JS_FILE" ]; then
-            grep -c "Percentual por Divis" "$JS_FILE" && echo "BOTAO ENCONTRADO no bundle" || echo "BOTAO NAO ENCONTRADO no bundle!"
-          fi
-          echo "=== Buscando o JS antigo que nginx serve (index-CLTPvyYJ.js) ==="
-          find / -name "index-CLTPvyYJ.js" 2>/dev/null | head -5 || echo "nao encontrado"
-          echo "=== Processo nginx args ==="
-          ps aux 2>/dev/null | grep "nginx" | grep -v grep | head -5
-          echo "=== Reload nginx via systemctl ==="
-          sudo systemctl reload nginx 2>/dev/null && echo "nginx reloaded OK" || echo "sem permissao para recarregar nginx"
-          echo "=== curl local porta 80 ==="
-          curl -s http://localhost/ 2>/dev/null | grep -o 'src="[^"]*\.js"' | head -3 || echo "sem resposta"
-          EOF
-          )
-          if [ "${SSH_AUTH_MODE}" = "key" ]; then
-            ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
-              DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
-              'bash -se' <<< "$DIAG_SCRIPT"
-          else
-            sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
-              DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
-              'bash -se' <<< "$DIAG_SCRIPT"
           fi
