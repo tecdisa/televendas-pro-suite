@@ -260,10 +260,11 @@ jobs:
           # Sincronizar dist/ para o webroot real do nginx do sistema
           NGINX_WEBROOT="/var/www/adsvendas/frontend"
           if [ -d "$NGINX_WEBROOT" ]; then
-            echo "Copiando dist/ para $NGINX_WEBROOT ..."
-            cp -r "$DEPLOY_DIR/dist/." "$NGINX_WEBROOT/"
-            echo "Copia concluida. Arquivos:"
-            ls -lh "$NGINX_WEBROOT/assets/" 2>/dev/null || ls -lh "$NGINX_WEBROOT/"
+            echo "Sincronizando dist/ para $NGINX_WEBROOT ..."
+            # rsync com --delete garante limpeza de arquivos antigos e sobrescreve index.html
+            rsync -av --checksum --delete "$DEPLOY_DIR/dist/." "$NGINX_WEBROOT/"
+            echo "--- index.html no webroot aponta para: ---"
+            grep -o 'src="[^"]*\.js"' "$NGINX_WEBROOT/index.html" || echo "FALHA ao ler index.html"
           else
             echo "AVISO: $NGINX_WEBROOT nao encontrado, pulando copia para nginx do sistema"
           fi
