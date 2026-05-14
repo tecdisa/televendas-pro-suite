@@ -237,16 +237,19 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL || 'https://adsvendas-f.adsapi.com.br' }}
         run: |
           TARGET_USER="${SSH_USER:-root}"
-          REMOTE_SCRIPT=$(cat <<'EOF'
+          REMOTE_SCRIPT=$(cat <<EOF
           set -euo pipefail
 
-          if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
-            DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
+          PUBLIC_URL="${PUBLIC_URL}"
+
+          if [[ "\${DEPLOY_DIR:-}" == "~/"* ]]; then
+            DEPLOY_DIR="\$HOME/\${DEPLOY_DIR#~/}"
           fi
 
-          cd "$DEPLOY_DIR"
+          cd "\$DEPLOY_DIR"
 
           if docker compose version >/dev/null 2>&1; then
             COMPOSE="docker compose"
@@ -257,35 +260,126 @@ jobs:
             exit 1
           fi
 
-          # Sincronizar dist/ para o webroot do nginx do sistema (CasaOS nginx na porta 80)
-          # O nginx do sistema serve de /var/www/adsvendas/frontend/ para o domínio público
-          NGINX_WEBROOT="/var/www/adsvendas/frontend"
-          if [ -d "$NGINX_WEBROOT" ]; then
-            echo "Sincronizando dist/ para $NGINX_WEBROOT ..."
-            rsync -a --checksum --delete "$DEPLOY_DIR/dist/." "$NGINX_WEBROOT/"
-            echo "Webroot atualizado. index.html aponta para:"
-            grep -o 'src="[^"]*\.js"' "$NGINX_WEBROOT/index.html"
+          # ===========================================================
+          # 1. Descobrir o nome do bundle atual (gerado neste build)
+          # ===========================================================
+          NEW_BUNDLE=\$(ls "\$DEPLOY_DIR/dist/assets/"index-*.js 2>/dev/null | head -1 | xargs -r basename)
+          if [ -z "\$NEW_BUNDLE" ]; then
+            echo "ERRO: bundle JS nao encontrado em dist/assets/"
+            exit 1
           fi
+          echo ">>> Bundle desta versao: \$NEW_BUNDLE"
 
-          # Recarregar nginx do sistema para limpar open_file_cache
-          # Requer: echo "USER ALL=(ALL) NOPASSWD: /usr/sbin/nginx -s reload" >> /etc/sudoers.d/deploy
-          # Ou:     echo "USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx" >> /etc/sudoers.d/deploy
-          if sudo nginx -s reload 2>/dev/null; then
-            echo "Nginx do sistema recarregado OK"
-          elif sudo systemctl reload nginx 2>/dev/null; then
-            echo "Nginx do sistema recarregado via systemctl OK"
-          else
-            echo "AVISO: sem permissao para recarregar nginx do sistema."
-            echo "Para habilitar: como root, execute:"
-            echo "  echo '$(whoami) ALL=(ALL) NOPASSWD: /usr/sbin/nginx -s reload' >> /etc/sudoers.d/deploy"
-          fi
-
-          # Docker container na porta 8081 (backup / acesso direto)
-          docker pull nginx:1.27-alpine
-          $COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+          # ===========================================================
+          # 2. Recriar Docker container (porta 8081) com dist/ novo
+          # ===========================================================
+          docker pull nginx:1.27-alpine >/dev/null
+          \$COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
           docker exec tecdisa-frontend nginx -s reload 2>/dev/null || true
 
-          echo "Deploy concluido."
+          # ===========================================================
+          # 3. Procurar TODOS os index.html no servidor que apontam
+          #    para um bundle DIFERENTE do nosso atual e atualiza-los.
+          #    Isso garante que qualquer webroot servido pelo nginx do
+          #    sistema seja descoberto e atualizado, mesmo que esteja
+          #    em um caminho que nao conhecemos.
+          # ===========================================================
+          echo ">>> Procurando webroots que servem versao antiga..."
+          UPDATED_DIRS=""
+          while IFS= read -r HTML; do
+            [ -r "\$HTML" ] || continue
+            # Pular htmls que nao tenham padrao de bundle do Vite
+            CURRENT_SRC=\$(grep -oE 'src="/assets/index-[^"]+\.js"' "\$HTML" 2>/dev/null | head -1)
+            [ -n "\$CURRENT_SRC" ] || continue
+            # Se ja aponta pro bundle novo, nada a fazer
+            if echo "\$CURRENT_SRC" | grep -q "\$NEW_BUNDLE"; then
+              continue
+            fi
+            DIR=\$(dirname "\$HTML")
+            # Pular o nosso proprio DEPLOY_DIR/dist (origem)
+            case "\$DIR" in
+              "\$DEPLOY_DIR/dist"*) continue ;;
+            esac
+            echo "    Webroot desatualizado: \$HTML  (aponta para \$CURRENT_SRC)"
+            if [ -w "\$DIR" ]; then
+              echo "    Atualizando \$DIR via rsync..."
+              rsync -a --checksum --delete "\$DEPLOY_DIR/dist/." "\$DIR/"
+              UPDATED_DIRS="\$UPDATED_DIRS \$DIR"
+            else
+              echo "    SEM permissao de escrita em \$DIR (precisa rodar como dono ou via sudo)"
+            fi
+          done < <(find / -type f -name "index.html" 2>/dev/null)
+
+          # ===========================================================
+          # 4. Atualizar /var/www/adsvendas/frontend (caso o find acima nao o tenha pegado por causa de permissoes ou symlinks)
+          # ===========================================================
+          for KNOWN in /var/www/adsvendas/frontend /var/www/html/adsvendas /var/www/adsvendas-f; do
+            if [ -d "\$KNOWN" ] && [ -w "\$KNOWN" ]; then
+              case " \$UPDATED_DIRS " in
+                *" \$KNOWN "*) ;;
+                *)
+                  echo ">>> Garantindo atualizacao de webroot conhecido: \$KNOWN"
+                  rsync -a --checksum --delete "\$DEPLOY_DIR/dist/." "\$KNOWN/"
+                  UPDATED_DIRS="\$UPDATED_DIRS \$KNOWN"
+                  ;;
+              esac
+            fi
+          done
+
+          # ===========================================================
+          # 5. Reload do nginx do sistema (limpa open_file_cache e
+          #    proxy_cache em memoria). Tenta varios metodos.
+          # ===========================================================
+          echo ">>> Tentando reload do nginx do sistema..."
+          RELOAD_OK=0
+          if sudo -n nginx -s reload 2>/dev/null; then
+            echo "    nginx -s reload via sudo: OK"
+            RELOAD_OK=1
+          elif sudo -n systemctl reload nginx 2>/dev/null; then
+            echo "    systemctl reload nginx via sudo: OK"
+            RELOAD_OK=1
+          elif sudo -n service nginx reload 2>/dev/null; then
+            echo "    service nginx reload via sudo: OK"
+            RELOAD_OK=1
+          fi
+
+          # Fallback: tentar enviar SIGHUP via /proc se temos permissao
+          if [ "\$RELOAD_OK" = "0" ]; then
+            NGINX_PIDS=\$(pgrep -f 'nginx: master process' 2>/dev/null | head -3)
+            for PID in \$NGINX_PIDS; do
+              if kill -HUP "\$PID" 2>/dev/null; then
+                echo "    SIGHUP enviado para nginx master PID=\$PID: OK"
+                RELOAD_OK=1
+                break
+              fi
+            done
+          fi
+
+          if [ "\$RELOAD_OK" = "0" ]; then
+            echo "    AVISO: nao foi possivel recarregar o nginx do sistema."
+            echo "    Para habilitar reload automatico no futuro, rode como ROOT no servidor:"
+            echo "      echo '\$(whoami) ALL=(ALL) NOPASSWD: /usr/sbin/nginx, /bin/systemctl reload nginx' | sudo tee /etc/sudoers.d/deploy-nginx"
+            echo "      sudo chmod 0440 /etc/sudoers.d/deploy-nginx"
+          fi
+
+          # ===========================================================
+          # 6. Verificacao final: o site publico esta servindo o bundle novo?
+          # ===========================================================
+          echo ">>> Verificando \$PUBLIC_URL ..."
+          sleep 2
+          REMOTE_BUNDLE=\$(curl -fsSL --max-time 10 "\$PUBLIC_URL/" 2>/dev/null | grep -oE 'src="/assets/index-[^"]+\.js"' | head -1 || echo "")
+          echo "    URL publica serve: \$REMOTE_BUNDLE"
+          echo "    Esperado:          src=\"/assets/\$NEW_BUNDLE\""
+          if echo "\$REMOTE_BUNDLE" | grep -q "\$NEW_BUNDLE"; then
+            echo "    OK! O site publico esta servindo a versao nova."
+          else
+            echo "    FALHA: o site publico ainda serve versao antiga."
+            echo "    Causa provavel: nginx do sistema NAO foi recarregado (cache de bytes ou open_file_cache)."
+            echo "    Solucao imediata: rode no servidor como root:  sudo nginx -s reload"
+            exit 2
+          fi
+
+          echo ">>> Deploy concluido com sucesso."
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
