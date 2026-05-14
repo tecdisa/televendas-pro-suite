@@ -11,7 +11,6 @@ on:
       - 'package-lock.json'
       - 'vite.config.ts'
       - 'nginx.conf'
-      - 'Dockerfile'
       - 'docker-compose.prod.yml'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
@@ -184,7 +183,7 @@ jobs:
             sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" DEPLOY_DIR="${TARGET_DIR}" 'bash -se' <<< "$REMOTE_SCRIPT"
           fi
 
-      - name: Copy project to VPS (rsync)
+      - name: Sync files to VPS (rsync)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -193,10 +192,10 @@ jobs:
         run: |
           TARGET_USER="${SSH_USER:-root}"
           TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
+          # Sync dist/ (built in CI) + config files. No build on the server.
           RSYNC_OPTS="-avz --checksum --delete \
             --exclude '.git/' \
             --exclude 'node_modules/' \
-            --exclude 'dist/' \
             --exclude '.env' \
             --exclude '.env.*'"
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
@@ -211,7 +210,7 @@ jobs:
               ./ "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/"
           fi
 
-      - name: Upload deploy env file
+      - name: Upload .env file
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -220,11 +219,7 @@ jobs:
         run: |
           TARGET_USER="${SSH_USER:-root}"
           TARGET_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}"
-          {
-            printf 'VITE_API_BASE=%s\n' "$VITE_API_BASE"
-            printf 'VITE_BASE_PATH=%s\n' "$VITE_BASE_PATH"
-            printf 'FRONTEND_PORT=%s\n' "$FRONTEND_PORT"
-          } > .env.deploy
+          printf 'FRONTEND_PORT=%s\n' "$FRONTEND_PORT" > .env.deploy
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
             scp $SCP_BASE_ARGS .env.deploy "${TARGET_USER}@${SSH_HOST}:${TARGET_DIR}/.env"
           else
@@ -232,7 +227,7 @@ jobs:
           fi
           rm -f .env.deploy
 
-      - name: Deploy on VPS (Docker Compose up)
+      - name: Deploy (start or reload nginx)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -258,8 +253,15 @@ jobs:
             exit 1
           fi
 
-          $COMPOSE -f docker-compose.prod.yml build --no-cache
-          $COMPOSE -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+          # Pull latest nginx image
+          docker pull nginx:1.27-alpine
+
+          # Recreate container if config changed; no-op if identical
+          $COMPOSE -f docker-compose.prod.yml up -d --remove-orphans
+
+          # Reload nginx in-place to pick up any nginx.conf changes (zero downtime)
+          docker exec tecdisa-frontend nginx -s reload
+          echo "Deploy concluido."
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
