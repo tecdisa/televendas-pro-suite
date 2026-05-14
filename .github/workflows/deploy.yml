@@ -277,3 +277,44 @@ jobs:
               DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
               'bash -se' <<< "$REMOTE_SCRIPT"
           fi
+
+      - name: Verify deploy
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+        run: |
+          TARGET_USER="${SSH_USER:-root}"
+          DIAG_SCRIPT=$(cat <<'EOF'
+          set -euo pipefail
+          if [[ "${DEPLOY_DIR:-}" == "~/"* ]]; then
+            DEPLOY_DIR="$HOME/${DEPLOY_DIR#~/}"
+          fi
+          echo "=== DEPLOY_DIR: $DEPLOY_DIR ==="
+          echo "=== dist/assets/ ==="
+          ls -lh "$DEPLOY_DIR/dist/assets/" 2>/dev/null || echo "MISSING: dist/assets/ nao encontrado!"
+          echo "=== index.html src tag ==="
+          grep -o 'src="[^"]*\.js"' "$DEPLOY_DIR/dist/index.html" 2>/dev/null || echo "MISSING: index.html nao encontrado!"
+          echo "=== Containers em execucao ==="
+          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+          echo "=== Volumes do container frontend ==="
+          docker inspect tecdisa-frontend --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' 2>/dev/null || echo "Container tecdisa-frontend nao encontrado"
+          echo "=== O que nginx serve (index.html) ==="
+          docker exec tecdisa-frontend wget -qO- http://localhost/index.html 2>/dev/null | grep -o 'src="[^"]*\.js"' || echo "Falha ao buscar index.html do container"
+          echo "=== Botao presente no JS? ==="
+          JS_FILE=$(ls "$DEPLOY_DIR/dist/assets/"*.js 2>/dev/null | head -1)
+          if [ -n "$JS_FILE" ]; then
+            grep -c "Percentual por Divis" "$JS_FILE" && echo "BOTAO ENCONTRADO no bundle" || echo "BOTAO NAO ENCONTRADO no bundle!"
+          fi
+          EOF
+          )
+          if [ "${SSH_AUTH_MODE}" = "key" ]; then
+            ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
+              DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+              'bash -se' <<< "$DIAG_SCRIPT"
+          else
+            sshpass -e ssh $SSH_BASE_ARGS "${TARGET_USER}@${SSH_HOST}" \
+              DEPLOY_DIR="${DEPLOY_DIR:-~/apps/televendas-pro-suite}" \
+              'bash -se' <<< "$DIAG_SCRIPT"
+          fi
