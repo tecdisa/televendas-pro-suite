@@ -1641,7 +1641,6 @@ export function TabelasPrecoTab() {
                   <thead className="bg-muted/60">
                     <tr className="border-b">
                       <th className="w-12 px-2 py-1.5 text-left">Id</th>
-                      <th className="w-20 px-2 py-1.5 text-left">Categoria</th>
                       <th className="w-20 px-2 py-1.5 text-left">Divisão</th>
                       <th className="px-2 py-1.5 text-left">Descrição</th>
                       <th className="w-28 px-2 py-1.5 text-right">Percentual Ajuste</th>
@@ -1650,11 +1649,11 @@ export function TabelasPrecoTab() {
                   </thead>
                   <tbody>
                     {divisoesLoading ? (
-                      <tr><td colSpan={6} className="text-center py-6">
+                      <tr><td colSpan={5} className="text-center py-6">
                         <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                       </td></tr>
                     ) : divisoesItems.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">
+                      <tr><td colSpan={5} className="text-center py-6 text-muted-foreground">
                         Nenhuma divisão cadastrada
                       </td></tr>
                     ) : (
@@ -1665,7 +1664,6 @@ export function TabelasPrecoTab() {
                           onClick={() => openEditDivisao(d)}
                         >
                           <td className="px-2 py-1.5 font-mono">{d.id}</td>
-                          <td className="px-2 py-1.5">{d.codigo_tabela_preco || '-'}</td>
                           <td className="px-2 py-1.5 font-mono">{d.codigo_divisao || '-'}</td>
                           <td className="px-2 py-1.5">{d.descricao_divisao || '-'}</td>
                           <td className="px-2 py-1.5 text-right font-mono">
@@ -1702,12 +1700,6 @@ export function TabelasPrecoTab() {
           {/* ── Aba Dados da divisão ── */}
           {divisoesTab === 'dados' && (
             <div className="space-y-4 py-1">
-              <div className="grid grid-cols-[120px_1fr] items-center gap-3">
-                <label className="text-sm font-medium text-right">Categoria</label>
-                <div className="h-8 flex items-center px-3 border rounded-md bg-muted/40 text-sm text-muted-foreground">
-                  {divisoesTabela?.codigo_tabela_preco} — {divisoesTabela?.descricao_tabela_preco}
-                </div>
-              </div>
               <div className="grid grid-cols-[120px_1fr] items-center gap-3">
                 <label className="text-sm font-medium text-right">Divisão</label>
                 <Select
