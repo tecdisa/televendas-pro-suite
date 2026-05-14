@@ -319,14 +319,18 @@ jobs:
           if [ -n "$JS_FILE" ]; then
             grep -c "Percentual por Divis" "$JS_FILE" && echo "BOTAO ENCONTRADO no bundle" || echo "BOTAO NAO ENCONTRADO no bundle!"
           fi
-          echo "=== Nginx config via sudo ==="
-          sudo nginx -T 2>/dev/null | grep -E "root |server_name|listen|index " | head -30 || echo "sudo nginx -T nao disponivel"
-          echo "=== Buscando index.html no servidor (exceto DEPLOY_DIR) ==="
-          find /var /srv /home /opt /root 2>/dev/null -name "index.html" -not -path "*/node_modules/*" -not -path "*/.git/*" | head -20
-          echo "=== Verificando /var/www ==="
-          ls -la /var/www/ 2>/dev/null || echo "sem /var/www"
-          echo "=== Porta 80 - processo ==="
-          ss -tlnp 2>/dev/null | grep -E ":80 |:443 " || echo "nao disponivel"
+          echo "=== Processo na porta 80 ==="
+          ss -tlnp | grep ':80' 2>/dev/null || echo "nao disponivel"
+          echo "=== CasaOS nginx config ==="
+          find /var/lib/casaos /etc/casaos 2>/dev/null -name "*.conf" | head -10
+          cat /var/lib/casaos/www/index.html 2>/dev/null | grep -o 'src="[^"]*\.js"' || echo "sem casaos index.html"
+          echo "=== index.html em /var/www/adsvendas/frontend ==="
+          ls -la /var/www/adsvendas/frontend/index.html 2>/dev/null
+          grep -o 'src="[^"]*\.js"' /var/www/adsvendas/frontend/index.html 2>/dev/null
+          echo "=== Todos nginx.conf no sistema ==="
+          find /etc /var/lib/casaos /usr/local 2>/dev/null -name "nginx.conf" | head -10
+          echo "=== nginx que responde na porta 80 (curl local) ==="
+          curl -s http://localhost/ 2>/dev/null | grep -o 'src="[^"]*\.js"' || echo "sem resposta local"
           EOF
           )
           if [ "${SSH_AUTH_MODE}" = "key" ]; then
