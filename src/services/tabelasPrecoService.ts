@@ -41,6 +41,10 @@ export interface TabelaPrecoItem {
   lucro: number;
   frete: number;
   majoracao: number;
+  ean13: string;
+  codigo_fabrica: string;
+  divisao: string;
+  fornecedor: string;
 }
 
 function normalizeTabelaPreco(raw: any): TabelaPreco {
@@ -85,6 +89,10 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     lucro: Number(raw?.lucro ?? 0),
     frete: Number(raw?.frete ?? 0),
     majoracao: Number(raw?.majoracao ?? 0),
+    ean13: String(raw?.ean13 ?? '').trim(),
+    codigo_fabrica: String(raw?.codigo_fabrica ?? '').trim(),
+    divisao: String(raw?.divisao ?? '').trim(),
+    fornecedor: String(raw?.fornecedor ?? '').trim(),
   };
 }
 

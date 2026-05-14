@@ -5,18 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, CalendarIcon, X, Filter, ChevronDown, ChevronUp, DollarSign, Loader2 } from 'lucide-react';
+import { Search, X, Filter, ChevronDown, ChevronUp, DollarSign, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { productsService, type Product, type ProductFiltersParams } from '@/services/productsService';
 import { metadataService, type Tabela } from '@/services/metadataService';
 import { suppliersService, type Fornecedor } from '@/services/suppliersService';
 import { divisionsService, type Divisao } from '@/services/divisionsService';
 import { formatCurrency } from '@/utils/format';
-import { cn } from '@/lib/utils';
 import { ProductPriceTablesModal, type ProductPriceTableEntry, fetchProductPriceTables } from './ProductPriceTablesModal';
 import { toast } from 'sonner';
 
@@ -228,7 +223,7 @@ export const ProductSearchDialog = ({
   };
 
   const handleClearFilters = () => {
-    setFilters((prev) => ({ ...emptyFilters, tabela: prev.tabela }));
+    setFilters(emptyFilters);
   };
 
   const handleSelectProduct = (product: Product) => {
@@ -314,33 +309,6 @@ export const ProductSearchDialog = ({
                       onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium w-24 text-right shrink-0">Cód.Fabrica</label>
-                    <Input
-                      value={filters.codFabrica}
-                      onChange={(e) => setFilters(prev => ({ ...prev, codFabrica: e.target.value }))}
-                      className="h-8 flex-1"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium w-24 text-right shrink-0">Ean13</label>
-                    <Input
-                      value={filters.ean13}
-                      onChange={(e) => setFilters(prev => ({ ...prev, ean13: e.target.value }))}
-                      className="h-8 flex-1"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium w-24 text-right shrink-0">Dun14</label>
-                    <Input
-                      value={filters.dun14}
-                      onChange={(e) => setFilters(prev => ({ ...prev, dun14: e.target.value }))}
-                      className="h-8 flex-1"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                  </div>
                 </div>
 
                 {/* Column 2 - Dropdowns and buttons */}
@@ -417,15 +385,6 @@ export const ProductSearchDialog = ({
                       </Select>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 pt-1">
-                    <label className="text-sm font-medium w-24 text-right shrink-0">Princípio Ativo</label>
-                    <Input
-                      value={filters.principioAtivo}
-                      onChange={(e) => setFilters(prev => ({ ...prev, principioAtivo: e.target.value }))}
-                      className="h-8 flex-1"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                  </div>
                   <Button
                     size="sm"
                     onClick={handleSearch}
@@ -435,35 +394,6 @@ export const ProductSearchDialog = ({
                     <Search className="h-4 w-4 mr-2" />
                     Filtrar
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium whitespace-nowrap">Últ. compras:</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "h-8 justify-start text-left font-normal px-3",
-                            !filters.ultimasComprasDesde && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.ultimasComprasDesde
-                            ? format(filters.ultimasComprasDesde, 'dd/MM/yyyy', { locale: ptBR })
-                            : 'Selecionar'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.ultimasComprasDesde}
-                          onSelect={(date) => setFilters(prev => ({ ...prev, ultimasComprasDesde: date }))}
-                          locale={ptBR}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
                   <Button
                     variant="outline"
                     size="sm"
