@@ -286,13 +286,20 @@ jobs:
           # ===========================================================
           echo ">>> Procurando webroots que servem versao antiga..."
           UPDATED_DIRS=""
+          # Limitar busca a diretorios web conhecidos para evitar permission errors
+          # e tornar a busca rapida. find pode retornar exit != 0 com 2>/dev/null,
+          # entao usamos || true para nao matar o script.
+          set +e
+          HTML_FILES=\$(find /var/www /var/lib/casaos /srv /opt /home 2>/dev/null -maxdepth 8 -type f -name "index.html" 2>/dev/null)
+          set -e
           while IFS= read -r HTML; do
+            [ -n "\$HTML" ] || continue
             [ -r "\$HTML" ] || continue
-            # Pular htmls que nao tenham padrao de bundle do Vite
             CURRENT_SRC=\$(grep -oE 'src="/assets/index-[^"]+\.js"' "\$HTML" 2>/dev/null | head -1)
             [ -n "\$CURRENT_SRC" ] || continue
             # Se ja aponta pro bundle novo, nada a fazer
             if echo "\$CURRENT_SRC" | grep -q "\$NEW_BUNDLE"; then
+              echo "    OK (ja atualizado): \$HTML"
               continue
             fi
             DIR=\$(dirname "\$HTML")
@@ -303,12 +310,12 @@ jobs:
             echo "    Webroot desatualizado: \$HTML  (aponta para \$CURRENT_SRC)"
             if [ -w "\$DIR" ]; then
               echo "    Atualizando \$DIR via rsync..."
-              rsync -a --checksum --delete "\$DEPLOY_DIR/dist/." "\$DIR/"
+              rsync -a --checksum --delete "\$DEPLOY_DIR/dist/." "\$DIR/" || echo "      rsync falhou para \$DIR"
               UPDATED_DIRS="\$UPDATED_DIRS \$DIR"
             else
               echo "    SEM permissao de escrita em \$DIR (precisa rodar como dono ou via sudo)"
             fi
-          done < <(find / -type f -name "index.html" 2>/dev/null)
+          done <<< "\$HTML_FILES"
 
           # ===========================================================
           # 4. Atualizar /var/www/adsvendas/frontend (caso o find acima nao o tenha pegado por causa de permissoes ou symlinks)
