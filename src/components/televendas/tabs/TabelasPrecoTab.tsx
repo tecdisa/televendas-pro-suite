@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent } from 'lucide-react';
+import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent, Layers } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem, TabelaPrecoDivisao } from '@/services/tabelasPrecoService';
+import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem, TabelaPrecoDivisao, TabelaPrecoEscala } from '@/services/tabelasPrecoService';
 import { metadataService, FormaPagamento, PrazoPagto } from '@/services/metadataService';
 import { type Product } from '@/services/productsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
@@ -257,6 +257,18 @@ export function TabelasPrecoTab() {
   const [divisaoFormPercentual, setDivisaoFormPercentual] = useState('');
   const [divisaoFormLoading, setDivisaoFormLoading] = useState(false);
   const [divisaoDeleteLoading, setDivisaoDeleteLoading] = useState<number | null>(null);
+
+  // Escala dialog
+  const [escalaOpen, setEscalaOpen] = useState(false);
+  const [escalaItem, setEscalaItem] = useState<TabelaPrecoItem | null>(null);
+  const [escalaRows, setEscalaRows] = useState<TabelaPrecoEscala[]>([]);
+  const [escalaLoading, setEscalaLoading] = useState(false);
+  const [escalaFormQtd, setEscalaFormQtd] = useState('');
+  const [escalaFormDesc, setEscalaFormDesc] = useState('');
+  const [escalaFormComissao, setEscalaFormComissao] = useState('');
+  const [escalaEditando, setEscalaEditando] = useState<TabelaPrecoEscala | null>(null);
+  const [escalaFormLoading, setEscalaFormLoading] = useState(false);
+  const [escalaDeleteLoading, setEscalaDeleteLoading] = useState<number | null>(null);
 
   // Edit item dialog
   const [addItemOpen, setAddItemOpen] = useState(false);
@@ -814,6 +826,72 @@ export function TabelasPrecoTab() {
     finally { setDivisaoDeleteLoading(null); }
   };
 
+  // ── Escala ──────────────────────────────────────────────────────────────
+  const openEscala = async (item: TabelaPrecoItem) => {
+    if (!itensTabela) return;
+    setEscalaItem(item);
+    setEscalaRows([]);
+    setEscalaEditando(null);
+    setEscalaFormQtd('');
+    setEscalaFormDesc('');
+    setEscalaFormComissao('');
+    setEscalaOpen(true);
+    setEscalaLoading(true);
+    try {
+      const rows = await tabelasPrecoService.listEscala(itensTabela.tabela_preco_id, item.produto_id);
+      setEscalaRows(rows);
+    } catch { toast.error('Erro ao carregar escala'); }
+    finally { setEscalaLoading(false); }
+  };
+
+  const resetEscalaForm = () => {
+    setEscalaEditando(null);
+    setEscalaFormQtd('');
+    setEscalaFormDesc('');
+    setEscalaFormComissao('');
+  };
+
+  const handleSaveEscala = async () => {
+    if (!itensTabela || !escalaItem) return;
+    const qtd = parseFloat(escalaFormQtd.replace(',', '.'));
+    if (isNaN(qtd) || qtd <= 0) { toast.error('Quantidade inválida'); return; }
+    const desc = parseFloat(escalaFormDesc.replace(',', '.') || '0');
+    const com = parseFloat(escalaFormComissao.replace(',', '.') || '0');
+    if (isNaN(desc) || isNaN(com)) { toast.error('Desconto ou comissão inválidos'); return; }
+    setEscalaFormLoading(true);
+    try {
+      if (escalaEditando) {
+        const updated = await tabelasPrecoService.updateEscala(
+          itensTabela.tabela_preco_id, escalaItem.produto_id, escalaEditando.id,
+          { quantidade: qtd, desconto: desc, comissao: com },
+        );
+        setEscalaRows((prev) => prev.map((r) => r.id === updated.id ? updated : r));
+        toast.success('Escala atualizada');
+      } else {
+        const created = await tabelasPrecoService.createEscala(
+          itensTabela.tabela_preco_id, escalaItem.produto_id,
+          { quantidade: qtd, desconto: desc, comissao: com },
+        );
+        setEscalaRows((prev) => [...prev, created].sort((a, b) => a.quantidade - b.quantidade));
+        toast.success('Escala adicionada');
+      }
+      resetEscalaForm();
+    } catch (e: any) { toast.error(e?.message || 'Erro ao salvar escala'); }
+    finally { setEscalaFormLoading(false); }
+  };
+
+  const handleDeleteEscala = async (row: TabelaPrecoEscala) => {
+    if (!itensTabela || !escalaItem) return;
+    if (!confirm(`Excluir escala de quantidade ${row.quantidade}?`)) return;
+    setEscalaDeleteLoading(row.id);
+    try {
+      await tabelasPrecoService.deleteEscala(itensTabela.tabela_preco_id, escalaItem.produto_id, row.id);
+      setEscalaRows((prev) => prev.filter((r) => r.id !== row.id));
+      toast.success('Escala excluída');
+    } catch (e: any) { toast.error(e?.message || 'Erro ao excluir escala'); }
+    finally { setEscalaDeleteLoading(null); }
+  };
+
   // ── Derived ─────────────────────────────────────────────────────────────
   const isInitialLoading = loading && tabelas.length === 0;
   const isLoadingMore = loading && tabelas.length > 0;
@@ -1227,20 +1305,33 @@ export function TabelasPrecoTab() {
                           <EditableCell value={item.desconto_maximo} field="desconto_maximo" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className="px-1 py-0.5 text-center">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6"
-                                  onClick={() => handleDeleteItem(item.produto_id)}
-                                  disabled={deleteItemLoading === item.produto_id}>
-                                  {deleteItemLoading === item.produto_id
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Trash2 className="h-3 w-3" />}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Excluir</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <div className="flex items-center gap-0.5">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"
+                                    onClick={() => openEscala(item)}>
+                                    <Layers className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Escalonado</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"
+                                    onClick={() => handleDeleteItem(item.produto_id)}
+                                    disabled={deleteItemLoading === item.produto_id}>
+                                    {deleteItemLoading === item.produto_id
+                                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                                      : <Trash2 className="h-3 w-3" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Excluir</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1384,6 +1475,99 @@ export function TabelasPrecoTab() {
                 <Copy className="h-4 w-4 mr-2" />
                 Copiar para destino
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Escala dialog */}
+        <Dialog open={escalaOpen} onOpenChange={(v) => { setEscalaOpen(v); if (!v) resetEscalaForm(); }}>
+          <DialogContent className="w-[95vw] max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                Escalonado — {escalaItem?.descricao_produto}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Tabela de escalas */}
+              <div className="border rounded-md overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/80">
+                    <tr>
+                      <th className="px-3 py-2 text-right">Quantidade</th>
+                      <th className="px-3 py-2 text-right">% Desconto</th>
+                      <th className="px-3 py-2 text-right">% Comissão</th>
+                      <th className="w-16 px-2 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {escalaLoading ? (
+                      <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </td></tr>
+                    ) : escalaRows.length === 0 ? (
+                      <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">
+                        Nenhuma escala cadastrada
+                      </td></tr>
+                    ) : escalaRows.map((row) => (
+                      <tr key={row.id} className={`border-t ${escalaEditando?.id === row.id ? 'bg-primary/5' : 'hover:bg-muted/30'}`}>
+                        <td className="px-3 py-1.5 text-right font-mono">{row.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+                        <td className="px-3 py-1.5 text-right">{row.desconto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</td>
+                        <td className="px-3 py-1.5 text-right">{row.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</td>
+                        <td className="px-2 py-1.5">
+                          <div className="flex gap-1 justify-end">
+                            <Button variant="ghost" size="icon" className="h-6 w-6"
+                              onClick={() => { setEscalaEditando(row); setEscalaFormQtd(String(row.quantidade)); setEscalaFormDesc(String(row.desconto)); setEscalaFormComissao(String(row.comissao)); }}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive"
+                              onClick={() => handleDeleteEscala(row)}
+                              disabled={escalaDeleteLoading === row.id}>
+                              {escalaDeleteLoading === row.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Formulário */}
+              <div className="border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  {escalaEditando ? 'Editar escala' : 'Adicionar escala'}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Quantidade</label>
+                    <Input className="h-8 text-sm mt-1" placeholder="0" value={escalaFormQtd}
+                      onChange={(e) => setEscalaFormQtd(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">% Desconto</label>
+                    <Input className="h-8 text-sm mt-1" placeholder="0,00" value={escalaFormDesc}
+                      onChange={(e) => setEscalaFormDesc(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">% Comissão</label>
+                    <Input className="h-8 text-sm mt-1" placeholder="0,00" value={escalaFormComissao}
+                      onChange={(e) => setEscalaFormComissao(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-2 justify-end">
+                  {escalaEditando && (
+                    <Button variant="ghost" size="sm" onClick={resetEscalaForm}>Cancelar</Button>
+                  )}
+                  <Button size="sm" onClick={handleSaveEscala} disabled={escalaFormLoading}>
+                    {escalaFormLoading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                    {escalaEditando ? 'Salvar' : 'Adicionar'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEscalaOpen(false)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

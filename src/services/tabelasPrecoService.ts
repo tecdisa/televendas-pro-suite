@@ -132,6 +132,13 @@ function normalizeTabelaPrecoDivisao(raw: any): TabelaPrecoDivisao {
   };
 }
 
+export interface TabelaPrecoEscala {
+  id: number;
+  quantidade: number;
+  desconto: number;
+  comissao: number;
+}
+
 export const tabelasPrecoService = {
   async getAll(
     query?: string,
@@ -531,6 +538,78 @@ export const tabelasPrecoService = {
     if (!response.ok && response.status !== 204) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir divisão');
+    }
+  },
+
+  async listEscala(tabelaId: number, produtoId: number): Promise<TabelaPrecoEscala[]> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/escala/${produtoId}?empresaId=${empresaId}`,
+    );
+    if (!response.ok) throw new Error('Erro ao carregar escala');
+    return response.json();
+  },
+
+  async createEscala(
+    tabelaId: number,
+    produtoId: number,
+    data: { quantidade: number; desconto: number; comissao: number },
+  ): Promise<TabelaPrecoEscala> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/escala/${produtoId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, ...data }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao criar escala');
+    }
+    return response.json();
+  },
+
+  async updateEscala(
+    tabelaId: number,
+    produtoId: number,
+    escalaId: number,
+    data: { quantidade?: number; desconto?: number; comissao?: number },
+  ): Promise<TabelaPrecoEscala> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/escala/${produtoId}/${escalaId}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, ...data }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar escala');
+    }
+    return response.json();
+  },
+
+  async deleteEscala(tabelaId: number, produtoId: number, escalaId: number): Promise<void> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/escala/${produtoId}/${escalaId}?empresaId=${empresaId}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok && response.status !== 204) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir escala');
     }
   },
 };
