@@ -401,7 +401,7 @@ export const tabelasPrecoService = {
   async copiarItens(
     origemId: number,
     destinoTabelaId: number,
-    filters?: { fornecedorId?: number; divisaoId?: number; marca?: string },
+    filters?: { fornecedorId?: number; divisaoId?: number; marca?: string; produtoIds?: number[] },
   ): Promise<{ total: number; copiados: number; ignorados: number }> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
@@ -415,6 +415,7 @@ export const tabelasPrecoService = {
         body: JSON.stringify({
           empresaId,
           destinoTabelaId,
+          produtoIds: filters?.produtoIds ?? null,
           fornecedorId: filters?.fornecedorId ?? null,
           divisaoId: filters?.divisaoId ?? null,
           marca: filters?.marca ?? null,

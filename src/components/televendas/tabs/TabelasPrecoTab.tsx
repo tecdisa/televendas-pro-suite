@@ -655,15 +655,18 @@ export function TabelasPrecoTab() {
   const handleCopiarItens = async () => {
     if (!itensTabela || !copiarDestino) { toast.error('Selecione a tabela destino'); return; }
     setCopiarLoading(true);
+    const hasSelection = selectedRows.size > 0;
     try {
       const result = await tabelasPrecoService.copiarItens(
         itensTabela.tabela_preco_id,
         Number(copiarDestino),
-        {
-          fornecedorId: copiarFornecedor !== 'all' ? Number(copiarFornecedor) : undefined,
-          divisaoId: copiarDivisao !== 'all' ? Number(copiarDivisao) : undefined,
-          marca: copiarMarca.trim() || undefined,
-        },
+        hasSelection
+          ? { produtoIds: Array.from(selectedRows) }
+          : {
+              fornecedorId: copiarFornecedor !== 'all' ? Number(copiarFornecedor) : undefined,
+              divisaoId: copiarDivisao !== 'all' ? Number(copiarDivisao) : undefined,
+              marca: copiarMarca.trim() || undefined,
+            },
       );
       toast.success(
         `${result.copiados} item(s) copiado(s)${result.ignorados > 0 ? ` · ${result.ignorados} já existente(s) ignorado(s)` : ''}`,
@@ -1307,9 +1310,14 @@ export function TabelasPrecoTab() {
               <DialogTitle>Copiar Itens para Tabela</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
+              {selectedRows.size > 0 && (
+                <div className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2">
+                  {selectedRows.size} item(s) selecionado(s) — os filtros abaixo serão ignorados
+                </div>
+              )}
               <div className="grid grid-cols-[100px_1fr] items-center gap-3">
-                <label className="text-sm font-medium text-right">Fornecedor</label>
-                <Select value={copiarFornecedor} onValueChange={setCopiarFornecedor}>
+                <label className={`text-sm font-medium text-right ${selectedRows.size > 0 ? 'text-muted-foreground' : ''}`}>Fornecedor</label>
+                <Select value={copiarFornecedor} onValueChange={setCopiarFornecedor} disabled={selectedRows.size > 0}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
@@ -1322,8 +1330,8 @@ export function TabelasPrecoTab() {
                 </Select>
               </div>
               <div className="grid grid-cols-[100px_1fr] items-center gap-3">
-                <label className="text-sm font-medium text-right">Divisão</label>
-                <Select value={copiarDivisao} onValueChange={setCopiarDivisao}>
+                <label className={`text-sm font-medium text-right ${selectedRows.size > 0 ? 'text-muted-foreground' : ''}`}>Divisão</label>
+                <Select value={copiarDivisao} onValueChange={setCopiarDivisao} disabled={selectedRows.size > 0}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
@@ -1336,12 +1344,13 @@ export function TabelasPrecoTab() {
                 </Select>
               </div>
               <div className="grid grid-cols-[100px_1fr] items-center gap-3">
-                <label className="text-sm font-medium text-right">Marca</label>
+                <label className={`text-sm font-medium text-right ${selectedRows.size > 0 ? 'text-muted-foreground' : ''}`}>Marca</label>
                 <Input
                   className="h-8 text-sm"
                   placeholder="Todas"
                   value={copiarMarca}
                   onChange={(e) => setCopiarMarca(e.target.value)}
+                  disabled={selectedRows.size > 0}
                 />
               </div>
               <div className="border-t pt-3 grid grid-cols-[100px_1fr] items-center gap-3">
