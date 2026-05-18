@@ -390,24 +390,26 @@ export const ProductSearchDialog = ({
                       </Select>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={handleSearch}
-                    className="h-9 w-48"
-                    disabled={loading}
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    Filtrar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearFilters}
-                    className="h-8 w-48"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Limpar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleSearch}
+                      className="h-9 w-48"
+                      disabled={loading}
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Filtrar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearFilters}
+                      className="h-9 w-48"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Limpar
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Column 3 - Checkboxes */}
