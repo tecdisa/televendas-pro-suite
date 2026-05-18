@@ -840,7 +840,7 @@ export function TabelasPrecoTab() {
     try {
       const rows = await tabelasPrecoService.listEscala(itensTabela.tabela_preco_id, item.produto_id);
       setEscalaRows(rows);
-    } catch { toast.error('Erro ao carregar escala'); }
+    } catch (e: any) { toast.error(e?.message || 'Erro ao carregar escala'); }
     finally { setEscalaLoading(false); }
   };
 
