@@ -1123,7 +1123,6 @@ export function TabelasPrecoTab() {
                   <th className="w-7 px-1 py-1.5 text-center">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
                   </th>
-                  <th className="w-5 px-1 py-1.5 text-center">C</th>
                   <th className="w-16 px-1 py-1.5 text-left">Prod.</th>
                   <th className="px-1 py-1.5 text-left">Descrição</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
@@ -1152,11 +1151,11 @@ export function TabelasPrecoTab() {
               </thead>
               <tbody>
                 {isItensLoading ? (
-                  <tr><td colSpan={26} className="text-center py-10 text-muted-foreground">
+                  <tr><td colSpan={25} className="text-center py-10 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </td></tr>
                 ) : visibleItens.length === 0 ? (
-                  <tr><td colSpan={26} className="text-center py-10 text-muted-foreground">
+                  <tr><td colSpan={25} className="text-center py-10 text-muted-foreground">
                     Nenhum item encontrado
                   </td></tr>
                 ) : (
@@ -1177,11 +1176,6 @@ export function TabelasPrecoTab() {
                       >
                         <td className="px-1 py-0.5 text-center">
                           <Checkbox checked={isSelected} onCheckedChange={() => toggleRow(item.produto_id)} />
-                        </td>
-                        <td className="px-1 py-0.5 text-center">
-                          <span className={`inline-block w-4 h-4 rounded text-[10px] font-bold leading-4 text-center ${item.produto_inativo ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
-                            {item.produto_inativo ? 'I' : 'A'}
-                          </span>
                         </td>
                         <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_produto}</td>
                         <td className="px-1 py-0.5 max-w-0">
@@ -1250,7 +1244,7 @@ export function TabelasPrecoTab() {
                   })
                 )}
                 {itensLoading && itens.length > 0 && (
-                  <tr><td colSpan={26} className="text-center py-3 text-muted-foreground">
+                  <tr><td colSpan={25} className="text-center py-3 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                   </td></tr>
                 )}
