@@ -1127,11 +1127,16 @@ export function TabelasPrecoTab() {
                   <th className="w-16 px-1 py-1.5 text-left">Prod.</th>
                   <th className="px-1 py-1.5 text-left">Descrição</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
+                  <th className="w-10 px-1 py-1.5 text-left">UN</th>
+                  <th className="w-20 px-1 py-1.5 text-right">Estoque</th>
                   <th className="w-32 px-1 py-1.5 text-left">Divisão</th>
                   <th className="w-36 px-1 py-1.5 text-left">Fornecedor</th>
                   <th className="w-24 px-1 py-1.5 text-left">EAN13</th>
                   <th className="w-24 px-1 py-1.5 text-left">Cód.Fábrica</th>
                   <th className="w-28 px-1 py-1.5 text-left">Marca</th>
+                  <th className="w-20 px-1 py-1.5 text-right">Múlt.Venda</th>
+                  <th className="w-28 px-1 py-1.5 text-right">Pr.Nac.Cons.</th>
+                  <th className="w-32 px-1 py-1.5 text-left">Princ.Ativo</th>
                   <th className="w-16 px-1 py-1.5 text-right">Custo</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
@@ -1147,11 +1152,11 @@ export function TabelasPrecoTab() {
               </thead>
               <tbody>
                 {isItensLoading ? (
-                  <tr><td colSpan={21} className="text-center py-10 text-muted-foreground">
+                  <tr><td colSpan={26} className="text-center py-10 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </td></tr>
                 ) : visibleItens.length === 0 ? (
-                  <tr><td colSpan={21} className="text-center py-10 text-muted-foreground">
+                  <tr><td colSpan={26} className="text-center py-10 text-muted-foreground">
                     Nenhum item encontrado
                   </td></tr>
                 ) : (
@@ -1183,11 +1188,16 @@ export function TabelasPrecoTab() {
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
+                        <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.estoque, 3)}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[144px]" title={item.fornecedor}>{item.fornecedor || '-'}</td>
                         <td className="px-1 py-0.5 font-mono text-[11px]">{item.ean13 || '-'}</td>
                         <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[112px]" title={item.marca}>{item.marca || '-'}</td>
+                        <td className="px-1 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas != null ? fmt(item.multiplo_de_vendas, 3) : '-'}</td>
+                        <td className="px-1 py-0.5 text-right text-muted-foreground">{item.preco_nacional_consumidor != null ? fmt(item.preco_nacional_consumidor) : '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.principio_ativo ?? ''}>{item.principio_ativo || '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.markup} field="markup" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
@@ -1240,7 +1250,7 @@ export function TabelasPrecoTab() {
                   })
                 )}
                 {itensLoading && itens.length > 0 && (
-                  <tr><td colSpan={21} className="text-center py-3 text-muted-foreground">
+                  <tr><td colSpan={26} className="text-center py-3 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                   </td></tr>
                 )}
