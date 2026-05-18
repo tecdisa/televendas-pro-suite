@@ -43,6 +43,7 @@ export interface TabelaPrecoItem {
   majoracao: number;
   ean13: string;
   codigo_fabrica: string;
+  marca: string;
   divisao: string;
   fornecedor: string;
 }
@@ -91,6 +92,7 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     majoracao: Number(raw?.majoracao ?? 0),
     ean13: String(raw?.ean13 ?? '').trim(),
     codigo_fabrica: String(raw?.codigo_fabrica ?? '').trim(),
+    marca: String(raw?.marca ?? '').trim(),
     divisao: String(raw?.divisao ?? '').trim(),
     fornecedor: String(raw?.fornecedor ?? '').trim(),
   };
