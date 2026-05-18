@@ -14,6 +14,7 @@ import { divisionsService, type Divisao } from '@/services/divisionsService';
 import { formatCurrency } from '@/utils/format';
 import { ProductPriceTablesModal, type ProductPriceTableEntry, fetchProductPriceTables } from './ProductPriceTablesModal';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 interface ProductFilters {
   codigoProduto: string;
@@ -58,6 +59,7 @@ interface ProductSearchDialogProps {
   trigger?: React.ReactNode;
   selectedTabelaId?: string;
   availableTabelas?: Tabela[];
+  showRecordCounter?: boolean;
 }
 
 export const ProductSearchDialog = ({
@@ -69,6 +71,7 @@ export const ProductSearchDialog = ({
   trigger,
   selectedTabelaId,
   availableTabelas,
+  showRecordCounter = false,
 }: ProductSearchDialogProps) => {
   const [filters, setFilters] = useState<ProductFilters>(emptyFilters);
   const [products, setProducts] = useState<Product[]>([]);
@@ -76,6 +79,7 @@ export const ProductSearchDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [tabelas, setTabelas] = useState<Tabela[]>([]);
   const [loadingTabelas, setLoadingTabelas] = useState(false);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -192,24 +196,25 @@ export const ProductSearchDialog = ({
     if (loading) return;
     setLoading(true);
     setError(null);
+    if (reset) setTotalProducts(0);
     try {
       const nextPage = reset ? 1 : page + 1;
       const filtersParams = buildFiltersParams();
-      const data = await productsService.find(filtersParams, nextPage, PRODUCT_LIMIT);
+      const result = await productsService.findPaged(filtersParams, nextPage, PRODUCT_LIMIT);
       
-      setProducts((prev) => {
-        const combined = reset ? data : [...prev, ...data];
-        const seen = new Set<number>();
-        return combined.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
-      });
+      const combined = reset ? result.data : [...products, ...result.data];
+      const seen = new Set<number>();
+      const nextProducts = combined.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+      setProducts(nextProducts);
       setPage(nextPage);
-      setHasMore(Array.isArray(data) && data.length === PRODUCT_LIMIT);
+      setTotalProducts(result.total);
+      setHasMore(nextProducts.length < result.total);
     } catch (e: any) {
       setError(String(e));
     } finally {
       setLoading(false);
     }
-  }, [loading, page, buildFiltersParams]);
+  }, [loading, page, products, buildFiltersParams]);
 
   // Load products when dialog opens
   useEffect(() => {
@@ -438,6 +443,12 @@ export const ProductSearchDialog = ({
         </Collapsible>
 
         {/* Products Table */}
+        {showRecordCounter && (
+          <div className="flex items-center justify-end text-sm text-muted-foreground">
+            Exibindo {products.length.toLocaleString('pt-BR')} de {totalProducts.toLocaleString('pt-BR')} registro(s)
+          </div>
+        )}
+
         <div className="flex-1 min-h-[250px] border rounded-lg overflow-hidden flex flex-col">
           {loading && products.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">Carregando produtos...</div>

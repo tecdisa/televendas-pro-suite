@@ -374,6 +374,12 @@ const Televendas = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <span
+              className="hidden lg:inline-flex items-center text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded"
+              title={`Build: ${__BUILD_DATE__}`}
+            >
+              {__GIT_HASH__}
+            </span>
             <Button
               variant="outline"
               size="sm"

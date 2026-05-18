@@ -418,6 +418,13 @@ interface ProductListResponse {
   total: number;
 }
 
+export interface ProductPagedResult {
+  data: Product[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
 function sanitizeNullableText(value: any): string | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -570,7 +577,7 @@ async function fetchFromApi({
   filters?: ProductFiltersParams; 
   page?: number; 
   limit?: number; 
-}): Promise<Product[]> {
+}): Promise<ProductPagedResult> {
   const empresa = authService.getEmpresa();
   if (!empresa) return Promise.reject('Empresa não selecionada');
   const token = authService.getToken();
@@ -598,7 +605,7 @@ async function fetchFromApi({
     }
     if (filters?.comEstoque) params.set('comEstoque', 'true');
     if (filters?.estoqueZerado) params.set('estoqueZerado', 'true');
-    if (filters?.lancamentos) params.set('lancamentos', 'true');
+    if (filters?.lancamentos) params.set('lancamento', 'true');
     if (filters?.ultimasComprasDesde) params.set('ultimasComprasDesde', filters.ultimasComprasDesde);
     
     const url = `${API_BASE}/api/produtos?${params.toString()}`;
@@ -617,9 +624,14 @@ async function fetchFromApi({
       return Promise.reject(message);
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as ProductListResponse | any[];
     const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-    return arr.map(normalizeProduct);
+    return {
+      data: arr.map(normalizeProduct),
+      page: Array.isArray(data) ? page : data?.page ?? page,
+      limit: Array.isArray(data) ? limit : data?.limit ?? limit,
+      total: Array.isArray(data) ? arr.length : data?.total ?? arr.length,
+    };
   } catch (e) {
     return Promise.reject('Erro de conexão com o servidor');
   }
@@ -736,13 +748,19 @@ async function fetchLotes(produtoId: number): Promise<ProductBatch[]> {
 
 export const productsService = {
   find: async (filters?: ProductFiltersParams, page = 1, limit = 100): Promise<Product[]> => {
+    const result = await fetchFromApi({ filters, page, limit });
+    return result.data;
+  },
+  findPaged: async (filters?: ProductFiltersParams, page = 1, limit = 100): Promise<ProductPagedResult> => {
     return fetchFromApi({ filters, page, limit });
   },
   search: async (filters?: ProductFiltersParams, page = 1, limit = 100): Promise<Product[]> => {
-    return fetchFromApi({ filters, page, limit });
+    const result = await fetchFromApi({ filters, page, limit });
+    return result.data;
   },
   getById: async (id: number): Promise<Product | undefined> => {
-    const list = await fetchFromApi({ filters: { descricao: String(id) }, page: 1, limit: 1 });
+    const result = await fetchFromApi({ filters: { descricao: String(id) }, page: 1, limit: 1 });
+    const list = result.data;
     return list.find((p) => p.id === id);
   },
   getPrecoByTabela: async (
