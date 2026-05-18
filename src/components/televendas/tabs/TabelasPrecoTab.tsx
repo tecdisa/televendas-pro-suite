@@ -1354,13 +1354,13 @@ export function TabelasPrecoTab() {
                 />
               </div>
               <div className="border-t pt-3 grid grid-cols-[100px_1fr] items-center gap-3">
-                <label className="text-sm font-medium text-right">Origem</label>
+                <label className="text-sm font-medium text-right">Tabela Origem</label>
                 <div className="h-8 flex items-center px-3 border rounded-md bg-muted/40 text-sm text-muted-foreground truncate">
                   {itensTabela?.codigo_tabela_preco} — {itensTabela?.descricao_tabela_preco}
                 </div>
               </div>
               <div className="grid grid-cols-[100px_1fr] items-center gap-3">
-                <label className="text-sm font-medium text-right">Destino</label>
+                <label className="text-sm font-medium text-right">Tabela Destino</label>
                 <Select value={copiarDestino} onValueChange={setCopiarDestino}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Selecione..." />
