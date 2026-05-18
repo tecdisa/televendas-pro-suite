@@ -1561,12 +1561,13 @@ export function TabelasPrecoTab() {
               variant="outline"
               className="gap-1.5"
               onClick={() => {
-                if (!formData.tabela_referencia_id) {
-                  toast.error('Informe a tabela de referência antes de configurar percentuais por divisão');
+                const t = tabelas.find((t) => t.tabela_preco_id === editId);
+                if (!t?.tabela_referencia_id) {
+                  toast.error('Salve a tabela com uma referência antes de configurar percentuais por divisão');
                   return;
                 }
-                const t = tabelas.find((t) => t.tabela_preco_id === editId);
-                if (t) { setEditOpen(false); openDivisoes(t); }
+                setEditOpen(false);
+                openDivisoes(t);
               }}
               disabled={!editId}
             >
