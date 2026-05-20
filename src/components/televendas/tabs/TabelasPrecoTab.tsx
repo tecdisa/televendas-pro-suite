@@ -1485,7 +1485,7 @@ export function TabelasPrecoTab() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Layers className="h-4 w-4" />
-                Escalonado — {escalaItem?.descricao_produto}
+                Escalonado — {escalaItem?.codigo_produto} · {escalaItem?.descricao_produto}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
