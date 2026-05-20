@@ -1206,6 +1206,16 @@ export function TabelasPrecoTab() {
                   </th>
                   <th className="w-16 px-1 py-1.5 text-left">Prod.</th>
                   <th className="px-1 py-1.5 text-left">Descrição</th>
+                  <th className="w-16 px-1 py-1.5 text-right">Custo</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Lucro</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
+                  <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
+                  <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
                   <th className="w-20 px-1 py-1.5 text-right">Estoque</th>
@@ -1217,16 +1227,6 @@ export function TabelasPrecoTab() {
                   <th className="w-20 px-1 py-1.5 text-right">Múlt.Venda</th>
                   <th className="w-28 px-1 py-1.5 text-right">Pr.Nac.Cons.</th>
                   <th className="w-32 px-1 py-1.5 text-left">Princ.Ativo</th>
-                  <th className="w-16 px-1 py-1.5 text-right">Custo</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Lucro</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
-                  <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
-                  <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-8 px-1 py-1.5 text-center"></th>
                 </tr>
               </thead>
@@ -1262,17 +1262,6 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 max-w-0">
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
-                        <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
-                        <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
-                        <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.estoque, 3)}</td>
-                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
-                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[144px]" title={item.fornecedor}>{item.fornecedor || '-'}</td>
-                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.ean13 || '-'}</td>
-                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
-                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[112px]" title={item.marca}>{item.marca || '-'}</td>
-                        <td className="px-1 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas != null ? fmt(item.multiplo_de_vendas, 3) : '-'}</td>
-                        <td className="px-1 py-0.5 text-right text-muted-foreground">{item.preco_nacional_consumidor != null ? fmt(item.preco_nacional_consumidor) : '-'}</td>
-                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.principio_ativo ?? ''}>{item.principio_ativo || '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.markup} field="markup" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
@@ -1304,6 +1293,17 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.desconto_maximo} field="desconto_maximo" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
+                        <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
+                        <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.estoque, 3)}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[144px]" title={item.fornecedor}>{item.fornecedor || '-'}</td>
+                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.ean13 || '-'}</td>
+                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[112px]" title={item.marca}>{item.marca || '-'}</td>
+                        <td className="px-1 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas != null ? fmt(item.multiplo_de_vendas, 3) : '-'}</td>
+                        <td className="px-1 py-0.5 text-right text-muted-foreground">{item.preco_nacional_consumidor != null ? fmt(item.preco_nacional_consumidor) : '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.principio_ativo ?? ''}>{item.principio_ativo || '-'}</td>
                         <td className="px-1 py-0.5 text-center">
                           <div className="flex items-center gap-0.5">
                             <TooltipProvider>
