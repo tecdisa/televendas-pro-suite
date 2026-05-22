@@ -599,6 +599,39 @@ export const tabelasPrecoService = {
     return response.json();
   },
 
+  async listItensAjuste(tabelaId: number, filters: { fornecedorId?: number; divisaoId?: number; grupoId?: number; marca?: string } = {}): Promise<Array<{ produto_id: number; codigo_produto: string; descricao_produto: string; apresentacao: string; preco: number }>> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const params = new URLSearchParams({ empresaId: String(empresaId), limit: '5000', status: 'ativos' });
+    if (filters.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
+    if (filters.divisaoId) params.set('divisaoId', String(filters.divisaoId));
+    if (filters.grupoId) params.set('grupoId', String(filters.grupoId));
+    if (filters.marca) params.set('marca', filters.marca);
+    const response = await apiClient.fetch(`${API_BASE}/api/tabelas-precos/${tabelaId}/itens?${params}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || 'Erro ao carregar itens');
+    }
+    const json = await response.json();
+    return (json.data ?? json) as any[];
+  },
+
+  async ajusteLinear(tabelaId: number, updates: Array<{ produto_id: number; preco: number }>): Promise<{ atualizados: number }> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/ajuste-linear`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empresaId, updates }) },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || 'Erro ao salvar ajuste');
+    }
+    return response.json();
+  },
+
   async deleteEscala(tabelaId: number, produtoId: number, escalaId: number): Promise<void> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;

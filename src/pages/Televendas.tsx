@@ -28,6 +28,7 @@ import {
   ProdutosTab,
   EstoquesTab,
   TabelasPrecoTab,
+  AtualizacaoLinearPrecoTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -60,6 +61,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   estoques: { title: 'Cadastro de Estoques', icon: Package },
   'clientes-representante': { title: 'Clientes por Representante', icon: Users },
   'tabelas-preco': { title: 'Tabelas de Preço', icon: CreditCard },
+  'ajuste-linear-preco': { title: 'Atualização Linear de Preços', icon: CreditCard },
 };
 
 const TAB_TO_FUNCAO: Record<string, string | null> = {
@@ -85,6 +87,7 @@ const TAB_TO_FUNCAO: Record<string, string | null> = {
   produtos: 'PRODUTOS',
   estoques: 'ESTOQUES',
   'tabelas-preco': null,
+  'ajuste-linear-preco': null,
 };
 
 function normalizeFuncaoKey(value: string | null | undefined): string {
@@ -266,6 +269,8 @@ const Televendas = () => {
         return <ErrorBoundary><EstoquesTab /></ErrorBoundary>;
       case 'tabelas-preco':
         return <ErrorBoundary><TabelasPrecoTab /></ErrorBoundary>;
+      case 'ajuste-linear-preco':
+        return <ErrorBoundary><AtualizacaoLinearPrecoTab /></ErrorBoundary>;
       default:
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }
