@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Calculator, Save } from 'lucide-react';
+import { Loader2, Search, Calculator, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { tabelasPrecoService } from '@/services/tabelasPrecoService';
 import { metadataService, type Tabela } from '@/services/metadataService';
@@ -38,7 +38,7 @@ export function AtualizacaoLinearPrecoTab() {
   const [percentual, setPercentual] = useState('');
 
   const [items, setItems] = useState<ItemAjuste[]>([]);
-  const [isCalculando, setIsCalculando] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSalvando, setIsSalvando] = useState(false);
   const [calculado, setCalculado] = useState(false);
 
@@ -56,36 +56,52 @@ export function AtualizacaoLinearPrecoTab() {
     }).catch(() => toast.error('Erro ao carregar filtros'));
   }, []);
 
-  async function handleCalcular() {
-    if (!tabelaId) { toast.error('Selecione uma tabela'); return; }
-    const pct = parseFloat(percentual.replace(',', '.'));
-    if (isNaN(pct)) { toast.error('Informe o percentual de ajuste'); return; }
-
-    setIsCalculando(true);
+  const loadItems = useCallback(async (tabId: string) => {
+    if (!tabId) return;
+    setIsLoading(true);
     setCalculado(false);
     try {
-      const data = await tabelasPrecoService.listItensAjuste(Number(tabelaId), {
-        fornecedorId: fornecedorId ? Number(fornecedorId) : undefined,
-        divisaoId: divisaoId ? Number(divisaoId) : undefined,
-        grupoId: grupoId ? Number(grupoId) : undefined,
+      const fId = fornecedorId && fornecedorId !== '_all' ? Number(fornecedorId) : undefined;
+      const dId = divisaoId && divisaoId !== '_all' ? Number(divisaoId) : undefined;
+      const gId = grupoId && grupoId !== '_all' ? Number(grupoId) : undefined;
+      const data = await tabelasPrecoService.listItensAjuste(Number(tabId), {
+        fornecedorId: fId,
+        divisaoId: dId,
+        grupoId: gId,
         marca: marca.trim() || undefined,
       });
-      const mapped: ItemAjuste[] = data.map((r) => ({
+      setItems(data.map((r) => ({
         produto_id: r.produto_id,
         codigo_produto: r.codigo_produto,
         descricao_produto: r.descricao_produto,
         apresentacao: r.apresentacao,
         preco: Number(r.preco ?? 0),
-        novo_preco: parseFloat((Number(r.preco ?? 0) * (1 + pct / 100)).toFixed(2)),
-      }));
-      setItems(mapped);
-      setCalculado(true);
-      if (!mapped.length) toast.info('Nenhum item encontrado para os filtros selecionados');
+        novo_preco: null,
+      })));
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao calcular');
+      toast.error(e?.message || 'Erro ao carregar itens');
     } finally {
-      setIsCalculando(false);
+      setIsLoading(false);
     }
+  }, [fornecedorId, divisaoId, grupoId, marca]);
+
+  // Carrega automaticamente ao selecionar tabela
+  useEffect(() => {
+    if (tabelaId) loadItems(tabelaId);
+    else setItems([]);
+  }, [tabelaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleCalcular() {
+    if (!items.length) { toast.error('Carregue os itens primeiro'); return; }
+    const pct = parseFloat(percentual.replace(',', '.'));
+    if (isNaN(pct)) { toast.error('Informe o percentual de ajuste'); return; }
+    setItems((prev) =>
+      prev.map((i) => ({
+        ...i,
+        novo_preco: parseFloat((i.preco * (1 + pct / 100)).toFixed(2)),
+      }))
+    );
+    setCalculado(true);
   }
 
   async function handleSalvar() {
@@ -98,7 +114,8 @@ export function AtualizacaoLinearPrecoTab() {
       const result = await tabelasPrecoService.ajusteLinear(Number(tabelaId), updates);
       toast.success(`${result.atualizados} preços atualizados com sucesso`);
       setCalculado(false);
-      setItems([]);
+      setItems((prev) => prev.map((i) => ({ ...i, novo_preco: null, preco: i.novo_preco ?? i.preco })));
+      setPercentual('');
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao salvar');
     } finally {
@@ -112,7 +129,7 @@ export function AtualizacaoLinearPrecoTab() {
       <div className="flex flex-wrap items-end gap-4 border rounded-lg p-4 bg-muted/30">
         <div className="flex flex-col gap-1 min-w-[200px]">
           <Label className="text-xs">Tabela *</Label>
-          <Select value={tabelaId} onValueChange={setTabelaId}>
+          <Select value={tabelaId} onValueChange={(v) => { setTabelaId(v); setCalculado(false); }}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Selecione a tabela" />
             </SelectTrigger>
@@ -126,7 +143,7 @@ export function AtualizacaoLinearPrecoTab() {
 
         <div className="flex flex-col gap-1 min-w-[180px]">
           <Label className="text-xs">Fornecedor</Label>
-          <Select value={fornecedorId} onValueChange={setFornecedorId}>
+          <Select value={fornecedorId} onValueChange={(v) => { setFornecedorId(v); setCalculado(false); }}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
@@ -141,7 +158,7 @@ export function AtualizacaoLinearPrecoTab() {
 
         <div className="flex flex-col gap-1 min-w-[160px]">
           <Label className="text-xs">Divisão</Label>
-          <Select value={divisaoId} onValueChange={setDivisaoId}>
+          <Select value={divisaoId} onValueChange={(v) => { setDivisaoId(v); setCalculado(false); }}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Todas" />
             </SelectTrigger>
@@ -156,7 +173,7 @@ export function AtualizacaoLinearPrecoTab() {
 
         <div className="flex flex-col gap-1 min-w-[160px]">
           <Label className="text-xs">Grupo</Label>
-          <Select value={grupoId} onValueChange={setGrupoId}>
+          <Select value={grupoId} onValueChange={(v) => { setGrupoId(v); setCalculado(false); }}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
@@ -171,8 +188,13 @@ export function AtualizacaoLinearPrecoTab() {
 
         <div className="flex flex-col gap-1 min-w-[140px]">
           <Label className="text-xs">Marca</Label>
-          <Input className="h-8 text-xs" placeholder="Filtrar por marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
+          <Input className="h-8 text-xs" placeholder="Filtrar por marca" value={marca} onChange={(e) => { setMarca(e.target.value); setCalculado(false); }} />
         </div>
+
+        <Button variant="outline" size="sm" onClick={() => loadItems(tabelaId)} disabled={!tabelaId || isLoading}>
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
+          Filtrar
+        </Button>
       </div>
 
       {/* Ação de ajuste */}
@@ -183,16 +205,17 @@ export function AtualizacaoLinearPrecoTab() {
           placeholder="0,00"
           value={percentual}
           onChange={(e) => { setPercentual(e.target.value); setCalculado(false); }}
+          onKeyDown={(e) => e.key === 'Enter' && handleCalcular()}
         />
-        <Button variant="outline" size="sm" onClick={handleCalcular} disabled={isCalculando || !tabelaId}>
-          {isCalculando ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Calculator className="h-4 w-4 mr-1" />}
+        <Button variant="outline" size="sm" onClick={handleCalcular} disabled={isLoading || !items.length}>
+          <Calculator className="h-4 w-4 mr-1" />
           Calcular
         </Button>
         <Button size="sm" onClick={handleSalvar} disabled={isSalvando || !calculado || !items.length}>
           {isSalvando ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
           Salvar
         </Button>
-        {calculado && items.length > 0 && (
+        {items.length > 0 && (
           <span className="text-xs text-muted-foreground">{items.length} produto{items.length !== 1 ? 's' : ''}</span>
         )}
       </div>
@@ -210,16 +233,22 @@ export function AtualizacaoLinearPrecoTab() {
             </tr>
           </thead>
           <tbody>
-            {!calculado && items.length === 0 ? (
+            {isLoading ? (
               <tr>
                 <td colSpan={5} className="text-center py-16 text-muted-foreground">
-                  Selecione a tabela, informe o percentual e clique em Calcular
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                </td>
+              </tr>
+            ) : !tabelaId ? (
+              <tr>
+                <td colSpan={5} className="text-center py-16 text-muted-foreground">
+                  Selecione uma tabela de preço para começar
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-16 text-muted-foreground">
-                  Nenhum produto encontrado
+                  Nenhum produto encontrado para os filtros selecionados
                 </td>
               </tr>
             ) : (
