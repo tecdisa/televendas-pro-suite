@@ -160,15 +160,12 @@ export const ProductSearchDialog = ({
     loadMetadata();
   }, [availableTabelas]);
 
-  // Initialize filter with selected tabela when dialog opens; reset multi-selection
+  // Reset multi-selection when dialog opens
   useEffect(() => {
     if (open) {
       setSelectedIds(new Set());
-      if (selectedTabelaId) {
-        setFilters(prev => ({ ...prev, tabela: selectedTabelaId }));
-      }
     }
-  }, [open, selectedTabelaId]);
+  }, [open]);
 
   // Build filters object for API
   const buildFiltersParams = useCallback((): ProductFiltersParams => {
@@ -335,11 +332,11 @@ export const ProductSearchDialog = ({
                         onValueChange={(v) => setFilters(prev => ({ ...prev, tabela: v === '_all' ? '' : v }))}
                       >
                         <SelectTrigger className="h-8 flex-1">
-                          <SelectValue placeholder={loadingTabelas ? '...' : 'Todas'} />
+                          <SelectValue placeholder={loadingTabelas ? '...' : 'Cadastro de produtos'} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableTabelas && availableTabelas.length > 0 ? null : (
-                            <SelectItem value="_all">Todas</SelectItem>
+                            <SelectItem value="_all">Cadastro de produtos</SelectItem>
                           )}
                           {displayTabelas.map((t) => (
                             <SelectItem key={String(t.id)} value={String(t.id)}>
