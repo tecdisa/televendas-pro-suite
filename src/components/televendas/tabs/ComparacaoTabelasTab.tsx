@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,64 @@ export function ComparacaoTabelasTab() {
 
   function handleImprimir() {
     if (!grupos_dados.length) { toast.error('Realize a comparação antes de imprimir'); return; }
-    window.print();
+
+    const linhasGrupos = grupos_dados.map((g) => {
+      const linhasItens = g.itens.map((item) => {
+        const corDif = item.dif_reais < 0 ? '#cc0000' : item.dif_reais > 0 ? '#006600' : '#000';
+        return `<tr>
+          <td style="padding:1px 4px 1px 16px;font-family:monospace">${item.codigo_produto}</td>
+          <td style="padding:1px 4px">${item.descricao_produto}</td>
+          <td style="padding:1px 4px">${item.apresentacao || ''}</td>
+          <td style="padding:1px 4px;text-align:center">${item.un}</td>
+          <td style="padding:1px 4px;text-align:right">${fmt2(item.preco_a)}</td>
+          <td style="padding:1px 4px;text-align:right;color:#666">${fmt2(item.desconto_a)}</td>
+          <td style="padding:1px 4px;text-align:right">${fmt2(item.preco_b)}</td>
+          <td style="padding:1px 4px;text-align:right;color:#666">${fmt2(item.desconto_b)}</td>
+          <td style="padding:1px 4px;text-align:right;color:${corDif};font-weight:600">${fmt2(item.dif_reais)}</td>
+          <td style="padding:1px 4px;text-align:right;color:${corDif};font-weight:600">${fmt2(item.dif_pct)}</td>
+        </tr>`;
+      }).join('');
+      return `<tr><td colspan="10" style="font-weight:bold;padding:6px 4px 2px;font-size:11pt;text-transform:uppercase;border-top:1px solid #ccc">${g.divisao}</td></tr>${linhasItens}`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Comparação de Tabelas</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 10mm; }
+        table { width: 100%; border-collapse: collapse; }
+        th { border-bottom: 1.5px solid #000; padding: 3px 4px; font-size: 10pt; }
+        td { padding: 1px 4px; font-size: 9.5pt; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        @media print { @page { margin: 10mm; size: A4 landscape; } }
+      </style></head><body>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:baseline">
+        <div style="font-weight:bold;font-size:11pt">${nomeEmpresa}</div>
+        <div style="font-weight:bold;font-size:14pt">COMPARAÇÃO DE TABELAS</div>
+        <div style="font-size:10pt">${hoje}</div>
+      </div>
+      <div style="text-align:center;font-size:9pt;color:#555;margin-bottom:10px">
+        A: ${tabelaALabel} &nbsp;|&nbsp; B: ${tabelaBLabel}
+      </div>
+      <table>
+        <thead><tr>
+          <th style="text-align:left;width:52px">Produto</th>
+          <th style="text-align:left">Descrição</th>
+          <th style="text-align:left;width:90px">Apresentação</th>
+          <th style="text-align:center;width:30px">UN</th>
+          <th style="text-align:right;width:55px">A</th>
+          <th style="text-align:right;width:40px">Desc A</th>
+          <th style="text-align:right;width:55px">B</th>
+          <th style="text-align:right;width:40px">Desc B</th>
+          <th style="text-align:right;width:60px">Dif. R$</th>
+          <th style="text-align:right;width:44px">(%)</th>
+        </tr></thead>
+        <tbody>${linhasGrupos}</tbody>
+      </table>
+      <div style="margin-top:8px;font-size:9pt;color:#555">${totalItens} produto(s)</div>
+      <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
+    </body></html>`;
+
+    const win = window.open('', '_blank', 'width=1100,height=750');
+    if (win) { win.document.write(html); win.document.close(); }
   }
 
   const empresa = authService.getEmpresa();
@@ -103,79 +160,7 @@ export function ComparacaoTabelasTab() {
 
   return (
     <>
-      {/* Estilos de impressão */}
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          #comparacao-print { display: block !important; }
-          #comparacao-print { position: fixed; top: 0; left: 0; width: 100%; background: white; z-index: 99999; }
-        }
-        @media screen {
-          #comparacao-print { display: none; }
-        }
-      `}</style>
-
-      {/* Conteúdo de impressão */}
-      <div id="comparacao-print" ref={printRef}>
-        <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, padding: '12mm 10mm', color: '#000' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontWeight: 'bold', fontSize: 12 }}>{nomeEmpresa}</div>
-            <div style={{ fontWeight: 'bold', fontSize: 14, textAlign: 'center', flex: 1 }}>COMPARAÇÃO DE TABELAS</div>
-            <div style={{ fontSize: 11 }}>{hoje}</div>
-          </div>
-          <div style={{ fontSize: 10, marginBottom: 12, textAlign: 'center', color: '#555' }}>
-            A: {tabelaALabel} &nbsp;|&nbsp; B: {tabelaBLabel}
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-            <thead>
-              <tr style={{ borderBottom: '1.5px solid #000' }}>
-                <th style={{ textAlign: 'left', padding: '2px 4px', width: 52 }}>Produto</th>
-                <th style={{ textAlign: 'left', padding: '2px 4px' }}>Descrição</th>
-                <th style={{ textAlign: 'left', padding: '2px 4px', width: 80 }}>Apresentação</th>
-                <th style={{ textAlign: 'center', padding: '2px 4px', width: 28 }}>UN</th>
-                <th style={{ textAlign: 'right', padding: '2px 4px', width: 48 }}>A</th>
-                <th style={{ textAlign: 'right', padding: '2px 4px', width: 36 }}></th>
-                <th style={{ textAlign: 'right', padding: '2px 4px', width: 48 }}>B</th>
-                <th style={{ textAlign: 'right', padding: '2px 4px', width: 36 }}></th>
-                <th style={{ textAlign: 'right', padding: '2px 4px', width: 52 }}>Dif. R$</th>
-                <th style={{ textAlign: 'right', padding: '2px 4px', width: 40 }}>(%)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grupos_dados.map((g) => (
-                <>
-                  <tr key={`h-${g.divisao}`}>
-                    <td colSpan={10} style={{ fontWeight: 'bold', padding: '6px 4px 2px', fontSize: 11, textTransform: 'uppercase' }}>
-                      {g.divisao}
-                    </td>
-                  </tr>
-                  {g.itens.map((item) => (
-                    <tr key={item.produto_id} style={{ borderBottom: '0.5px solid #eee' }}>
-                      <td style={{ padding: '1px 4px 1px 16px', fontFamily: 'monospace' }}>{item.codigo_produto}</td>
-                      <td style={{ padding: '1px 4px' }}>{item.descricao_produto}</td>
-                      <td style={{ padding: '1px 4px' }}>{item.apresentacao}</td>
-                      <td style={{ padding: '1px 4px', textAlign: 'center' }}>{item.un}</td>
-                      <td style={{ padding: '1px 4px', textAlign: 'right' }}>{fmt2(item.preco_a)}</td>
-                      <td style={{ padding: '1px 4px', textAlign: 'right', color: '#666' }}>{fmt2(item.desconto_a)}</td>
-                      <td style={{ padding: '1px 4px', textAlign: 'right' }}>{fmt2(item.preco_b)}</td>
-                      <td style={{ padding: '1px 4px', textAlign: 'right', color: '#666' }}>{fmt2(item.desconto_b)}</td>
-                      <td style={{ padding: '1px 4px', textAlign: 'right', color: item.dif_reais < 0 ? '#c00' : item.dif_reais > 0 ? '#060' : undefined }}>
-                        {fmt2(item.dif_reais)}
-                      </td>
-                      <td style={{ padding: '1px 4px', textAlign: 'right', color: item.dif_pct < 0 ? '#c00' : item.dif_pct > 0 ? '#060' : undefined }}>
-                        {fmt2(item.dif_pct)}
-                      </td>
-                    </tr>
-                  ))}
-                </>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ marginTop: 10, fontSize: 10, color: '#555' }}>{totalItens} produto(s)</div>
-        </div>
-      </div>
-
-      {/* UI principal (visível só em tela) */}
+      {/* UI principal */}
       <div className="flex flex-col h-full gap-4 p-4">
         {/* Filtros */}
         <div className="flex flex-wrap items-end gap-4 border rounded-lg p-4 bg-muted/30">
