@@ -139,6 +139,21 @@ export interface TabelaPrecoEscala {
   comissao: number;
 }
 
+export interface ComparacaoItem {
+  produto_id: number;
+  codigo_produto: string;
+  descricao_produto: string;
+  apresentacao: string;
+  un: string;
+  divisao: string;
+  preco_a: number;
+  desconto_a: number;
+  preco_b: number;
+  desconto_b: number;
+  dif_reais: number;
+  dif_pct: number;
+}
+
 export const tabelasPrecoService = {
   async getAll(
     query?: string,
@@ -644,5 +659,22 @@ export const tabelasPrecoService = {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao excluir escala');
     }
+  },
+
+  async comparacaoTabelas(tabelaAId: number, tabelaBId: number, filters: { fornecedorId?: number; divisaoId?: number; grupoId?: number; marca?: string } = {}): Promise<ComparacaoItem[]> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const params = new URLSearchParams({ empresaId: String(empresaId), tabelaAId: String(tabelaAId), tabelaBId: String(tabelaBId) });
+    if (filters.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
+    if (filters.divisaoId) params.set('divisaoId', String(filters.divisaoId));
+    if (filters.grupoId) params.set('grupoId', String(filters.grupoId));
+    if (filters.marca) params.set('marca', filters.marca);
+    const response = await apiClient.fetch(`${API_BASE}/api/tabelas-precos/comparacao?${params}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || 'Erro ao comparar tabelas');
+    }
+    return response.json();
   },
 };
