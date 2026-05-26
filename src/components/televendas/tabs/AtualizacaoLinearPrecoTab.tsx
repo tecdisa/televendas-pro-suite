@@ -45,7 +45,7 @@ export function AtualizacaoLinearPrecoTab() {
   useEffect(() => {
     Promise.all([
       metadataService.getTabelas(),
-      suppliersService.getAll('', 1, 1000, 'ativos'),
+      suppliersService.getAll('', 1, 1000, 'ativos', true),
       divisionsService.getAll('', 1, 1000, 'ativos'),
       groupsService.getAll('', 1, 1000, 'ativos'),
     ]).then(([t, f, d, g]) => {
