@@ -1198,14 +1198,14 @@ export function TabelasPrecoTab() {
         {/* Grid */}
         <div className="flex-1 overflow-hidden border-x">
           <div className="h-full overflow-auto" onScroll={handleItensScroll}>
-            <table className="w-full text-xs border-collapse" style={{ minWidth: 1500 }}>
-              <thead className="sticky top-0 z-10 bg-muted/90">
+            <table className="w-full text-xs border-collapse" style={{ minWidth: 1700 }}>
+              <thead className="sticky top-0 z-20 bg-muted/90">
                 <tr className="border-b">
-                  <th className="w-7 px-1 py-1.5 text-center">
+                  <th className="sticky left-0 z-30 w-7 px-1 py-1.5 text-center bg-muted/90">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
                   </th>
-                  <th className="w-16 px-1 py-1.5 text-left">Prod.</th>
-                  <th className="px-1 py-1.5 text-left">Descrição</th>
+                  <th className="sticky left-7 z-30 w-16 px-1 py-1.5 text-left bg-muted/90">Prod.</th>
+                  <th className="sticky left-[92px] z-30 min-w-[260px] px-1 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
                   <th className="w-16 px-1 py-1.5 text-right">Custo</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
@@ -1247,19 +1247,24 @@ export function TabelasPrecoTab() {
                     const promValue = pending && 'produto_em_promocao' in pending
                       ? Boolean(pending.produto_em_promocao)
                       : item.produto_em_promocao;
+                    const stickyBg = isSelected
+                      ? 'bg-primary/5'
+                      : hasPendingRow
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20'
+                        : 'bg-background group-hover:bg-muted/30';
 
                     return (
                       <tr
                         key={item.produto_id}
-                        className={`border-b transition-colors
+                        className={`group border-b transition-colors
                           ${isSelected ? 'bg-primary/5' : hasPendingRow ? 'bg-amber-50/50 dark:bg-amber-950/20' : 'hover:bg-muted/30'}
                           ${item.produto_inativo ? 'opacity-50' : ''}`}
                       >
-                        <td className="px-1 py-0.5 text-center">
+                        <td className={`sticky left-0 z-10 px-1 py-0.5 text-center ${stickyBg}`}>
                           <Checkbox checked={isSelected} onCheckedChange={() => toggleRow(item.produto_id)} />
                         </td>
-                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_produto}</td>
-                        <td className="px-1 py-0.5 max-w-0">
+                        <td className={`sticky left-7 z-10 px-1 py-0.5 font-mono text-[11px] ${stickyBg}`}>{item.codigo_produto}</td>
+                        <td className={`sticky left-[92px] z-10 px-1 py-0.5 min-w-[260px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
