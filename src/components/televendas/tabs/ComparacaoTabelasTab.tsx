@@ -48,7 +48,7 @@ export function ComparacaoTabelasTab() {
   const [isLoading, setIsLoading] = useState(false);
   const [tabelaALabel, setTabelaALabel] = useState('A');
   const [tabelaBLabel, setTabelaBLabel] = useState('B');
-  const printRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     Promise.all([
