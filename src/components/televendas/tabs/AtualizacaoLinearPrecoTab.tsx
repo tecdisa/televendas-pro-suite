@@ -16,6 +16,7 @@ interface ItemAjuste {
   codigo_produto: string;
   descricao_produto: string;
   apresentacao: string;
+  marca: string;
   preco: number;
   novo_preco: number | null;
 }
@@ -46,7 +47,7 @@ export function AtualizacaoLinearPrecoTab() {
     Promise.all([
       metadataService.getTabelas(),
       suppliersService.getAll('', 1, 1000, 'ativos', true),
-      divisionsService.getAll('', 1, 1000, 'ativos'),
+      divisionsService.getAll('', undefined, 1, 1000, 'ativos'),
       groupsService.getAll('', 1, 1000, 'ativos'),
     ]).then(([t, f, d, g]) => {
       setTabelas(t);
@@ -75,6 +76,7 @@ export function AtualizacaoLinearPrecoTab() {
         codigo_produto: r.codigo_produto,
         descricao_produto: r.descricao_produto,
         apresentacao: r.apresentacao,
+        marca: (r as any).marca || '',
         preco: Number(r.preco ?? 0),
         novo_preco: null,
       })));
@@ -228,6 +230,7 @@ export function AtualizacaoLinearPrecoTab() {
               <th className="w-20 px-2 py-2 text-left">Código</th>
               <th className="px-2 py-2 text-left">Descrição</th>
               <th className="w-28 px-2 py-2 text-left">Apresentação</th>
+              <th className="w-24 px-2 py-2 text-left">Marca</th>
               <th className="w-24 px-2 py-2 text-right">Preço Atual</th>
               <th className="w-24 px-2 py-2 text-right font-semibold">Novo Preço</th>
             </tr>
@@ -235,19 +238,19 @@ export function AtualizacaoLinearPrecoTab() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="text-center py-16 text-muted-foreground">
+                <td colSpan={6} className="text-center py-16 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                 </td>
               </tr>
             ) : !tabelaId ? (
               <tr>
-                <td colSpan={5} className="text-center py-16 text-muted-foreground">
+                <td colSpan={6} className="text-center py-16 text-muted-foreground">
                   Selecione uma tabela de preço para começar
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-16 text-muted-foreground">
+                <td colSpan={6} className="text-center py-16 text-muted-foreground">
                   Nenhum produto encontrado para os filtros selecionados
                 </td>
               </tr>
@@ -259,6 +262,7 @@ export function AtualizacaoLinearPrecoTab() {
                     <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                   </td>
                   <td className="px-2 py-1 text-muted-foreground">{item.apresentacao || '-'}</td>
+                  <td className="px-2 py-1 text-muted-foreground">{item.marca || '-'}</td>
                   <td className="px-2 py-1 text-right text-muted-foreground">{fmt(item.preco)}</td>
                   <td className="px-2 py-1 text-right font-medium text-primary">
                     {item.novo_preco !== null ? fmt(item.novo_preco) : '-'}
