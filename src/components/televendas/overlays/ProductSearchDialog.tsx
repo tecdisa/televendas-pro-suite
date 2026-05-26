@@ -113,7 +113,7 @@ export const ProductSearchDialog = ({
     value == null ? '-' : value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits });
   const formatCurrencyOrDash = (value?: number) => (value == null ? '-' : formatCurrency(value));
 
-  const PRODUCT_LIMIT = 100;
+  const PRODUCT_LIMIT = 300;
 
   // Use available tabelas from props, or fallback to fetching
   const displayTabelas = availableTabelas && availableTabelas.length > 0 ? availableTabelas : tabelas;
@@ -268,7 +268,7 @@ export const ProductSearchDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Pesquisa Produtos</DialogTitle>
         </DialogHeader>
