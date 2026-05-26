@@ -1205,7 +1205,7 @@ export function TabelasPrecoTab() {
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
                   </th>
                   <th className="sticky left-7 z-30 w-16 px-1 py-1.5 text-left bg-muted/90">Prod.</th>
-                  <th className="sticky left-[92px] z-30 min-w-[260px] pl-1 pr-4 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
+                  <th className="sticky left-[92px] z-30 w-[260px] pl-1 pr-4 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
                   <th className="w-16 px-1 py-1.5 text-right">Custo</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
@@ -1264,7 +1264,7 @@ export function TabelasPrecoTab() {
                           <Checkbox checked={isSelected} onCheckedChange={() => toggleRow(item.produto_id)} />
                         </td>
                         <td className={`sticky left-7 z-10 px-1 py-0.5 font-mono text-[11px] ${stickyBg}`}>{item.codigo_produto}</td>
-                        <td className={`sticky left-[92px] z-10 pl-1 pr-4 py-0.5 min-w-[260px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
+                        <td className={`sticky left-[92px] z-10 pl-1 pr-4 py-0.5 w-[260px] max-w-[260px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
