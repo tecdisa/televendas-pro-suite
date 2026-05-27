@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Search, Printer } from 'lucide-react';
+import { Loader2, Search, Printer, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { tabelasPrecoService, ComparacaoItem } from '@/services/tabelasPrecoService';
 import { metadataService, type Tabela } from '@/services/metadataService';
@@ -11,6 +11,7 @@ import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
 import { authService } from '@/services/authService';
+import * as XLSX from 'xlsx';
 
 function fmt2(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -153,6 +154,76 @@ export function ComparacaoTabelasTab() {
     if (win) { win.document.write(html); win.document.close(); }
   }
 
+  function handleExportarExcel() {
+    if (!grupos_dados.length) { toast.error('Realize a comparação antes de exportar'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    // Cabeçalho informativo
+    const infoRows = [
+      [nomeEmpresa, '', '', '', '', '', '', '', '', ''],
+      ['COMPARAÇÃO DE TABELAS', '', '', '', '', '', '', '', '', ''],
+      [`A: ${tabelaALabel}`, '', '', `B: ${tabelaBLabel}`, '', '', '', '', '', ''],
+      [`Data: ${hoje}`, '', '', '', '', '', '', '', '', ''],
+      [],
+    ];
+
+    // Cabeçalho das colunas
+    const header = ['Produto', 'Descrição', 'Apresentação', 'UN',
+      `Preço A (${tabelaALabel})`, 'Desc A (%)',
+      `Preço B (${tabelaBLabel})`, 'Desc B (%)',
+      'Dif. R$', 'Dif. %'];
+
+    const dataRows: (string | number)[][] = [];
+    for (const g of grupos_dados) {
+      // Linha de divisão
+      dataRows.push([g.divisao, '', '', '', '', '', '', '', '', '']);
+      for (const item of g.itens) {
+        dataRows.push([
+          item.codigo_produto,
+          item.descricao_produto,
+          item.apresentacao || '',
+          item.un,
+          item.preco_a,
+          item.desconto_a,
+          item.preco_b,
+          item.desconto_b,
+          item.dif_reais,
+          item.dif_pct,
+        ]);
+      }
+    }
+
+    const wsData = [...infoRows, header, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Larguras das colunas
+    ws['!cols'] = [
+      { wch: 10 }, { wch: 40 }, { wch: 18 }, { wch: 6 },
+      { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 },
+      { wch: 12 }, { wch: 10 },
+    ];
+
+    // Formatar células numéricas a partir da linha de dados (após info + header = infoRows.length + 1)
+    const dataStartRow = infoRows.length + 1; // 0-indexed: header é linha dataStartRow-1, dados começam em dataStartRow
+    const numCols = [4, 5, 6, 7, 8, 9]; // índices 0-based das colunas numéricas
+    for (let r = dataStartRow; r < wsData.length; r++) {
+      for (const c of numCols) {
+        const cellAddr = XLSX.utils.encode_cell({ r, c });
+        if (ws[cellAddr] && typeof ws[cellAddr].v === 'number') {
+          ws[cellAddr].t = 'n';
+          ws[cellAddr].z = '#,##0.00';
+        }
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Comparação');
+
+    const fileName = `comparacao_tabelas_${tabelaALabel.replace(/\s+/g, '_')}_vs_${tabelaBLabel.replace(/\s+/g, '_')}_${hoje.replace(/\//g, '-')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast.success('Arquivo Excel exportado com sucesso');
+  }
+
   const empresa = authService.getEmpresa();
   const nomeEmpresa = empresa?.nome_empresa ?? '';
   const hoje = new Date().toLocaleDateString('pt-BR');
@@ -251,6 +322,13 @@ export function ComparacaoTabelasTab() {
             <Button variant="outline" size="sm" onClick={handleImprimir}>
               <Printer className="h-4 w-4 mr-1" />
               Imprimir
+            </Button>
+          )}
+
+          {grupos_dados.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleExportarExcel}>
+              <FileSpreadsheet className="h-4 w-4 mr-1" />
+              Excel
             </Button>
           )}
 
