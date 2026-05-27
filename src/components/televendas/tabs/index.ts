@@ -22,3 +22,4 @@ export { EstoquesTab } from './EstoquesTab';
 export { TabelasPrecoTab } from './TabelasPrecoTab';
 export { AtualizacaoLinearPrecoTab } from './AtualizacaoLinearPrecoTab';
 export { ComparacaoTabelasTab } from './ComparacaoTabelasTab';
+export { ListaTabelaPrecoTab } from './ListaTabelaPrecoTab';

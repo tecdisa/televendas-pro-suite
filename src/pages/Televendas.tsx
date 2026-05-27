@@ -30,6 +30,7 @@ import {
   TabelasPrecoTab,
   AtualizacaoLinearPrecoTab,
   ComparacaoTabelasTab,
+  ListaTabelaPrecoTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -63,6 +64,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'clientes-representante': { title: 'Clientes por Representante', icon: Users },
   'tabelas-preco': { title: 'Tabelas de Preço', icon: CreditCard },
   'ajuste-linear-preco': { title: 'Atualização Linear de Preços', icon: CreditCard },
+  'lista-tabela-preco': { title: 'Lista de Preços', icon: CreditCard },
   'comparacao-tabelas': { title: 'Comparação de Tabelas', icon: CreditCard },
 };
 
@@ -90,6 +92,7 @@ const TAB_TO_FUNCAO: Record<string, string | null> = {
   estoques: 'ESTOQUES',
   'tabelas-preco': null,
   'ajuste-linear-preco': null,
+  'lista-tabela-preco': null,
   'comparacao-tabelas': null,
 };
 
@@ -274,6 +277,8 @@ const Televendas = () => {
         return <ErrorBoundary><TabelasPrecoTab /></ErrorBoundary>;
       case 'ajuste-linear-preco':
         return <ErrorBoundary><AtualizacaoLinearPrecoTab /></ErrorBoundary>;
+      case 'lista-tabela-preco':
+        return <ErrorBoundary><ListaTabelaPrecoTab /></ErrorBoundary>;
       case 'comparacao-tabelas':
         return <ErrorBoundary><ComparacaoTabelasTab /></ErrorBoundary>;
       default:

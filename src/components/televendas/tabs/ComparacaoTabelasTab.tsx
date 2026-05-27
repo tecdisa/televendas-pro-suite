@@ -5,13 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, Search, Printer, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
-import { tabelasPrecoService, ComparacaoItem } from '@/services/tabelasPrecoService';
+import { tabelasPrecoService, ComparacaoItem, OrdemLista } from '@/services/tabelasPrecoService';
 import { metadataService, type Tabela } from '@/services/metadataService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
 import { authService } from '@/services/authService';
+import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import * as XLSX from 'xlsx';
+
+const ORDENS: { value: OrdemLista; label: string }[] = [
+  { value: 'divisao_descricao', label: 'Divisão + Descrição' },
+  { value: 'marca',             label: 'Marca + Descrição' },
+  { value: 'fornecedor',        label: 'Fornecedor + Descrição' },
+  { value: 'descricao',         label: 'Descrição' },
+  { value: 'produto',           label: 'Código do Produto' },
+];
 
 function fmt2(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,10 +49,11 @@ export function ComparacaoTabelasTab() {
 
   const [tabelaAId, setTabelaAId] = useState('');
   const [tabelaBId, setTabelaBId] = useState('');
-  const [fornecedorId, setFornecedorId] = useState('');
-  const [divisaoId, setDivisaoId] = useState('');
-  const [grupoId, setGrupoId] = useState('');
+  const [fornecedorIds, setFornecedorIds] = useState<string[]>([]);
+  const [divisaoIds, setDivisaoIds] = useState<string[]>([]);
+  const [grupoIds, setGrupoIds] = useState<string[]>([]);
   const [marca, setMarca] = useState('');
+  const [ordem, setOrdem] = useState<OrdemLista>('divisao_descricao');
 
   const [grupos_dados, setGruposDados] = useState<GrupoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +65,7 @@ export function ComparacaoTabelasTab() {
     Promise.all([
       metadataService.getTabelas(),
       suppliersService.getAll('', 1, 1000, 'ativos', true),
-      divisionsService.getAll('', 1, 1000, 'ativos'),
+      divisionsService.getAll('', undefined, 1, 1000, 'ativos'),
       groupsService.getAll('', 1, 1000, 'ativos'),
     ]).then(([t, f, d, g]) => {
       setTabelas(t);
@@ -78,10 +88,11 @@ export function ComparacaoTabelasTab() {
     setIsLoading(true);
     try {
       const data = await tabelasPrecoService.comparacaoTabelas(Number(tabelaAId), Number(tabelaBId), {
-        fornecedorId: fornecedorId && fornecedorId !== '_all' ? Number(fornecedorId) : undefined,
-        divisaoId: divisaoId && divisaoId !== '_all' ? Number(divisaoId) : undefined,
-        grupoId: grupoId && grupoId !== '_all' ? Number(grupoId) : undefined,
+        fornecedorIds: fornecedorIds.length ? fornecedorIds : undefined,
+        divisaoIds: divisaoIds.length ? divisaoIds : undefined,
+        grupoIds: grupoIds.length ? grupoIds : undefined,
         marca: marca.trim() || undefined,
+        ordem,
       });
       setGruposDados(agrupar(data));
       if (!data.length) toast.info('Nenhum produto encontrado para os filtros selecionados');
@@ -263,54 +274,43 @@ export function ComparacaoTabelasTab() {
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1 min-w-[160px]">
+          <div className="flex flex-col gap-1 min-w-[170px]">
             <Label className="text-xs">Fornecedor</Label>
-            <Select value={fornecedorId} onValueChange={setFornecedorId}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todos</SelectItem>
-                {fornecedores.map((f) => (
-                  <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>{f.nome_fornecedor}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={fornecedores.map((f) => ({ value: String(f.fornecedor_id), label: f.nome_fornecedor }))}
+              selected={fornecedorIds} onChange={setFornecedorIds}
+              placeholder="Todos" searchPlaceholder="Buscar fornecedor..." />
           </div>
 
-          <div className="flex flex-col gap-1 min-w-[140px]">
+          <div className="flex flex-col gap-1 min-w-[150px]">
             <Label className="text-xs">Divisão</Label>
-            <Select value={divisaoId} onValueChange={setDivisaoId}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todas</SelectItem>
-                {divisoes.map((d) => (
-                  <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>{d.descricao_divisao}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={divisoes.map((d) => ({ value: String(d.divisao_id), label: d.descricao_divisao }))}
+              selected={divisaoIds} onChange={setDivisaoIds}
+              placeholder="Todas" searchPlaceholder="Buscar divisão..." />
           </div>
 
           <div className="flex flex-col gap-1 min-w-[140px]">
             <Label className="text-xs">Grupo</Label>
-            <Select value={grupoId} onValueChange={setGrupoId}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todos</SelectItem>
-                {grupos.map((g) => (
-                  <SelectItem key={g.grupo_id} value={String(g.grupo_id)}>{g.descricao_grupo}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={grupos.map((g) => ({ value: String(g.grupo_id), label: g.descricao_grupo }))}
+              selected={grupoIds} onChange={setGrupoIds}
+              placeholder="Todos" searchPlaceholder="Buscar grupo..." />
           </div>
 
           <div className="flex flex-col gap-1 min-w-[120px]">
             <Label className="text-xs">Marca</Label>
             <Input className="h-8 text-xs" placeholder="Filtrar por marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
+          </div>
+
+          <div className="flex flex-col gap-1 min-w-[170px]">
+            <Label className="text-xs">Ordenação</Label>
+            <Select value={ordem} onValueChange={(v) => setOrdem(v as OrdemLista)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ORDENS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           <Button size="sm" onClick={handleComparar} disabled={isLoading || !tabelaAId || !tabelaBId}>

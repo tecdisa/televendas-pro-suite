@@ -145,7 +145,9 @@ export interface ComparacaoItem {
   descricao_produto: string;
   apresentacao: string;
   un: string;
+  marca: string;
   divisao: string;
+  fornecedor: string;
   preco_a: number;
   desconto_a: number;
   preco_b: number;
@@ -153,6 +155,31 @@ export interface ComparacaoItem {
   dif_reais: number;
   dif_pct: number;
 }
+
+export interface ListaItem {
+  produto_id: number;
+  codigo_produto: string;
+  descricao_produto: string;
+  apresentacao: string;
+  un: string;
+  marca: string;
+  codigo_fabrica: string;
+  multiplo_de_vendas: number;
+  estoque: number;
+  divisao: string;
+  grupo: string;
+  fornecedor: string;
+  preco: number;
+  desconto_maximo: number;
+  comissao: number;
+  quantidade_minima: number;
+  permite_bonificacao: boolean;
+  permite_debito_credito: boolean;
+  permite_venda_especial: boolean;
+  produto_em_promocao: boolean;
+}
+
+export type OrdemLista = 'divisao_descricao' | 'produto' | 'descricao' | 'marca' | 'fornecedor';
 
 export const tabelasPrecoService = {
   async getAll(
@@ -661,19 +688,55 @@ export const tabelasPrecoService = {
     }
   },
 
-  async comparacaoTabelas(tabelaAId: number, tabelaBId: number, filters: { fornecedorId?: number; divisaoId?: number; grupoId?: number; marca?: string } = {}): Promise<ComparacaoItem[]> {
+  async comparacaoTabelas(
+    tabelaAId: number,
+    tabelaBId: number,
+    filters: { fornecedorIds?: string[]; divisaoIds?: string[]; grupoIds?: string[]; marca?: string; ordem?: OrdemLista } = {},
+  ): Promise<ComparacaoItem[]> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
     if (!empresaId) throw new Error('Empresa não selecionada');
     const params = new URLSearchParams({ empresaId: String(empresaId), tabelaAId: String(tabelaAId), tabelaBId: String(tabelaBId) });
-    if (filters.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
-    if (filters.divisaoId) params.set('divisaoId', String(filters.divisaoId));
-    if (filters.grupoId) params.set('grupoId', String(filters.grupoId));
+    if (filters.fornecedorIds?.length) params.set('fornecedorIds', filters.fornecedorIds.join(','));
+    if (filters.divisaoIds?.length) params.set('divisaoIds', filters.divisaoIds.join(','));
+    if (filters.grupoIds?.length) params.set('grupoIds', filters.grupoIds.join(','));
     if (filters.marca) params.set('marca', filters.marca);
+    if (filters.ordem) params.set('ordem', filters.ordem);
     const response = await apiClient.fetch(`${API_BASE}/api/tabelas-precos/comparacao?${params}`);
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.message || 'Erro ao comparar tabelas');
+    }
+    return response.json();
+  },
+
+  async listaTabelaPreco(
+    tabelaId: number,
+    filters: {
+      fornecedorIds?: string[];
+      divisaoIds?: string[];
+      grupoIds?: string[];
+      marca?: string;
+      ordem?: OrdemLista;
+      somente_estoque?: boolean;
+      somente_promocao?: boolean;
+    } = {},
+  ): Promise<ListaItem[]> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const params = new URLSearchParams({ empresaId: String(empresaId) });
+    if (filters.fornecedorIds?.length) params.set('fornecedorIds', filters.fornecedorIds.join(','));
+    if (filters.divisaoIds?.length) params.set('divisaoIds', filters.divisaoIds.join(','));
+    if (filters.grupoIds?.length) params.set('grupoIds', filters.grupoIds.join(','));
+    if (filters.marca) params.set('marca', filters.marca);
+    if (filters.ordem) params.set('ordem', filters.ordem);
+    if (filters.somente_estoque) params.set('somente_estoque', 'true');
+    if (filters.somente_promocao) params.set('somente_promocao', 'true');
+    const response = await apiClient.fetch(`${API_BASE}/api/tabelas-precos/${tabelaId}/lista?${params}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || 'Erro ao carregar lista');
     }
     return response.json();
   },
