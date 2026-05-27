@@ -1206,6 +1206,8 @@ export function TabelasPrecoTab() {
                   </th>
                   <th className="sticky left-7 z-30 w-16 px-1 py-1.5 text-left bg-muted/90">Prod.</th>
                   <th className="sticky left-[92px] z-30 w-[260px] pl-1 pr-4 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
+                  <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
+                  <th className="w-10 px-1 py-1.5 text-left">UN</th>
                   <th className="w-16 pl-12 pr-1 py-1.5 text-right">Custo</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
@@ -1216,8 +1218,6 @@ export function TabelasPrecoTab() {
                   <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
                   <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
-                  <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
-                  <th className="w-10 px-1 py-1.5 text-left">UN</th>
                   <th className="w-20 px-1 py-1.5 text-right">Estoque</th>
                   <th className="w-32 px-1 py-1.5 text-left">Divisão</th>
                   <th className="w-36 px-1 py-1.5 text-left">Fornecedor</th>
@@ -1267,6 +1267,8 @@ export function TabelasPrecoTab() {
                         <td className={`sticky left-[92px] z-10 pl-1 pr-4 py-0.5 w-[260px] max-w-[260px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
+                        <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
+                        <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
                         <td className="pl-12 pr-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.markup} field="markup" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
@@ -1298,8 +1300,6 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.desconto_maximo} field="desconto_maximo" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
-                        <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
-                        <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.estoque, 3)}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[144px]" title={item.fornecedor}>{item.fornecedor || '-'}</td>
