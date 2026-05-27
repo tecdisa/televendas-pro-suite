@@ -1215,9 +1215,13 @@ export function TabelasPrecoTab() {
                   <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
-                  <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
                   <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
+                  <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
+                  <th className="w-14 px-1 py-1.5 text-right">Qtd.Mín.</th>
+                  <th className="w-10 px-1 py-1.5 text-center" title="Permite Bonificação">Bon.</th>
+                  <th className="w-10 px-1 py-1.5 text-center" title="Permite Débito/Crédito">Déb/Cr.</th>
+                  <th className="w-10 px-1 py-1.5 text-center" title="Permite Venda Especial">Vd.Esp.</th>
                   <th className="w-20 px-1 py-1.5 text-right">Estoque</th>
                   <th className="w-32 px-1 py-1.5 text-left">Divisão</th>
                   <th className="w-36 px-1 py-1.5 text-left">Fornecedor</th>
@@ -1232,11 +1236,11 @@ export function TabelasPrecoTab() {
               </thead>
               <tbody>
                 {isItensLoading ? (
-                  <tr><td colSpan={25} className="text-center py-10 text-muted-foreground">
+                  <tr><td colSpan={29} className="text-center py-10 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </td></tr>
                 ) : visibleItens.length === 0 ? (
-                  <tr><td colSpan={25} className="text-center py-10 text-muted-foreground">
+                  <tr><td colSpan={29} className="text-center py-10 text-muted-foreground">
                     Nenhum item encontrado
                   </td></tr>
                 ) : (
@@ -1288,17 +1292,35 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.majoracao} field="majoracao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
-                        <td className="px-1 py-0.5 text-center">
-                          <Checkbox
-                            checked={promValue}
-                            onCheckedChange={(c) => commitBool(item.produto_id, 'produto_em_promocao', c === true)}
-                          />
-                        </td>
                         <td className="px-1 py-0.5 text-right font-medium">
                           <EditableCell value={item.preco} field="preco" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.desconto_maximo} field="desconto_maximo" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-center">
+                          <Checkbox checked={promValue} onCheckedChange={(c) => commitBool(item.produto_id, 'produto_em_promocao', c === true)} />
+                        </td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.quantidade_minima} field="quantidade_minima" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-center">
+                          <Checkbox
+                            checked={pending && 'permite_bonificacao' in pending ? Boolean(pending.permite_bonificacao) : item.permite_bonificacao}
+                            onCheckedChange={(c) => commitBool(item.produto_id, 'permite_bonificacao', c === true)}
+                          />
+                        </td>
+                        <td className="px-1 py-0.5 text-center">
+                          <Checkbox
+                            checked={pending && 'permite_debito_credito' in pending ? Boolean(pending.permite_debito_credito) : item.permite_debito_credito}
+                            onCheckedChange={(c) => commitBool(item.produto_id, 'permite_debito_credito', c === true)}
+                          />
+                        </td>
+                        <td className="px-1 py-0.5 text-center">
+                          <Checkbox
+                            checked={pending && 'permite_venda_especial' in pending ? Boolean(pending.permite_venda_especial) : item.permite_venda_especial}
+                            onCheckedChange={(c) => commitBool(item.produto_id, 'permite_venda_especial', c === true)}
+                          />
                         </td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.estoque, 3)}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
@@ -1343,7 +1365,7 @@ export function TabelasPrecoTab() {
                   })
                 )}
                 {itensLoading && itens.length > 0 && (
-                  <tr><td colSpan={25} className="text-center py-3 text-muted-foreground">
+                  <tr><td colSpan={29} className="text-center py-3 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                   </td></tr>
                 )}
