@@ -59,9 +59,9 @@ export function ListaTabelaPrecoTab() {
   const [tabelaId, setTabelaId] = useState('');
   const [modelo, setModelo] = useState<Modelo>('representante');
   const [fornecedorIds, setFornecedorIds] = useState<string[]>([]);
-  const [excetoFornecedores, setExcetoFornecedores] = useState('');
+  const [excetoFornecedorIds, setExcetoFornecedorIds] = useState<string[]>([]);
   const [divisaoIds, setDivisaoIds] = useState<string[]>([]);
-  const [excetoDivisoes, setExcetoDivisoes] = useState('');
+  const [excetoDivisaoIds, setExcetoDivisaoIds] = useState<string[]>([]);
   const [grupoIds, setGrupoIds] = useState<string[]>([]);
   const [marca, setMarca] = useState('');
   const [ordem, setOrdem] = useState<OrdemLista>('divisao_descricao');
@@ -93,11 +93,6 @@ export function ListaTabelaPrecoTab() {
     }).catch(() => toast.error('Erro ao carregar filtros'));
   }, []);
 
-  // parse exceto: "1,2,3" ou "101 102" → string[]
-  function parseExceto(raw: string): string[] {
-    return raw.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
-  }
-
   const fornecedorOptions: MultiSelectOption[] = fornecedores.map((f) => ({ value: String(f.fornecedor_id), label: f.nome_fornecedor }));
   const divisaoOptions: MultiSelectOption[] = divisoes.map((d) => ({ value: String(d.divisao_id), label: d.descricao_divisao }));
   const grupoOptions: MultiSelectOption[] = grupos.map((g) => ({ value: String(g.grupo_id), label: g.descricao_grupo }));
@@ -110,9 +105,9 @@ export function ListaTabelaPrecoTab() {
     try {
       const data = await tabelasPrecoService.listaTabelaPreco(Number(tabelaId), {
         fornecedorIds: fornecedorIds.length ? fornecedorIds : undefined,
-        excetoFornecedorIds: excetoFornecedores.trim() ? parseExceto(excetoFornecedores) : undefined,
+        excetoFornecedorIds: excetoFornecedorIds.length ? excetoFornecedorIds : undefined,
         divisaoIds: divisaoIds.length ? divisaoIds : undefined,
-        excetoDivisaoIds: excetoDivisoes.trim() ? parseExceto(excetoDivisoes) : undefined,
+        excetoDivisaoIds: excetoDivisaoIds.length ? excetoDivisaoIds : undefined,
         grupoIds: grupoIds.length ? grupoIds : undefined,
         marca: marca.trim() || undefined,
         ordem,
@@ -360,18 +355,18 @@ export function ListaTabelaPrecoTab() {
             <Label className="text-xs">Fornecedor</Label>
             <MultiSelect options={fornecedorOptions} selected={fornecedorIds} onChange={setFornecedorIds} placeholder="Todos" searchPlaceholder="Buscar fornecedor..." />
           </div>
-          <div className="flex flex-col gap-1 flex-1 max-w-[260px]">
-            <Label className="text-xs text-muted-foreground">Exceto (IDs separados por vírgula)</Label>
-            <Input className="h-8 text-xs" placeholder="Ex: 5, 12, 30" value={excetoFornecedores} onChange={(e) => setExcetoFornecedores(e.target.value)} />
+          <div className="flex flex-col gap-1 min-w-[180px] flex-1 max-w-[280px]">
+            <Label className="text-xs text-muted-foreground">Exceto Fornecedor</Label>
+            <MultiSelect options={fornecedorOptions} selected={excetoFornecedorIds} onChange={setExcetoFornecedorIds} placeholder="Nenhum" searchPlaceholder="Buscar fornecedor..." />
           </div>
 
           <div className="flex flex-col gap-1 min-w-[160px] flex-1 max-w-[260px]">
             <Label className="text-xs">Divisão</Label>
             <MultiSelect options={divisaoOptions} selected={divisaoIds} onChange={setDivisaoIds} placeholder="Todas" searchPlaceholder="Buscar divisão..." />
           </div>
-          <div className="flex flex-col gap-1 flex-1 max-w-[240px]">
-            <Label className="text-xs text-muted-foreground">Exceto (IDs separados por vírgula)</Label>
-            <Input className="h-8 text-xs" placeholder="Ex: 3, 7" value={excetoDivisoes} onChange={(e) => setExcetoDivisoes(e.target.value)} />
+          <div className="flex flex-col gap-1 min-w-[160px] flex-1 max-w-[260px]">
+            <Label className="text-xs text-muted-foreground">Exceto Divisão</Label>
+            <MultiSelect options={divisaoOptions} selected={excetoDivisaoIds} onChange={setExcetoDivisaoIds} placeholder="Nenhuma" searchPlaceholder="Buscar divisão..." />
           </div>
 
           <div className="flex flex-col gap-1 min-w-[140px] flex-1 max-w-[220px]">
