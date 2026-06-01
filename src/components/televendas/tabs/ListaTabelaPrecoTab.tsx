@@ -19,6 +19,8 @@ function fmt2(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+type Modelo = 'representante' | 'cliente';
+
 type AgrupadorKey = 'divisao' | 'marca' | 'fornecedor' | 'grupo' | '';
 
 interface GrupoItem { label: string; itens: ListaItem[] }
@@ -42,6 +44,12 @@ function agrupar(items: ListaItem[], agrupador: AgrupadorKey): GrupoItem[] {
   return Array.from(map.entries()).map(([label, itens]) => ({ label, itens }));
 }
 
+// Pr.Unit = preco / multiplo (quando multiplo > 1)
+function prUnit(item: ListaItem) {
+  const muv = item.multiplo_de_vendas ?? 1;
+  return muv > 1 ? item.preco / muv : item.preco;
+}
+
 export function ListaTabelaPrecoTab() {
   const [tabelas, setTabelas] = useState<Tabela[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -49,8 +57,11 @@ export function ListaTabelaPrecoTab() {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
 
   const [tabelaId, setTabelaId] = useState('');
+  const [modelo, setModelo] = useState<Modelo>('representante');
   const [fornecedorIds, setFornecedorIds] = useState<string[]>([]);
+  const [excetoFornecedores, setExcetoFornecedores] = useState('');
   const [divisaoIds, setDivisaoIds] = useState<string[]>([]);
+  const [excetoDivisoes, setExcetoDivisoes] = useState('');
   const [grupoIds, setGrupoIds] = useState<string[]>([]);
   const [marca, setMarca] = useState('');
   const [ordem, setOrdem] = useState<OrdemLista>('divisao_descricao');
@@ -66,6 +77,7 @@ export function ListaTabelaPrecoTab() {
   const hoje = new Date().toLocaleDateString('pt-BR');
   const totalItens = grupos_dados.reduce((s, g) => s + g.itens.length, 0);
   const ordemAtual = ORDENS.find((o) => o.value === ordem) ?? ORDENS[0];
+  const modeloLabel = modelo === 'representante' ? 'Lista de Preços (Representante)' : 'Lista de Preços (Cliente)';
 
   useEffect(() => {
     Promise.all([
@@ -81,6 +93,11 @@ export function ListaTabelaPrecoTab() {
     }).catch(() => toast.error('Erro ao carregar filtros'));
   }, []);
 
+  // parse exceto: "1,2,3" ou "101 102" → string[]
+  function parseExceto(raw: string): string[] {
+    return raw.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+  }
+
   const fornecedorOptions: MultiSelectOption[] = fornecedores.map((f) => ({ value: String(f.fornecedor_id), label: f.nome_fornecedor }));
   const divisaoOptions: MultiSelectOption[] = divisoes.map((d) => ({ value: String(d.divisao_id), label: d.descricao_divisao }));
   const grupoOptions: MultiSelectOption[] = grupos.map((g) => ({ value: String(g.grupo_id), label: g.descricao_grupo }));
@@ -93,7 +110,9 @@ export function ListaTabelaPrecoTab() {
     try {
       const data = await tabelasPrecoService.listaTabelaPreco(Number(tabelaId), {
         fornecedorIds: fornecedorIds.length ? fornecedorIds : undefined,
+        excetoFornecedorIds: excetoFornecedores.trim() ? parseExceto(excetoFornecedores) : undefined,
         divisaoIds: divisaoIds.length ? divisaoIds : undefined,
+        excetoDivisaoIds: excetoDivisoes.trim() ? parseExceto(excetoDivisoes) : undefined,
         grupoIds: grupoIds.length ? grupoIds : undefined,
         marca: marca.trim() || undefined,
         ordem,
@@ -109,109 +128,156 @@ export function ListaTabelaPrecoTab() {
     }
   }
 
+  // ── Impressão ─────────────────────────────────────────────────────────────
   function handleImprimir() {
     if (!grupos_dados.length) { toast.error('Realize a listagem antes de imprimir'); return; }
 
     const linhas = grupos_dados.map((g) => {
-      const header = g.label ? `<tr><td colspan="10" style="font-weight:bold;padding:6px 4px 2px;font-size:11pt;text-transform:uppercase;border-top:1px solid #ccc">${g.label}</td></tr>` : '';
-      const rows = g.itens.map((item) => `<tr>
-        <td style="padding:1px 4px 1px 16px;font-family:monospace">${item.codigo_produto}</td>
-        <td style="padding:1px 4px">${item.descricao_produto}</td>
-        <td style="padding:1px 4px">${item.apresentacao || ''}</td>
-        <td style="padding:1px 4px;text-align:center">${item.un}</td>
-        <td style="padding:1px 4px">${item.marca || ''}</td>
-        <td style="padding:1px 4px">${item.codigo_fabrica || ''}</td>
-        <td style="padding:1px 4px;text-align:right">${item.multiplo_de_vendas ?? 1}</td>
-        <td style="padding:1px 4px;text-align:right">${fmt2(item.comissao)}</td>
-        <td style="padding:1px 4px;text-align:right;font-weight:600">${fmt2(item.preco)}</td>
-        <td style="padding:1px 4px;text-align:right;color:#666">${fmt2(item.desconto_maximo)}</td>
-      </tr>`).join('');
+      const header = g.label
+        ? `<tr><td colspan="99" style="font-weight:bold;padding:6px 4px 2px;font-size:10.5pt;text-transform:uppercase;border-top:1px solid #ccc">${g.label}</td></tr>`
+        : '';
+
+      const rows = modelo === 'representante'
+        ? g.itens.map((item) => `<tr>
+            <td style="padding:1px 6px 1px 16px;font-family:monospace">${item.codigo_produto}</td>
+            <td style="padding:1px 4px">${item.descricao_produto}</td>
+            <td style="padding:1px 4px">${item.apresentacao || ''}</td>
+            <td style="padding:1px 4px;text-align:center">${item.un}</td>
+            <td style="padding:1px 4px">${item.marca || ''}</td>
+            <td style="padding:1px 4px">${item.codigo_fabrica || ''}</td>
+            <td style="padding:1px 4px;text-align:right">${item.multiplo_de_vendas ?? 1}</td>
+            <td style="padding:1px 4px;text-align:center">${item.permite_bonificacao ? 'P' : 'N'}</td>
+            <td style="padding:1px 4px;text-align:center">${item.permite_debito_credito ? 'X' : ''}</td>
+            <td style="padding:1px 4px;text-align:right">${fmt2(item.comissao)}</td>
+            <td style="padding:1px 4px;text-align:right;font-weight:600">${fmt2(item.preco)}</td>
+            <td style="padding:1px 4px;text-align:right">${fmt2(item.desconto_maximo)}</td>
+            <td style="padding:1px 4px;text-align:right">${fmt2(prUnit(item))}</td>
+          </tr>`).join('')
+        : g.itens.map((item) => `<tr>
+            <td style="padding:1px 6px 1px 16px;font-family:monospace">${item.codigo_produto}</td>
+            <td style="padding:1px 4px">${item.descricao_produto}</td>
+            <td style="padding:1px 4px">${item.apresentacao || ''}</td>
+            <td style="padding:1px 4px">${item.marca || ''}</td>
+            <td style="padding:1px 4px;font-family:monospace">${item.ean13 || ''}</td>
+            <td style="padding:1px 4px">${item.codigo_fabrica || ''}</td>
+            <td style="padding:1px 4px;text-align:center">${item.un}</td>
+            <td style="padding:1px 4px;text-align:right;font-weight:600">${fmt2(item.preco)}</td>
+            <td style="padding:1px 4px;text-align:right">${fmt2(prUnit(item))}</td>
+          </tr>`).join('');
+
       return header + rows;
     }).join('');
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lista de Preços</title>
+    const theadRep = `<tr>
+      <th style="text-align:left;width:52px">Produto</th>
+      <th style="text-align:left">Descrição</th>
+      <th style="text-align:left;width:76px">Apres.</th>
+      <th style="text-align:center;width:26px">UN</th>
+      <th style="text-align:left;width:64px">Marca</th>
+      <th style="text-align:left;width:64px">Cod.Fab</th>
+      <th style="text-align:right;width:32px">Muv</th>
+      <th style="text-align:center;width:28px">Pno</th>
+      <th style="text-align:center;width:24px">DC</th>
+      <th style="text-align:right;width:40px">%Com</th>
+      <th style="text-align:right;width:56px">Preço</th>
+      <th style="text-align:right;width:40px">%Desc</th>
+      <th style="text-align:right;width:52px">Pr.Unit</th>
+    </tr>`;
+
+    const theadCli = `<tr>
+      <th style="text-align:left;width:52px">Produto</th>
+      <th style="text-align:left">Descrição</th>
+      <th style="text-align:left;width:76px">Apres.</th>
+      <th style="text-align:left;width:64px">Marca</th>
+      <th style="text-align:left;width:100px">EAN</th>
+      <th style="text-align:left;width:64px">Cod.Fab.</th>
+      <th style="text-align:center;width:26px">Un</th>
+      <th style="text-align:right;width:56px">Pr.Emb.</th>
+      <th style="text-align:right;width:52px">Pr.Unit.</th>
+    </tr>`;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${modeloLabel}</title>
       <style>
-        body{font-family:Arial,sans-serif;font-size:10pt;color:#000;margin:0;padding:10mm}
+        body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:0;padding:8mm}
         table{width:100%;border-collapse:collapse}
-        th{border-bottom:1.5px solid #000;padding:3px 4px;font-size:10pt}
-        td{padding:1px 4px;font-size:9.5pt}
-        tr:nth-child(even){background:#f9f9f9}
-        @media print{@page{margin:10mm;size:A4 landscape}}
+        th{border-bottom:1.5px solid #000;padding:3px 4px;font-size:9.5pt}
+        td{padding:1px 4px;font-size:9pt}
+        tr:nth-child(even) td{background:#f9f9f9}
+        @media print{@page{margin:8mm;size:A4 landscape}}
       </style></head><body>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:baseline">
-        <div style="font-weight:bold;font-size:11pt">${nomeEmpresa}</div>
-        <div style="font-weight:bold;font-size:14pt">LISTA DE PREÇOS</div>
-        <div style="font-size:10pt">${hoje}</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:baseline">
+        <div style="font-size:9.5pt">${nomeEmpresa}</div>
+        <div style="font-weight:bold;font-size:13pt">${modeloLabel}</div>
+        <div style="font-size:9pt">${hoje}</div>
       </div>
-      <div style="font-size:9pt;color:#555;margin-bottom:10px">Tabela: <strong>${tabelaLabel}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;Ordem: ${ordemAtual.label}</div>
+      <div style="text-align:center;font-size:9pt;margin-bottom:8px">
+        Tabela: <strong>${tabelaLabel}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;Ordem: ${ordemAtual.label}
+      </div>
       <table>
-        <thead><tr>
-          <th style="text-align:left;width:52px">Produto</th>
-          <th style="text-align:left">Descrição</th>
-          <th style="text-align:left;width:90px">Apres.</th>
-          <th style="text-align:center;width:28px">UN</th>
-          <th style="text-align:left;width:70px">Marca</th>
-          <th style="text-align:left;width:70px">Cod.Fab</th>
-          <th style="text-align:right;width:36px">Muv</th>
-          <th style="text-align:right;width:44px">%Com</th>
-          <th style="text-align:right;width:60px">Preço</th>
-          <th style="text-align:right;width:44px">%Desc</th>
-        </tr></thead>
+        <thead>${modelo === 'representante' ? theadRep : theadCli}</thead>
         <tbody>${linhas}</tbody>
       </table>
-      <div style="margin-top:8px;font-size:9pt;color:#555">${totalItens} produto(s)</div>
+      <div style="margin-top:6px;font-size:8.5pt;color:#555">${totalItens} produto(s)</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 
-    const win = window.open('', '_blank', 'width=1100,height=750');
+    const win = window.open('', '_blank', 'width=1200,height=800');
     if (win) { win.document.write(html); win.document.close(); }
   }
 
+  // ── Excel ─────────────────────────────────────────────────────────────────
   function handleExportarExcel() {
     if (!grupos_dados.length) { toast.error('Realize a listagem antes de exportar'); return; }
 
     const wb = XLSX.utils.book_new();
     const infoRows: (string | number)[][] = [
       [nomeEmpresa],
-      ['LISTA DE PREÇOS'],
+      [modeloLabel],
       [`Tabela: ${tabelaLabel}`, '', '', '', `Ordem: ${ordemAtual.label}`],
       [`Data: ${hoje}`],
       [],
     ];
 
-    const header = ['Produto', 'Descrição', 'Apresentação', 'UN', 'Marca', 'Cod.Fab', 'Muv', '%Comissão', 'Preço', '%Desc Máx', 'Estoque'];
+    const headerRep = ['Produto', 'Descrição', 'Apresentação', 'UN', 'Marca', 'Cod.Fab', 'Muv', 'Pno', 'DC', '%Comissão', 'Preço', '%Desc', 'Pr.Unit'];
+    const headerCli = ['Produto', 'Descrição', 'Apresentação', 'Marca', 'EAN', 'Cod.Fab.', 'UN', 'Pr.Emb.', 'Pr.Unit.'];
 
     const dataRows: (string | number)[][] = [];
     for (const g of grupos_dados) {
-      if (g.label) dataRows.push([g.label, '', '', '', '', '', '', '', '', '', '']);
+      if (g.label) dataRows.push([g.label]);
       for (const item of g.itens) {
-        dataRows.push([
-          item.codigo_produto,
-          item.descricao_produto,
-          item.apresentacao,
-          item.un,
-          item.marca,
-          item.codigo_fabrica,
-          item.multiplo_de_vendas ?? 1,
-          item.comissao,
-          item.preco,
-          item.desconto_maximo,
-          item.estoque,
-        ]);
+        if (modelo === 'representante') {
+          dataRows.push([
+            item.codigo_produto, item.descricao_produto, item.apresentacao, item.un,
+            item.marca, item.codigo_fabrica,
+            item.multiplo_de_vendas ?? 1,
+            item.permite_bonificacao ? 'P' : 'N',
+            item.permite_debito_credito ? 'X' : '',
+            item.comissao, item.preco, item.desconto_maximo, prUnit(item),
+          ]);
+        } else {
+          dataRows.push([
+            item.codigo_produto, item.descricao_produto, item.apresentacao,
+            item.marca, item.ean13, item.codigo_fabrica, item.un,
+            item.preco, prUnit(item),
+          ]);
+        }
       }
     }
 
+    const header = modelo === 'representante' ? headerRep : headerCli;
     const wsData = [...infoRows, header, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    ws['!cols'] = [
-      { wch: 10 }, { wch: 40 }, { wch: 16 }, { wch: 6 },
-      { wch: 16 }, { wch: 12 }, { wch: 6 }, { wch: 10 },
-      { wch: 12 }, { wch: 10 }, { wch: 10 },
-    ];
+    if (modelo === 'representante') {
+      ws['!cols'] = [{ wch: 10 }, { wch: 38 }, { wch: 14 }, { wch: 5 }, { wch: 14 }, { wch: 12 }, { wch: 5 }, { wch: 5 }, { wch: 5 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
+    } else {
+      ws['!cols'] = [{ wch: 10 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 5 }, { wch: 12 }, { wch: 12 }];
+    }
 
+    const numColsRep = [9, 10, 11, 12];
+    const numColsCli = [7, 8];
+    const numCols = modelo === 'representante' ? numColsRep : numColsCli;
     const dataStartRow = infoRows.length + 1;
-    const numCols = [6, 7, 8, 9, 10];
     for (let r = dataStartRow; r < wsData.length; r++) {
       for (const c of numCols) {
         const cellAddr = XLSX.utils.encode_cell({ r, c });
@@ -223,75 +289,99 @@ export function ListaTabelaPrecoTab() {
     }
 
     XLSX.utils.book_append_sheet(wb, ws, 'Lista de Preços');
-    const fileName = `lista_precos_${tabelaLabel.replace(/\s+/g, '_')}_${hoje.replace(/\//g, '-')}.xlsx`;
+    const fileName = `lista_precos_${modelo}_${tabelaLabel.replace(/\s+/g, '_')}_${hoje.replace(/\//g, '-')}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Arquivo Excel exportado com sucesso');
   }
 
   return (
-    <div className="flex flex-col h-full gap-4 p-4">
+    <div className="flex flex-col h-full gap-3 p-4">
       {/* Filtros */}
-      <div className="flex flex-wrap items-end gap-3 border rounded-lg p-4 bg-muted/30">
-        {/* Tabela */}
-        <div className="flex flex-col gap-1 min-w-[200px]">
-          <Label className="text-xs font-semibold">Tabela *</Label>
-          <Select value={tabelaId} onValueChange={setTabelaId}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione a tabela" /></SelectTrigger>
-            <SelectContent>
-              {tabelas.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.descricao}</SelectItem>)}
-            </SelectContent>
-          </Select>
+      <div className="flex flex-wrap items-start gap-3 border rounded-lg p-4 bg-muted/30">
+
+        {/* Linha 1 */}
+        <div className="flex flex-wrap items-end gap-3 w-full">
+          {/* Tabela */}
+          <div className="flex flex-col gap-1 min-w-[200px]">
+            <Label className="text-xs font-semibold">Tabela *</Label>
+            <Select value={tabelaId} onValueChange={setTabelaId}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione a tabela" /></SelectTrigger>
+              <SelectContent>
+                {tabelas.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.descricao}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Modelo */}
+          <div className="flex flex-col gap-1 min-w-[200px]">
+            <Label className="text-xs font-semibold">Modelo</Label>
+            <Select value={modelo} onValueChange={(v) => setModelo(v as Modelo)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="representante">Modelo Representante</SelectItem>
+                <SelectItem value="cliente">Modelo Cliente</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Ordenação */}
+          <div className="flex flex-col gap-1 min-w-[180px]">
+            <Label className="text-xs">Ordenação</Label>
+            <Select value={ordem} onValueChange={(v) => setOrdem(v as OrdemLista)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ORDENS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Marca */}
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            <Label className="text-xs">Marca</Label>
+            <Input className="h-8 text-xs" placeholder="Filtrar por marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
+          </div>
+
+          {/* Checkboxes */}
+          <div className="flex flex-col gap-1.5 self-end pb-1">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox checked={somente_estoque} onCheckedChange={(v) => setSomenteEstoque(Boolean(v))} />
+              Somente em estoque
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox checked={somente_promocao} onCheckedChange={(v) => setSomentePromocao(Boolean(v))} />
+              Somente em promoção
+            </label>
+          </div>
         </div>
 
-        {/* Fornecedor multi */}
-        <div className="flex flex-col gap-1 min-w-[180px]">
-          <Label className="text-xs">Fornecedor</Label>
-          <MultiSelect options={fornecedorOptions} selected={fornecedorIds} onChange={setFornecedorIds} placeholder="Todos" searchPlaceholder="Buscar fornecedor..." />
-        </div>
+        {/* Linha 2: Fornecedor + Exceto */}
+        <div className="flex flex-wrap items-end gap-2 w-full">
+          <div className="flex flex-col gap-1 min-w-[180px] flex-1 max-w-[280px]">
+            <Label className="text-xs">Fornecedor</Label>
+            <MultiSelect options={fornecedorOptions} selected={fornecedorIds} onChange={setFornecedorIds} placeholder="Todos" searchPlaceholder="Buscar fornecedor..." />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 max-w-[260px]">
+            <Label className="text-xs text-muted-foreground">Exceto (IDs separados por vírgula)</Label>
+            <Input className="h-8 text-xs" placeholder="Ex: 5, 12, 30" value={excetoFornecedores} onChange={(e) => setExcetoFornecedores(e.target.value)} />
+          </div>
 
-        {/* Divisão multi */}
-        <div className="flex flex-col gap-1 min-w-[160px]">
-          <Label className="text-xs">Divisão</Label>
-          <MultiSelect options={divisaoOptions} selected={divisaoIds} onChange={setDivisaoIds} placeholder="Todas" searchPlaceholder="Buscar divisão..." />
-        </div>
+          <div className="flex flex-col gap-1 min-w-[160px] flex-1 max-w-[260px]">
+            <Label className="text-xs">Divisão</Label>
+            <MultiSelect options={divisaoOptions} selected={divisaoIds} onChange={setDivisaoIds} placeholder="Todas" searchPlaceholder="Buscar divisão..." />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 max-w-[240px]">
+            <Label className="text-xs text-muted-foreground">Exceto (IDs separados por vírgula)</Label>
+            <Input className="h-8 text-xs" placeholder="Ex: 3, 7" value={excetoDivisoes} onChange={(e) => setExcetoDivisoes(e.target.value)} />
+          </div>
 
-        {/* Grupo multi */}
-        <div className="flex flex-col gap-1 min-w-[150px]">
-          <Label className="text-xs">Grupo</Label>
-          <MultiSelect options={grupoOptions} selected={grupoIds} onChange={setGrupoIds} placeholder="Todos" searchPlaceholder="Buscar grupo..." />
-        </div>
-
-        {/* Marca */}
-        <div className="flex flex-col gap-1 min-w-[120px]">
-          <Label className="text-xs">Marca</Label>
-          <Input className="h-8 text-xs" placeholder="Filtrar por marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
-        </div>
-
-        {/* Ordem */}
-        <div className="flex flex-col gap-1 min-w-[180px]">
-          <Label className="text-xs">Ordenação</Label>
-          <Select value={ordem} onValueChange={(v) => setOrdem(v as OrdemLista)}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {ORDENS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Checkboxes */}
-        <div className="flex flex-col gap-1.5 self-end pb-1">
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <Checkbox checked={somente_estoque} onCheckedChange={(v) => setSomenteEstoque(Boolean(v))} />
-            Somente em estoque
-          </label>
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <Checkbox checked={somente_promocao} onCheckedChange={(v) => setSomentePromocao(Boolean(v))} />
-            Somente em promoção
-          </label>
+          <div className="flex flex-col gap-1 min-w-[140px] flex-1 max-w-[220px]">
+            <Label className="text-xs">Grupo</Label>
+            <MultiSelect options={grupoOptions} selected={grupoIds} onChange={setGrupoIds} placeholder="Todos" searchPlaceholder="Buscar grupo..." />
+          </div>
         </div>
 
         {/* Botões */}
-        <div className="flex items-end gap-2 self-end">
+        <div className="flex items-center gap-2 w-full">
           <Button size="sm" onClick={handleListar} disabled={isLoading || !tabelaId}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
             Listar
@@ -303,75 +393,107 @@ export function ListaTabelaPrecoTab() {
             <Button variant="outline" size="sm" onClick={handleExportarExcel}>
               <FileSpreadsheet className="h-4 w-4 mr-1" />Excel
             </Button>
+            <span className="text-xs text-muted-foreground">{totalItens} produto(s)</span>
           </>)}
         </div>
-
-        {grupos_dados.length > 0 && (
-          <span className="text-xs text-muted-foreground self-end pb-1">{totalItens} produto(s)</span>
-        )}
       </div>
 
       {/* Legenda */}
       {grupos_dados.length > 0 && (
         <div className="text-xs text-muted-foreground px-1">
-          Tabela: <strong>{tabelaLabel}</strong> &nbsp;|&nbsp; Ordem: {ordemAtual.label}
+          <strong>{modeloLabel}</strong> &nbsp;|&nbsp; Tabela: <strong>{tabelaLabel}</strong> &nbsp;|&nbsp; Ordem: {ordemAtual.label}
         </div>
       )}
 
       {/* Tabela */}
       <div className="flex-1 overflow-auto border rounded-lg">
-        <table className="w-full text-xs border-collapse" style={{ minWidth: 900 }}>
-          <thead className="sticky top-0 bg-muted/90 z-10">
-            <tr className="border-b">
-              <th className="w-20 px-2 py-2 text-left">Produto</th>
-              <th className="px-2 py-2 text-left">Descrição</th>
-              <th className="w-28 px-2 py-2 text-left">Apresentação</th>
-              <th className="w-8 px-2 py-2 text-center">UN</th>
-              <th className="w-24 px-2 py-2 text-left">Marca</th>
-              <th className="w-24 px-2 py-2 text-left">Cod.Fab</th>
-              <th className="w-12 px-2 py-2 text-right">Muv</th>
-              <th className="w-16 px-2 py-2 text-right">%Com</th>
-              <th className="w-20 px-2 py-2 text-right font-semibold">Preço</th>
-              <th className="w-16 px-2 py-2 text-right text-muted-foreground">%Desc</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={10} className="text-center py-16"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>
-            ) : !tabelaId ? (
-              <tr><td colSpan={10} className="text-center py-16 text-muted-foreground">Selecione uma tabela e clique em Listar</td></tr>
-            ) : grupos_dados.length === 0 ? (
-              <tr><td colSpan={10} className="text-center py-16 text-muted-foreground">Nenhum produto encontrado</td></tr>
-            ) : (
-              grupos_dados.map((g, gi) => (
-                <>
-                  {g.label && (
-                    <tr key={`h-${gi}`} className="bg-muted/60">
-                      <td colSpan={10} className="px-2 py-1 font-semibold uppercase text-[11px] tracking-wide">{g.label}</td>
-                    </tr>
-                  )}
-                  {g.itens.map((item) => (
-                    <tr key={item.produto_id} className="border-b hover:bg-muted/20">
-                      <td className="px-2 py-0.5 pl-4 font-mono text-[11px]">{item.codigo_produto}</td>
-                      <td className="px-2 py-0.5 max-w-0">
-                        <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
-                      </td>
-                      <td className="px-2 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
-                      <td className="px-2 py-0.5 text-center text-muted-foreground">{item.un}</td>
-                      <td className="px-2 py-0.5 text-muted-foreground">{item.marca || '-'}</td>
-                      <td className="px-2 py-0.5 text-muted-foreground font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
-                      <td className="px-2 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas ?? 1}</td>
-                      <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(item.comissao)}</td>
-                      <td className="px-2 py-0.5 text-right font-semibold">{fmt2(item.preco)}</td>
-                      <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(item.desconto_maximo)}</td>
-                    </tr>
-                  ))}
-                </>
-              ))
-            )}
-          </tbody>
-        </table>
+        {modelo === 'representante' ? (
+          <table className="w-full text-xs border-collapse" style={{ minWidth: 860 }}>
+            <thead className="sticky top-0 bg-muted/90 z-10">
+              <tr className="border-b">
+                <th className="w-20 px-2 py-2 text-left">Produto</th>
+                <th className="px-2 py-2 text-left">Descrição</th>
+                <th className="w-24 px-2 py-2 text-left">Apres.</th>
+                <th className="w-8 px-2 py-2 text-center">UN</th>
+                <th className="w-20 px-2 py-2 text-left">Marca</th>
+                <th className="w-20 px-2 py-2 text-left">Cod.Fab</th>
+                <th className="w-10 px-2 py-2 text-right">Muv</th>
+                <th className="w-10 px-2 py-2 text-center" title="Permite Bonificação">Pno</th>
+                <th className="w-10 px-2 py-2 text-center" title="Permite Déb/Créd">DC</th>
+                <th className="w-14 px-2 py-2 text-right">%Com</th>
+                <th className="w-20 px-2 py-2 text-right font-semibold">Preço</th>
+                <th className="w-14 px-2 py-2 text-right">%Desc</th>
+                <th className="w-20 px-2 py-2 text-right">Pr.Unit</th>
+              </tr>
+            </thead>
+            <tbody>{renderRows('representante')}</tbody>
+          </table>
+        ) : (
+          <table className="w-full text-xs border-collapse" style={{ minWidth: 780 }}>
+            <thead className="sticky top-0 bg-muted/90 z-10">
+              <tr className="border-b">
+                <th className="w-20 px-2 py-2 text-left">Produto</th>
+                <th className="px-2 py-2 text-left">Descrição</th>
+                <th className="w-24 px-2 py-2 text-left">Apres.</th>
+                <th className="w-20 px-2 py-2 text-left">Marca</th>
+                <th className="w-32 px-2 py-2 text-left">EAN</th>
+                <th className="w-24 px-2 py-2 text-left">Cod.Fab.</th>
+                <th className="w-8 px-2 py-2 text-center">UN</th>
+                <th className="w-20 px-2 py-2 text-right font-semibold">Pr.Emb.</th>
+                <th className="w-20 px-2 py-2 text-right">Pr.Unit.</th>
+              </tr>
+            </thead>
+            <tbody>{renderRows('cliente')}</tbody>
+          </table>
+        )}
       </div>
     </div>
   );
+
+  function renderRows(m: Modelo) {
+    if (isLoading) return <tr><td colSpan={13} className="text-center py-16"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>;
+    if (!tabelaId) return <tr><td colSpan={13} className="text-center py-16 text-muted-foreground">Selecione uma tabela e clique em Listar</td></tr>;
+    if (grupos_dados.length === 0) return <tr><td colSpan={13} className="text-center py-16 text-muted-foreground">Nenhum produto encontrado</td></tr>;
+
+    return grupos_dados.map((g, gi) => (
+      <>
+        {g.label && (
+          <tr key={`h-${gi}`} className="bg-muted/60">
+            <td colSpan={13} className="px-2 py-1 font-semibold uppercase text-[11px] tracking-wide">{g.label}</td>
+          </tr>
+        )}
+        {g.itens.map((item) =>
+          m === 'representante' ? (
+            <tr key={item.produto_id} className="border-b hover:bg-muted/20">
+              <td className="px-2 py-0.5 pl-4 font-mono text-[11px]">{item.codigo_produto}</td>
+              <td className="px-2 py-0.5 max-w-0"><span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span></td>
+              <td className="px-2 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
+              <td className="px-2 py-0.5 text-center text-muted-foreground">{item.un}</td>
+              <td className="px-2 py-0.5 text-muted-foreground">{item.marca || '-'}</td>
+              <td className="px-2 py-0.5 text-muted-foreground font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
+              <td className="px-2 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas ?? 1}</td>
+              <td className="px-2 py-0.5 text-center font-medium">{item.permite_bonificacao ? 'P' : 'N'}</td>
+              <td className="px-2 py-0.5 text-center text-muted-foreground">{item.permite_debito_credito ? 'X' : ''}</td>
+              <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(item.comissao)}</td>
+              <td className="px-2 py-0.5 text-right font-semibold">{fmt2(item.preco)}</td>
+              <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(item.desconto_maximo)}</td>
+              <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(prUnit(item))}</td>
+            </tr>
+          ) : (
+            <tr key={item.produto_id} className="border-b hover:bg-muted/20">
+              <td className="px-2 py-0.5 pl-4 font-mono text-[11px]">{item.codigo_produto}</td>
+              <td className="px-2 py-0.5 max-w-0"><span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span></td>
+              <td className="px-2 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
+              <td className="px-2 py-0.5 text-muted-foreground">{item.marca || '-'}</td>
+              <td className="px-2 py-0.5 font-mono text-[11px] text-muted-foreground">{item.ean13 || '-'}</td>
+              <td className="px-2 py-0.5 font-mono text-[11px] text-muted-foreground">{item.codigo_fabrica || '-'}</td>
+              <td className="px-2 py-0.5 text-center text-muted-foreground">{item.un}</td>
+              <td className="px-2 py-0.5 text-right font-semibold">{fmt2(item.preco)}</td>
+              <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(prUnit(item))}</td>
+            </tr>
+          )
+        )}
+      </>
+    ));
+  }
 }

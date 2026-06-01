@@ -164,6 +164,7 @@ export interface ListaItem {
   un: string;
   marca: string;
   codigo_fabrica: string;
+  ean13: string;
   multiplo_de_vendas: number;
   estoque: number;
   divisao: string;
@@ -714,7 +715,9 @@ export const tabelasPrecoService = {
     tabelaId: number,
     filters: {
       fornecedorIds?: string[];
+      excetoFornecedorIds?: string[];
       divisaoIds?: string[];
+      excetoDivisaoIds?: string[];
       grupoIds?: string[];
       marca?: string;
       ordem?: OrdemLista;
@@ -727,7 +730,9 @@ export const tabelasPrecoService = {
     if (!empresaId) throw new Error('Empresa não selecionada');
     const params = new URLSearchParams({ empresaId: String(empresaId) });
     if (filters.fornecedorIds?.length) params.set('fornecedorIds', filters.fornecedorIds.join(','));
+    if (filters.excetoFornecedorIds?.length) params.set('excetoFornecedorIds', filters.excetoFornecedorIds.join(','));
     if (filters.divisaoIds?.length) params.set('divisaoIds', filters.divisaoIds.join(','));
+    if (filters.excetoDivisaoIds?.length) params.set('excetoDivisaoIds', filters.excetoDivisaoIds.join(','));
     if (filters.grupoIds?.length) params.set('grupoIds', filters.grupoIds.join(','));
     if (filters.marca) params.set('marca', filters.marca);
     if (filters.ordem) params.set('ordem', filters.ordem);
