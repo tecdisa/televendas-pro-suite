@@ -178,6 +178,8 @@ export interface ListaItem {
   permite_debito_credito: boolean;
   permite_venda_especial: boolean;
   produto_em_promocao: boolean;
+  custo: number;
+  pvs: number;
 }
 
 export type OrdemLista = 'divisao_descricao' | 'produto' | 'descricao' | 'marca' | 'fornecedor';

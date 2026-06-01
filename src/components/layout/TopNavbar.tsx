@@ -75,6 +75,7 @@ const baseNavGroups: NavGroup[] = [
           { title: 'Tabelas de Preço', tab: 'tabelas-preco', icon: CreditCard },
           { title: 'Atualização Linear de Preços', tab: 'ajuste-linear-preco', icon: CreditCard },
           { title: 'Lista de Preços', tab: 'lista-tabela-preco', icon: CreditCard },
+          { title: 'Lista Configurável', tab: 'lista-configuravel', icon: CreditCard },
           { title: 'Comparação de Tabelas', tab: 'comparacao-tabelas', icon: CreditCard },
         ],
       },
