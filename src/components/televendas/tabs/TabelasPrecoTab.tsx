@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent, Layers } from 'lucide-react';
+import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent, Layers, FileSpreadsheet, Upload, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { tabelasPrecoService, TabelaPreco, TabelaPrecoItem, TabelaPrecoDivisao, TabelaPrecoEscala } from '@/services/tabelasPrecoService';
@@ -18,6 +19,70 @@ import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 import { ProductSearchDialog } from '@/components/televendas/overlays/ProductSearchDialog';
 
 const PAGE_LIMIT = 100;
+
+// ─── Excel Export / Import ────────────────────────────────────────────────────
+
+interface ExportColDef {
+  header: string;
+  field: keyof TabelaPrecoItem;
+  type: 'number' | 'string' | 'boolean';
+  editable: boolean;
+  digits?: number;
+}
+
+const EXPORT_COLS: ExportColDef[] = [
+  { header: 'produto_id',        field: 'produto_id',             type: 'number',  editable: false },
+  { header: 'Produto',           field: 'codigo_produto',         type: 'string',  editable: false },
+  { header: 'Descrição',         field: 'descricao_produto',      type: 'string',  editable: false },
+  { header: 'Apres.',            field: 'apresentacao',           type: 'string',  editable: false },
+  { header: 'UN',                field: 'un',                     type: 'string',  editable: false },
+  { header: 'Custo',             field: 'custo',                  type: 'number',  editable: false, digits: 4 },
+  { header: '%Markup',           field: 'markup',                 type: 'number',  editable: true,  digits: 2 },
+  { header: '%Despesa',          field: 'despesa',                type: 'number',  editable: true,  digits: 2 },
+  { header: '%Lucro',            field: 'lucro',                  type: 'number',  editable: true,  digits: 2 },
+  { header: '%Comissão',         field: 'comissao',               type: 'number',  editable: true,  digits: 2 },
+  { header: '%Frete',            field: 'frete',                  type: 'number',  editable: true,  digits: 2 },
+  { header: '%Major.',           field: 'majoracao',              type: 'number',  editable: true,  digits: 2 },
+  { header: 'Preço Venda',       field: 'preco',                  type: 'number',  editable: true,  digits: 2 },
+  { header: '%DescMáx',          field: 'desconto_maximo',        type: 'number',  editable: true,  digits: 2 },
+  { header: 'Prom.',             field: 'produto_em_promocao',    type: 'boolean', editable: true },
+  { header: 'Qtd.Mín.',          field: 'quantidade_minima',      type: 'number',  editable: true,  digits: 0 },
+  { header: 'Bon.',              field: 'permite_bonificacao',    type: 'boolean', editable: true },
+  { header: 'Déb/Cr.',           field: 'permite_debito_credito', type: 'boolean', editable: true },
+  { header: 'Vd.Esp.',           field: 'permite_venda_especial', type: 'boolean', editable: true },
+  { header: 'Estoque',           field: 'estoque',                type: 'number',  editable: false, digits: 0 },
+  { header: 'Divisão',           field: 'divisao',                type: 'string',  editable: false },
+  { header: 'Fornecedor',        field: 'fornecedor',             type: 'string',  editable: false },
+  { header: 'EAN13',             field: 'ean13',                  type: 'string',  editable: false },
+  { header: 'Cód.Fábrica',       field: 'codigo_fabrica',         type: 'string',  editable: false },
+  { header: 'Marca',             field: 'marca',                  type: 'string',  editable: false },
+  { header: 'Múlt.Venda',        field: 'multiplo_de_vendas',     type: 'number',  editable: false, digits: 0 },
+  { header: 'Pr.Nac.Cons.',      field: 'preco_nacional_consumidor', type: 'number', editable: false, digits: 2 },
+  { header: 'Princ.Ativo',       field: 'principio_ativo',        type: 'string',  editable: false },
+];
+
+function xlsxBool(v: boolean): string {
+  return v ? 'S' : 'N';
+}
+
+function parseXlsxBool(v: unknown): boolean | null {
+  if (v === null || v === undefined || v === '') return false;
+  const s = String(v).trim().toUpperCase();
+  if (['S', 'SIM', 'TRUE', '1', 'X', 'Y', 'YES'].includes(s)) return true;
+  if (['N', 'NÃO', 'NAO', 'FALSE', '0', ''].includes(s)) return false;
+  return null; // invalid
+}
+
+interface ImportPreviewRow {
+  xlsxLine: number;
+  produtoId: number;
+  codigoProduto: string;
+  descricao: string;
+  status: 'ok' | 'warning' | 'error';
+  diffLines: string[];
+  errors: string[];
+  warnings: string[];
+}
 
 function fmt(value: number, digits = 2): string {
   return value.toFixed(digits);
@@ -289,6 +354,13 @@ export function TabelasPrecoTab() {
   const [batchDebitoCredito, setBatchDebitoCredito] = useState(false);
   const [batchVendaEspecial, setBatchVendaEspecial] = useState(false);
   const [batchPromocao, setBatchPromocao] = useState(false);
+
+  // ── Excel import/export ─────────────────────────────────────────────────
+  const [xlsxPreviewOpen, setXlsxPreviewOpen] = useState(false);
+  const [xlsxPreviewRows, setXlsxPreviewRows] = useState<ImportPreviewRow[]>([]);
+  const [xlsxImporting, setXlsxImporting] = useState(false);
+  const [xlsxParsedChanges, setXlsxParsedChanges] = useState<Record<number, PendingChange>>({});
+  const xlsxFileRef = useRef<HTMLInputElement>(null);
 
   // ── Metadata ────────────────────────────────────────────────────────────
   const loadMetadata = useCallback(async () => {
@@ -1053,6 +1125,222 @@ export function TabelasPrecoTab() {
     );
   }
 
+  // ── Excel Export ────────────────────────────────────────────────────────
+  function handleExportExcel() {
+    const toExport = selectedRows.size > 0
+      ? itens.filter((i) => selectedRows.has(i.produto_id))
+      : itens;
+
+    const header = EXPORT_COLS.map((c) => c.header);
+    const rows = toExport.map((item) =>
+      EXPORT_COLS.map((col) => {
+        const raw = item[col.field];
+        if (col.type === 'boolean') return xlsxBool(raw as boolean);
+        if (col.type === 'number') {
+          const n = raw == null ? 0 : Number(raw);
+          return col.digits === 0 ? Math.round(n) : n;
+        }
+        return raw ?? '';
+      })
+    );
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    // Mark editable columns in green, read-only in light-gray
+    EXPORT_COLS.forEach((col, ci) => {
+      const cell = ws[XLSX.utils.encode_cell({ r: 0, c: ci })];
+      if (cell) {
+        cell.s = col.editable
+          ? { fill: { fgColor: { rgb: 'C6EFCE' } }, font: { bold: true } }
+          : { fill: { fgColor: { rgb: 'F2F2F2' } }, font: { bold: true } };
+      }
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Itens');
+    const label = itensTabela
+      ? `${itensTabela.codigo_tabela_preco}_itens`
+      : 'tabela_itens';
+    XLSX.writeFile(wb, `${label}.xlsx`);
+  }
+
+  // ── Excel Import ─────────────────────────────────────────────────────────
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // reset input so same file can be re-imported
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = ev.target?.result;
+        const wb = XLSX.read(data, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        // Find header row by locating 'produto_id' cell
+        let headerRowIdx = -1;
+        let headerMap: Record<string, number> = {};
+        for (let ri = 0; ri < Math.min(aoa.length, 10); ri++) {
+          const row = aoa[ri] as unknown[];
+          const pidIdx = row.findIndex((c) => String(c).trim().toLowerCase() === 'produto_id');
+          if (pidIdx >= 0) {
+            headerRowIdx = ri;
+            row.forEach((c, ci) => { headerMap[String(c).trim()] = ci; });
+            break;
+          }
+        }
+
+        if (headerRowIdx < 0) {
+          toast.error('Planilha inválida: coluna "produto_id" não encontrada.');
+          return;
+        }
+
+        const itensMap = new Map(itens.map((i) => [i.produto_id, i]));
+        const previewRows: ImportPreviewRow[] = [];
+        const parsedChanges: Record<number, PendingChange> = {};
+
+        for (let ri = headerRowIdx + 1; ri < aoa.length; ri++) {
+          const row = aoa[ri] as unknown[];
+          const rawId = row[headerMap['produto_id']];
+          if (rawId === '' || rawId === null || rawId === undefined) continue;
+          const produtoId = Number(rawId);
+          if (isNaN(produtoId) || produtoId <= 0) continue;
+
+          const xlsxLine = ri + 1;
+          const codigoProduto = String(row[headerMap['Produto']] ?? '');
+          const descricao = String(row[headerMap['Descrição']] ?? '');
+          const errors: string[] = [];
+          const warnings: string[] = [];
+          const diffLines: string[] = [];
+          const change: PendingChange = {};
+
+          const currentItem = itensMap.get(produtoId);
+          if (!currentItem) {
+            warnings.push(`Produto ID ${produtoId} não está carregado nos itens atuais`);
+          }
+
+          // Parse editable numeric fields
+          const numericEditableFields: Array<{ header: string; field: keyof PendingChange; digits: number }> = [
+            { header: '%Markup',     field: 'markup',          digits: 2 },
+            { header: '%Despesa',    field: 'despesa',         digits: 2 },
+            { header: '%Lucro',      field: 'lucro',           digits: 2 },
+            { header: '%Comissão',   field: 'comissao',        digits: 2 },
+            { header: '%Frete',      field: 'frete',           digits: 2 },
+            { header: '%Major.',     field: 'majoracao',       digits: 2 },
+            { header: 'Preço Venda', field: 'preco',           digits: 2 },
+            { header: '%DescMáx',    field: 'desconto_maximo', digits: 2 },
+            { header: 'Qtd.Mín.',    field: 'quantidade_minima', digits: 0 },
+          ];
+          for (const { header, field, digits } of numericEditableFields) {
+            const idx = headerMap[header];
+            if (idx === undefined) continue;
+            const raw = row[idx];
+            if (raw === '' || raw === null || raw === undefined) continue;
+            const num = parseFloat(String(raw).replace(',', '.'));
+            if (isNaN(num)) {
+              errors.push(`${header}: valor inválido "${raw}"`);
+            } else {
+              const rounded = digits === 0 ? Math.round(num) : parseFloat(num.toFixed(digits));
+              (change as any)[field] = rounded;
+              if (currentItem) {
+                const cur = Number((currentItem as any)[field]);
+                if (Math.abs(cur - rounded) > 0.001) {
+                  diffLines.push(`${header}: ${cur.toFixed(digits)} → ${rounded.toFixed(digits)}`);
+                }
+              }
+            }
+          }
+
+          // Parse editable boolean fields
+          const boolEditableFields: Array<{ header: string; field: keyof PendingChange }> = [
+            { header: 'Prom.',    field: 'produto_em_promocao' },
+            { header: 'Bon.',     field: 'permite_bonificacao' },
+            { header: 'Déb/Cr.', field: 'permite_debito_credito' },
+            { header: 'Vd.Esp.', field: 'permite_venda_especial' },
+          ];
+          for (const { header, field } of boolEditableFields) {
+            const idx = headerMap[header];
+            if (idx === undefined) continue;
+            const raw = row[idx];
+            if (raw === '' || raw === null || raw === undefined) continue;
+            const b = parseXlsxBool(raw);
+            if (b === null) {
+              errors.push(`${header}: valor inválido "${raw}" (use S ou N)`);
+            } else {
+              (change as any)[field] = b;
+              if (currentItem) {
+                const cur = Boolean((currentItem as any)[field]);
+                if (cur !== b) {
+                  diffLines.push(`${header}: ${xlsxBool(cur)} → ${xlsxBool(b)}`);
+                }
+              }
+            }
+          }
+
+          const hasChanges = Object.keys(change).length > 0;
+          if (hasChanges) parsedChanges[produtoId] = change;
+
+          const status = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok';
+          previewRows.push({ xlsxLine, produtoId, codigoProduto, descricao, status, diffLines, errors, warnings });
+        }
+
+        setXlsxParsedChanges(parsedChanges);
+        setXlsxPreviewRows(previewRows);
+        setXlsxPreviewOpen(true);
+      } catch (err) {
+        toast.error('Erro ao ler planilha Excel.');
+        console.error(err);
+      }
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  async function handleConfirmImport() {
+    setXlsxImporting(true);
+    try {
+      const tabelaId = itensTabela!.tabela_preco_id;
+      const entries = Object.entries(xlsxParsedChanges);
+      let saved = 0;
+      for (const [pidStr, change] of entries) {
+        const produtoId = Number(pidStr);
+        const current = itens.find((i) => i.produto_id === produtoId);
+        if (!current) continue;
+        const merged = { ...current, ...change };
+        await tabelasPrecoService.updateItem(tabelaId, produtoId, {
+          preco: merged.preco,
+          desconto_maximo: merged.desconto_maximo,
+          comissao: merged.comissao,
+          quantidade_minima: merged.quantidade_minima,
+          pvs: merged.pvs,
+          markup: merged.markup,
+          despesa: merged.despesa,
+          lucro: merged.lucro,
+          frete: merged.frete,
+          majoracao: merged.majoracao,
+          permite_bonificacao: merged.permite_bonificacao,
+          permite_debito_credito: merged.permite_debito_credito,
+          permite_venda_especial: merged.permite_venda_especial,
+          produto_em_promocao: merged.produto_em_promocao,
+        });
+        saved++;
+      }
+      toast.success(`${saved} item(s) atualizados com sucesso.`);
+      setXlsxPreviewOpen(false);
+      setXlsxParsedChanges({});
+      setXlsxPreviewRows([]);
+      // Reload items
+      setItensPage(1);
+      setItens([]);
+      setItensHasMore(true);
+    } catch (err) {
+      toast.error('Erro ao salvar itens importados.');
+      console.error(err);
+    } finally {
+      setXlsxImporting(false);
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   // ITEMS VIEW
   // ═══════════════════════════════════════════════════════════════════════
@@ -1083,6 +1371,21 @@ export function TabelasPrecoTab() {
               <Copy className="h-3.5 w-3.5" />
               Copiar itens
             </Button>
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleExportExcel} disabled={itens.length === 0}>
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              {selectedRows.size > 0 ? `Excel (${selectedRows.size})` : 'Excel'}
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => xlsxFileRef.current?.click()} disabled={itens.length === 0}>
+              <Upload className="h-3.5 w-3.5" />
+              Importar
+            </Button>
+            <input
+              ref={xlsxFileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleImportFile}
+            />
             {selectedRows.size > 0 && (
               <Button size="sm" variant="destructive" className="h-7 gap-1 text-xs" onClick={handleDeleteSelected}>
                 <Trash2 className="h-3.5 w-3.5" />
@@ -1608,6 +1911,94 @@ export function TabelasPrecoTab() {
           selectedTabelaId={itensTabela?.tabela_preco_id ? String(itensTabela.tabela_preco_id) : undefined}
           showRecordCounter
         />
+
+        {/* Excel Import Preview Dialog */}
+        <Dialog open={xlsxPreviewOpen} onOpenChange={setXlsxPreviewOpen}>
+          <DialogContent className="w-[95vw] max-w-4xl max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Pré-visualização da Importação</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-auto text-xs">
+              {xlsxPreviewRows.length === 0 ? (
+                <p className="text-muted-foreground py-4 text-center">Nenhuma linha encontrada na planilha.</p>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-muted z-10">
+                    <tr>
+                      <th className="border px-2 py-1 text-left font-medium">#Linha</th>
+                      <th className="border px-2 py-1 text-left font-medium">Status</th>
+                      <th className="border px-2 py-1 text-left font-medium">Produto</th>
+                      <th className="border px-2 py-1 text-left font-medium">Descrição</th>
+                      <th className="border px-2 py-1 text-left font-medium">Alterações / Erros / Avisos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {xlsxPreviewRows.map((row) => (
+                      <tr key={row.xlsxLine} className={
+                        row.status === 'error' ? 'bg-red-50' :
+                        row.status === 'warning' ? 'bg-yellow-50' : ''
+                      }>
+                        <td className="border px-2 py-1 text-muted-foreground">{row.xlsxLine}</td>
+                        <td className="border px-2 py-1">
+                          {row.status === 'ok' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                          {row.status === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-600" />}
+                          {row.status === 'error' && <AlertCircle className="h-4 w-4 text-red-600" />}
+                        </td>
+                        <td className="border px-2 py-1 font-mono">{row.codigoProduto}</td>
+                        <td className="border px-2 py-1 max-w-[200px] truncate" title={row.descricao}>{row.descricao}</td>
+                        <td className="border px-2 py-1">
+                          {row.errors.length > 0 && (
+                            <div className="text-red-700">
+                              {row.errors.map((e, i) => <div key={i}>❌ {e}</div>)}
+                            </div>
+                          )}
+                          {row.warnings.length > 0 && (
+                            <div className="text-yellow-700">
+                              {row.warnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
+                            </div>
+                          )}
+                          {row.diffLines.length > 0 && (
+                            <div className="text-foreground space-y-0.5">
+                              {row.diffLines.map((d, i) => <div key={i} className="font-mono">{d}</div>)}
+                            </div>
+                          )}
+                          {row.errors.length === 0 && row.warnings.length === 0 && row.diffLines.length === 0 && (
+                            <span className="text-muted-foreground italic">Sem alterações</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="text-xs text-muted-foreground space-x-3">
+                <span className="text-green-700">✅ {xlsxPreviewRows.filter(r => r.status === 'ok').length} ok</span>
+                <span className="text-yellow-700">⚠️ {xlsxPreviewRows.filter(r => r.status === 'warning').length} aviso(s)</span>
+                <span className="text-red-700">❌ {xlsxPreviewRows.filter(r => r.status === 'error').length} erro(s)</span>
+                <span>{Object.keys(xlsxParsedChanges).length} item(s) com alterações</span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setXlsxPreviewOpen(false)} disabled={xlsxImporting}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleConfirmImport}
+                  disabled={
+                    xlsxImporting ||
+                    xlsxPreviewRows.some(r => r.status === 'error') ||
+                    Object.keys(xlsxParsedChanges).length === 0
+                  }
+                >
+                  {xlsxImporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Importar ({Object.keys(xlsxParsedChanges).length})
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit item dialog */}
         <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
