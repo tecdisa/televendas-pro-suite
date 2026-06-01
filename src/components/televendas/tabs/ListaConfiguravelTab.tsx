@@ -523,12 +523,12 @@ export function ListaConfiguravelTab() {
             {slots.map((slot, idx) => (
               <div key={slot.letra} className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-muted-foreground w-4">{slot.letra}</span>
-                <Select value={slot.tabelaId} onValueChange={(v) => updateSlot(idx, v)}>
+                <Select value={slot.tabelaId || '__none__'} onValueChange={(v) => updateSlot(idx, v === '__none__' ? '' : v)}>
                   <SelectTrigger className="h-8 text-xs w-[200px]">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">— Nenhuma —</SelectItem>
+                    <SelectItem value="__none__">— Nenhuma —</SelectItem>
                     {tabelas.map((t) => (
                       <SelectItem key={t.id} value={String(t.id)}>{t.descricao}</SelectItem>
                     ))}
