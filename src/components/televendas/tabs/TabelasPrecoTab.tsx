@@ -1316,6 +1316,9 @@ export function TabelasPrecoTab() {
           const hasChanges = Object.keys(change).length > 0;
           if (hasChanges && produtoId > 0) parsedChanges[produtoId] = change;
 
+          // Ignorar linhas sem alterações, sem erros e sem avisos
+          if (!hasChanges && errors.length === 0 && warnings.length === 0) continue;
+
           const status = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok';
           previewRows.push({ xlsxLine, produtoId, codigoProduto, descricao, status, diffLines, errors, warnings });
         }
