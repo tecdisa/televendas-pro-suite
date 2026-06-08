@@ -356,6 +356,7 @@ export function TabelasPrecoTab() {
   const [batchPromocao, setBatchPromocao] = useState(false);
 
   // ── Excel import/export ─────────────────────────────────────────────────
+  const [xlsxExporting, setXlsxExporting] = useState(false);
   const [xlsxPreviewOpen, setXlsxPreviewOpen] = useState(false);
   const [xlsxPreviewRows, setXlsxPreviewRows] = useState<ImportPreviewRow[]>([]);
   const [xlsxImporting, setXlsxImporting] = useState(false);
@@ -1126,11 +1127,7 @@ export function TabelasPrecoTab() {
   }
 
   // ── Excel Export ────────────────────────────────────────────────────────
-  function handleExportExcel() {
-    const toExport = selectedRows.size > 0
-      ? itens.filter((i) => selectedRows.has(i.produto_id))
-      : itens;
-
+  function buildAndDownloadXlsx(toExport: TabelaPrecoItem[]) {
     const header = EXPORT_COLS.map((c) => c.header);
     const rows = toExport.map((item) =>
       EXPORT_COLS.map((col) => {
@@ -1143,9 +1140,7 @@ export function TabelasPrecoTab() {
         return raw ?? '';
       })
     );
-
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    // Mark editable columns in green, read-only in light-gray
     EXPORT_COLS.forEach((col, ci) => {
       const cell = ws[XLSX.utils.encode_cell({ r: 0, c: ci })];
       if (cell) {
@@ -1154,13 +1149,51 @@ export function TabelasPrecoTab() {
           : { fill: { fgColor: { rgb: 'F2F2F2' } }, font: { bold: true } };
       }
     });
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Itens');
     const label = itensTabela
       ? `${itensTabela.codigo_tabela_preco}_itens`
       : 'tabela_itens';
     XLSX.writeFile(wb, `${label}.xlsx`);
+  }
+
+  async function handleExportExcel() {
+    if (xlsxExporting) return;
+
+    // Com seleção: exporta apenas os selecionados (já estão em memória)
+    if (selectedRows.size > 0) {
+      buildAndDownloadXlsx(itens.filter((i) => selectedRows.has(i.produto_id)));
+      return;
+    }
+
+    // Sem seleção: busca TODOS os itens ignorando paginação
+    if (!itensTabela) return;
+    setXlsxExporting(true);
+    try {
+      const filters = {
+        status: itensStatusRef.current as 'ativos' | 'inativos' | 'todos',
+        fornecedorId: itensFornecedorRef.current !== 'all' ? Number(itensFornecedorRef.current) : undefined,
+        divisaoId: itensDivisaoRef.current !== 'all' ? Number(itensDivisaoRef.current) : undefined,
+        marca: itensMarcaRef.current || undefined,
+        lancamento: itensLancamentoRef.current || undefined,
+        possuiFoto: itensPossuiFotoRef.current || undefined,
+        permiteVendaB2b: itensB2bRef.current || undefined,
+        permiteVendaB2c: itensB2cRef.current || undefined,
+      };
+      const result = await tabelasPrecoService.getItens(
+        itensTabela.tabela_preco_id,
+        itensSearchRef.current,
+        1,
+        99999,
+        filters,
+      );
+      buildAndDownloadXlsx(result.data);
+      toast.success(`${result.data.length} item(s) exportados`);
+    } catch {
+      toast.error('Erro ao exportar para Excel');
+    } finally {
+      setXlsxExporting(false);
+    }
   }
 
   // ── Excel Import ─────────────────────────────────────────────────────────
@@ -1371,9 +1404,9 @@ export function TabelasPrecoTab() {
               <Copy className="h-3.5 w-3.5" />
               Copiar itens
             </Button>
-            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleExportExcel} disabled={itens.length === 0}>
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              {selectedRows.size > 0 ? `Excel (${selectedRows.size})` : 'Excel'}
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleExportExcel} disabled={xlsxExporting || itens.length === 0}>
+              {xlsxExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+              {selectedRows.size > 0 ? `Excel (${selectedRows.size} sel.)` : 'Excel (todos)'}
             </Button>
             <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => xlsxFileRef.current?.click()} disabled={itens.length === 0}>
               <Upload className="h-3.5 w-3.5" />
