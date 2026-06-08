@@ -1506,7 +1506,7 @@ export function TabelasPrecoTab() {
             <Button size="sm" className="h-7 px-3 text-xs" onClick={handleItensSearch} disabled={itensLoading}>
               Pesquisar
             </Button>
-            <Button size="sm" variant="outline" className="h-7 px-3 text-xs gap-1" onClick={() => { resetItensFilters(); }}>
+            <Button size="sm" variant="outline" className="h-7 px-3 text-xs gap-1" onClick={() => { resetItensFilters(); loadItens(true); }}>
               <X className="h-3 w-3" />
               Limpar
             </Button>
