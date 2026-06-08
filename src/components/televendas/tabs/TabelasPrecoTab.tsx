@@ -31,7 +31,6 @@ interface ExportColDef {
 }
 
 const EXPORT_COLS: ExportColDef[] = [
-  { header: 'produto_id',        field: 'produto_id',             type: 'number',  editable: false },
   { header: 'Produto',           field: 'codigo_produto',         type: 'string',  editable: false },
   { header: 'Descrição',         field: 'descricao_produto',      type: 'string',  editable: false },
   { header: 'Apres.',            field: 'apresentacao',           type: 'string',  editable: false },
@@ -1211,12 +1210,12 @@ export function TabelasPrecoTab() {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-        // Find header row by locating 'produto_id' cell
+        // Find header row by locating 'Produto' cell
         let headerRowIdx = -1;
         let headerMap: Record<string, number> = {};
         for (let ri = 0; ri < Math.min(aoa.length, 10); ri++) {
           const row = aoa[ri] as unknown[];
-          const pidIdx = row.findIndex((c) => String(c).trim().toLowerCase() === 'produto_id');
+          const pidIdx = row.findIndex((c) => String(c).trim() === 'Produto');
           if (pidIdx >= 0) {
             headerRowIdx = ri;
             row.forEach((c, ci) => { headerMap[String(c).trim()] = ci; });
@@ -1225,32 +1224,35 @@ export function TabelasPrecoTab() {
         }
 
         if (headerRowIdx < 0) {
-          toast.error('Planilha inválida: coluna "produto_id" não encontrada.');
+          toast.error('Planilha inválida: coluna "Produto" não encontrada.');
           return;
         }
 
-        const itensMap = new Map(itens.map((i) => [i.produto_id, i]));
+        // Mapa de código_produto (uppercase) → item carregado
+        const itensMapByCodigo = new Map(
+          itens.map((i) => [i.codigo_produto.toUpperCase().trim(), i])
+        );
         const previewRows: ImportPreviewRow[] = [];
         const parsedChanges: Record<number, PendingChange> = {};
 
         for (let ri = headerRowIdx + 1; ri < aoa.length; ri++) {
           const row = aoa[ri] as unknown[];
-          const rawId = row[headerMap['produto_id']];
-          if (rawId === '' || rawId === null || rawId === undefined) continue;
-          const produtoId = Number(rawId);
-          if (isNaN(produtoId) || produtoId <= 0) continue;
+          const rawCodigo = row[headerMap['Produto']];
+          if (rawCodigo === '' || rawCodigo === null || rawCodigo === undefined) continue;
+          const codigoProduto = String(rawCodigo).toUpperCase().trim();
+          if (!codigoProduto) continue;
 
           const xlsxLine = ri + 1;
-          const codigoProduto = String(row[headerMap['Produto']] ?? '');
           const descricao = String(row[headerMap['Descrição']] ?? '');
           const errors: string[] = [];
           const warnings: string[] = [];
           const diffLines: string[] = [];
           const change: PendingChange = {};
 
-          const currentItem = itensMap.get(produtoId);
+          const currentItem = itensMapByCodigo.get(codigoProduto);
+          const produtoId = currentItem?.produto_id ?? 0;
           if (!currentItem) {
-            warnings.push(`Produto ID ${produtoId} não está carregado nos itens atuais`);
+            warnings.push(`Produto "${codigoProduto}" não encontrado nos itens carregados`);
           }
 
           // Parse editable numeric fields
@@ -1312,7 +1314,7 @@ export function TabelasPrecoTab() {
           }
 
           const hasChanges = Object.keys(change).length > 0;
-          if (hasChanges) parsedChanges[produtoId] = change;
+          if (hasChanges && produtoId > 0) parsedChanges[produtoId] = change;
 
           const status = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok';
           previewRows.push({ xlsxLine, produtoId, codigoProduto, descricao, status, diffLines, errors, warnings });
