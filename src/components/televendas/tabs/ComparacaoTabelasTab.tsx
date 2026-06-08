@@ -127,34 +127,45 @@ export function ComparacaoTabelasTab() {
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Comparação de Tabelas</title>
       <style>
-        body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 10mm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 0; }
         table { width: 100%; border-collapse: collapse; }
         th { border-bottom: 1.5px solid #000; padding: 3px 4px; font-size: 10pt; }
         td { padding: 1px 4px; font-size: 9.5pt; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        @media print { @page { margin: 10mm; size: A4 landscape; } }
+        tbody tr:nth-child(even) td { background: #f9f9f9; }
+        thead td { border: none !important; background: #fff !important; padding: 1px 4px; }
+        thead { display: table-header-group; }
+        @page { margin: 10mm 10mm 14mm 10mm; size: A4 landscape; }
+        @page { @bottom-right { content: "Página " counter(page) " / " counter(pages); font-size: 8pt; color: #555; } }
       </style></head><body>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:baseline">
-        <div style="font-weight:bold;font-size:11pt">${nomeEmpresa}</div>
-        <div style="font-weight:bold;font-size:14pt">COMPARAÇÃO DE TABELAS</div>
-        <div style="font-size:10pt">${hoje}</div>
-      </div>
-      <div style="text-align:center;font-size:9pt;color:#555;margin-bottom:10px">
-        A: ${tabelaALabel} &nbsp;|&nbsp; B: ${tabelaBLabel}
-      </div>
       <table>
-        <thead><tr>
-          <th style="text-align:left;width:52px">Produto</th>
-          <th style="text-align:left">Descrição</th>
-          <th style="text-align:left;width:90px">Apresentação</th>
-          <th style="text-align:center;width:30px">UN</th>
-          <th style="text-align:right;width:55px">A</th>
-          <th style="text-align:right;width:40px">Desc A</th>
-          <th style="text-align:right;width:55px">B</th>
-          <th style="text-align:right;width:40px">Desc B</th>
-          <th style="text-align:right;width:60px">Dif. R$</th>
-          <th style="text-align:right;width:44px">(%)</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <td colspan="99" style="padding:4px 4px 1px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-weight:bold;font-size:11pt">${nomeEmpresa}</span>
+                <span style="font-weight:bold;font-size:14pt">COMPARAÇÃO DE TABELAS</span>
+                <span style="font-size:10pt">${hoje}</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="99" style="padding:0 4px 6px;font-size:9pt;text-align:center;color:#555;border-bottom:1px solid #ccc">
+              A: ${tabelaALabel} &nbsp;|&nbsp; B: ${tabelaBLabel}
+            </td>
+          </tr>
+          <tr>
+            <th style="text-align:left;width:52px">Produto</th>
+            <th style="text-align:left">Descrição</th>
+            <th style="text-align:left;width:90px">Apresentação</th>
+            <th style="text-align:center;width:30px">UN</th>
+            <th style="text-align:right;width:55px">A</th>
+            <th style="text-align:right;width:40px">Desc A</th>
+            <th style="text-align:right;width:55px">B</th>
+            <th style="text-align:right;width:40px">Desc B</th>
+            <th style="text-align:right;width:60px">Dif. R$</th>
+            <th style="text-align:right;width:44px">(%)</th>
+          </tr>
+        </thead>
         <tbody>${linhasGrupos}</tbody>
       </table>
       <div style="margin-top:8px;font-size:9pt;color:#555">${totalItens} produto(s)</div>

@@ -301,23 +301,34 @@ export function ListaConfiguravelTab() {
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${modeloLabel}</title>
       <style>
-        body{font-family:Arial,sans-serif;font-size:9pt;color:#000;margin:0;padding:8mm}
+        body{font-family:Arial,sans-serif;font-size:9pt;color:#000;margin:0;padding:0}
         table{width:100%;border-collapse:collapse}
         th{border-bottom:1.5px solid #000;padding:3px 4px;font-size:9pt}
         td{padding:1px 4px;font-size:8.5pt}
-        tr:nth-child(even) td{background:#f9f9f9}
-        @media print{@page{margin:8mm;size:A4 landscape}}
+        tbody tr:nth-child(even) td{background:#f9f9f9}
+        thead td{border:none!important;background:#fff!important;padding:1px 4px}
+        thead{display:table-header-group}
+        @page{margin:8mm 8mm 12mm 8mm;size:A4 landscape}
+        @page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-size:8pt;color:#555}}
       </style></head><body>
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:baseline">
-        <div style="font-size:9pt">${nomeEmpresa}</div>
-        <div style="font-weight:bold;font-size:12pt">${modeloLabel}</div>
-        <div style="font-size:8.5pt">${hoje}</div>
-      </div>
-      <div style="text-align:center;font-size:8.5pt;margin-bottom:6px">
-        ${tabelasInfo} &nbsp;|&nbsp; Ordem: ${ordemAtual.label}
-      </div>
       <table>
-        <thead>${modelo === 'representante' ? buildHeaderRep() : buildHeaderCli()}</thead>
+        <thead>
+          <tr>
+            <td colspan="99" style="padding:4px 4px 1px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-size:9pt">${nomeEmpresa}</span>
+                <span style="font-weight:bold;font-size:12pt">${modeloLabel}</span>
+                <span style="font-size:8.5pt">${hoje}</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="99" style="padding:0 4px 5px;font-size:8.5pt;text-align:center;border-bottom:1px solid #ccc">
+              ${tabelasInfo} &nbsp;|&nbsp; Ordem: ${ordemAtual.label}
+            </td>
+          </tr>
+          ${modelo === 'representante' ? buildHeaderRep() : buildHeaderCli()}
+        </thead>
         <tbody>${buildRows()}</tbody>
       </table>
       <div style="margin-top:6px;font-size:8pt;color:#555">${totalItens} produto(s)</div>
