@@ -569,9 +569,13 @@ export function EstoquesTab() {
                 <TableRow>
                   <TableHead className="w-24">Código</TableHead>
                   <TableHead>Descrição</TableHead>
+                  <TableHead className="w-28">Apres.</TableHead>
+                  <TableHead className="w-28">Cód. Fábrica</TableHead>
+                  <TableHead className="w-28">EAN13</TableHead>
+                  <TableHead className="w-36">Fornecedor</TableHead>
+                  <TableHead className="w-36">Divisão</TableHead>
                   <TableHead className="w-14">UN</TableHead>
                   <TableHead className="w-28 text-right">Estoque</TableHead>
-                  <TableHead className="w-28 text-right">Reservado</TableHead>
                   <TableHead className="w-28 text-right">Disponível</TableHead>
                   <TableHead className="w-28 text-right">Custo Médio</TableHead>
                   <TableHead className="w-20 text-center">Repasse</TableHead>
@@ -581,13 +585,13 @@ export function EstoquesTab() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={13} className="text-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : stocks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       Nenhum estoque encontrado
                     </TableCell>
                   </TableRow>
@@ -597,13 +601,15 @@ export function EstoquesTab() {
                       <TableCell className="text-xs">{stock.codigo_produto || stock.produto_id}</TableCell>
                       <TableCell className="text-xs">
                         <div className="font-medium">{stock.descricao_produto}</div>
-                        {stock.marca ? (
-                          <div className="text-[11px] text-muted-foreground">{stock.marca}</div>
-                        ) : null}
+                        {stock.marca ? <div className="text-[11px] text-muted-foreground">{stock.marca}</div> : null}
                       </TableCell>
+                      <TableCell className="text-xs">{stock.apresentacao || '—'}</TableCell>
+                      <TableCell className="text-xs font-mono">{stock.codigo_fabrica || '—'}</TableCell>
+                      <TableCell className="text-xs font-mono">{stock.ean13 || '—'}</TableCell>
+                      <TableCell className="text-xs">{stock.nome_fornecedor || '—'}</TableCell>
+                      <TableCell className="text-xs">{stock.descricao_divisao || '—'}</TableCell>
                       <TableCell className="text-xs">{stock.unidade}</TableCell>
                       <TableCell className="text-xs text-right">{toFixedNumber(stock.estoque, 3)}</TableCell>
-                      <TableCell className="text-xs text-right">{toFixedNumber(stock.quantidade_reservada, 3)}</TableCell>
                       <TableCell className="text-xs text-right">{toFixedNumber(stock.disponivel, 3)}</TableCell>
                       <TableCell className="text-xs text-right">{toFixedNumber(Number(stock.custo_medio ?? 0), 5)}</TableCell>
                       <TableCell className="text-xs text-center">{stock.repasse_icms ? 'Sim' : 'Não'}</TableCell>

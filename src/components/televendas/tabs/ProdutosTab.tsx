@@ -19,7 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3 } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -409,6 +410,21 @@ function validateRequiredProductFields(form: ProductFormState): RequiredProductE
   return errors;
 }
 
+interface ImportRow {
+  rowIndex: number;
+  action: 'criar' | 'atualizar' | 'erro';
+  productId?: number;
+  data: Partial<ProductFormState>;
+  originalData?: Product;
+  error?: string;
+}
+
+function parseXlsxBool(val: any): boolean {
+  if (typeof val === 'boolean') return val;
+  const s = String(val ?? '').trim().toLowerCase();
+  return s === 'sim' || s === 'true' || s === '1' || s === 'yes';
+}
+
 export function ProdutosTab() {
   const { canInsert } = useModuleCrudPermission('PRODUTOS');
   const [loading, setLoading] = useState(false);
@@ -461,6 +477,10 @@ export function ProdutosTab() {
   const [kitQuantity, setKitQuantity] = useState(1);
   const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
   const kitSnapshotRef = useRef<string>(JSON.stringify([] as ProductKitFormItem[]));
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
   const empresaCadastroId =
@@ -835,6 +855,200 @@ export function ProdutosTab() {
       setDeleteLoading(false);
     }
   };
+
+  function handleExportarExcel() {
+    if (!produtos.length) { toast.error('Realize a pesquisa antes de exportar'); return; }
+
+    const wb = XLSX.utils.book_new();
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const infoRows = [
+      ['Produtos — Exportação'],
+      [`Data: ${hoje}`],
+      [],
+    ];
+
+    const header = [
+      'Produto', 'Descrição', 'Unidade', 'Tipo Item', 'Cód. Fábrica', 'EAN13', 'DUN14',
+      'Apresentação', 'Marca', 'ID Fornecedor', 'ID Divisão',
+      'Fator Compra', 'Fator Venda', 'Múltiplo Vendas',
+      'Peso Bruto', 'Peso Líquido', 'Controla Lote', 'B2B', 'B2C', 'Possui Foto',
+      'Princípio Ativo', 'Preço Nac. Consumidor', 'Preço Fábrica',
+      'Desc. Complementar', 'Cód. Site B2C', 'NCM', 'CEST',
+      'Msg. Nota Fiscal', 'Reg. MS', 'Origem', 'Validade',
+      'Lançamento', 'Inativo',
+    ];
+
+    const dataRows = produtos.map((p) => [
+      p.codigoProduto ?? '',
+      p.descricao ?? '',
+      p.un ?? '',
+      p.tipoItem ?? '',
+      p.codigoFabrica ?? '',
+      p.ean13 ?? '',
+      p.dun14 ?? '',
+      p.apresentacao ?? '',
+      p.marca ?? '',
+      p.fornecedorId ?? '',
+      p.divisaoId ?? '',
+      p.fatorCompra ?? '',
+      p.fatorVenda ?? '',
+      p.multiploDeVendas ?? '',
+      p.pesoBruto ?? '',
+      p.pesoLiquido ?? '',
+      p.controlaLote ? 'Sim' : 'Não',
+      p.permiteVendaB2b ? 'Sim' : 'Não',
+      p.permiteVendaB2c ? 'Sim' : 'Não',
+      p.possuiFoto ? 'Sim' : 'Não',
+      p.principioAtivo ?? '',
+      p.precoNacionalConsumidor ?? '',
+      p.precoFabrica ?? '',
+      p.descricaoComplementar ?? '',
+      p.codigoSiteB2c ?? '',
+      p.ncm ?? '',
+      p.cest ?? '',
+      p.mensagemNotaFiscal ?? '',
+      p.regMs ?? '',
+      p.origemProduto ?? '',
+      p.validade ?? '',
+      p.lancamento ? 'Sim' : 'Não',
+      p.inativo ? 'Sim' : 'Não',
+    ]);
+
+    const wsData = [...infoRows, header, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [
+      { wch: 14 }, { wch: 40 }, { wch: 8 }, { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+      { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 12 }, { wch: 14 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
+      { wch: 20 }, { wch: 20 }, { wch: 14 },
+      { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 10 },
+      { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+    XLSX.writeFile(wb, `produtos_${hoje.replace(/\//g, '-')}.xlsx`);
+    toast.success('Arquivo exportado com sucesso');
+  }
+
+  function handleImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = ev.target?.result;
+        const wb = XLSX.read(data, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
+
+        if (!rows.length) { toast.error('Planilha vazia'); return; }
+
+        const prodByCode = new Map<string, Product>(
+          produtos.filter((p) => p.codigoProduto).map((p) => [String(p.codigoProduto!).toUpperCase(), p])
+        );
+
+        const parsed: ImportRow[] = rows.map((row, idx) => {
+          const codigoProduto = String(row['Produto'] ?? '').trim();
+          const descricao = String(row['Descrição'] ?? '').trim().toUpperCase();
+
+          const data: Partial<ProductFormState> = {
+            codigoProduto: codigoProduto || undefined,
+            descricao: descricao || undefined,
+            unidade: String(row['Unidade'] ?? '').trim().toUpperCase() || undefined,
+            tipoItem: String(row['Tipo Item'] ?? '').trim() || undefined,
+            codigoFabrica: String(row['Cód. Fábrica'] ?? '').trim().toUpperCase() || undefined,
+            ean13: String(row['EAN13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
+            dun14: String(row['DUN14'] ?? '').replace(/\D/g, '').slice(0, 14) || undefined,
+            apresentacao: String(row['Apresentação'] ?? '').trim().toUpperCase() || undefined,
+            marca: String(row['Marca'] ?? '').trim().toUpperCase() || undefined,
+            fornecedorId: row['ID Fornecedor'] ? Number(row['ID Fornecedor']) || undefined : undefined,
+            divisaoId: row['ID Divisão'] ? Number(row['ID Divisão']) || undefined : undefined,
+            fatorCompra: row['Fator Compra'] ? Number(row['Fator Compra']) || undefined : undefined,
+            fatorVenda: row['Fator Venda'] ? Number(row['Fator Venda']) || undefined : undefined,
+            multiploDeVendas: row['Múltiplo Vendas'] !== '' ? Number(row['Múltiplo Vendas']) : undefined,
+            pesoBruto: row['Peso Bruto'] !== '' ? Number(row['Peso Bruto']) : undefined,
+            pesoLiquido: row['Peso Líquido'] !== '' ? Number(row['Peso Líquido']) : undefined,
+            controlaLote: row['Controla Lote'] !== '' ? parseXlsxBool(row['Controla Lote']) : undefined,
+            permiteVendaB2b: row['B2B'] !== '' ? parseXlsxBool(row['B2B']) : undefined,
+            permiteVendaB2c: row['B2C'] !== '' ? parseXlsxBool(row['B2C']) : undefined,
+            possuiFoto: row['Possui Foto'] !== '' ? parseXlsxBool(row['Possui Foto']) : undefined,
+            principioAtivo: String(row['Princípio Ativo'] ?? '').trim() || undefined,
+            precoNacionalConsumidor: row['Preço Nac. Consumidor'] !== '' ? Number(row['Preço Nac. Consumidor']) : undefined,
+            precoFabrica: row['Preço Fábrica'] !== '' ? Number(row['Preço Fábrica']) : undefined,
+            descricaoComplementar: String(row['Desc. Complementar'] ?? '').trim() || undefined,
+            codigoSiteB2c: String(row['Cód. Site B2C'] ?? '').trim() || undefined,
+            ncm: String(row['NCM'] ?? '').trim() || undefined,
+            cest: String(row['CEST'] ?? '').trim() || undefined,
+            mensagemNotaFiscal: String(row['Msg. Nota Fiscal'] ?? '').trim() || undefined,
+            regMs: String(row['Reg. MS'] ?? '').trim() || undefined,
+            origemProduto: String(row['Origem'] ?? '').trim() || undefined,
+            validade: String(row['Validade'] ?? '').trim() || undefined,
+            lancamento: row['Lançamento'] !== '' ? parseXlsxBool(row['Lançamento']) : undefined,
+            inativo: row['Inativo'] !== '' ? parseXlsxBool(row['Inativo']) : undefined,
+          };
+
+          if (codigoProduto) {
+            const existing = prodByCode.get(codigoProduto.toUpperCase());
+            if (!existing) {
+              return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto "${codigoProduto}" não encontrado na lista atual` };
+            }
+            return { rowIndex: idx + 1, action: 'atualizar' as const, productId: existing.id, data, originalData: existing };
+          }
+
+          if (!descricao) {
+            return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
+          }
+
+          return { rowIndex: idx + 1, action: 'criar' as const, data };
+        });
+
+        const validRows = parsed.filter((r) => r.action !== 'erro');
+        const errorRows = parsed.filter((r) => r.action === 'erro');
+        if (errorRows.length) toast.warning(`${errorRows.length} linha(s) com problema foram ignoradas`);
+        if (!validRows.length) { toast.error('Nenhuma linha válida encontrada'); return; }
+
+        setImportRows(parsed);
+        setImportDialogOpen(true);
+      } catch (err: any) {
+        toast.error(err?.message || 'Erro ao ler o arquivo');
+      }
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  async function handleConfirmImport() {
+    const validRows = importRows.filter((r) => r.action !== 'erro');
+    if (!validRows.length) return;
+    setImportLoading(true);
+    let created = 0, updated = 0, errors = 0;
+    try {
+      for (const row of validRows) {
+        try {
+          const base = row.originalData ? mapProductToForm(row.originalData) : { ...initialFormData };
+          const merged: ProductFormState = { ...base, ...Object.fromEntries(Object.entries(row.data).filter(([, v]) => v !== undefined)) } as ProductFormState;
+          const payload = mapFormToPayload(merged);
+          if (row.action === 'atualizar' && row.productId) {
+            await productsService.updateCadastro(row.productId, payload);
+            updated++;
+          } else {
+            await productsService.createCadastro(payload);
+            created++;
+          }
+        } catch {
+          errors++;
+        }
+      }
+      toast.success(`Importação concluída: ${created} criado(s), ${updated} atualizado(s)${errors ? `, ${errors} erro(s)` : ''}`);
+      setImportDialogOpen(false);
+      setImportRows([]);
+      await loadProdutos();
+    } finally {
+      setImportLoading(false);
+    }
+  }
 
   const updateFilter = (key: string, value: any) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -1218,6 +1432,21 @@ export function ProdutosTab() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <CardTitle className="text-base sm:text-lg">Produtos ({totalProdutos})</CardTitle>
             <div className="flex flex-wrap gap-2">
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleImportFileChange}
+              />
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => importFileRef.current?.click()}>
+                <Upload className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Importar Excel</span>
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={handleExportarExcel}>
+                <FileSpreadsheet className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </Button>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
@@ -1346,6 +1575,60 @@ export function ProdutosTab() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={importDialogOpen} onOpenChange={(open) => { if (!open && !importLoading) { setImportDialogOpen(false); setImportRows([]); } }}>
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Prévia da importação</DialogTitle>
+          </DialogHeader>
+          <div className="text-xs text-muted-foreground mb-2">
+            {importRows.filter((r) => r.action === 'criar').length} a criar &nbsp;|&nbsp;
+            {importRows.filter((r) => r.action === 'atualizar').length} a atualizar &nbsp;|&nbsp;
+            {importRows.filter((r) => r.action === 'erro').length} com erro (ignorados)
+          </div>
+          <div className="flex-1 overflow-auto border rounded-md">
+            <table className="w-full text-xs border-collapse">
+              <thead className="sticky top-0 bg-muted/90">
+                <tr className="border-b">
+                  <th className="px-2 py-1.5 text-left w-20">Ação</th>
+                  <th className="px-2 py-1.5 text-left w-24">Produto</th>
+                  <th className="px-2 py-1.5 text-left">Descrição</th>
+                  <th className="px-2 py-1.5 text-left w-16">UN</th>
+                  <th className="px-2 py-1.5 text-left w-32">Fornecedor ID</th>
+                  <th className="px-2 py-1.5 text-left w-32">Divisão ID</th>
+                  <th className="px-2 py-1.5 text-left">Obs.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importRows.map((row) => (
+                  <tr key={row.rowIndex} className={`border-b ${row.action === 'erro' ? 'bg-red-50 dark:bg-red-950/20' : row.action === 'criar' ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}>
+                    <td className="px-2 py-1">
+                      <span className={`font-semibold ${row.action === 'erro' ? 'text-red-600' : row.action === 'criar' ? 'text-green-700' : 'text-blue-600'}`}>
+                        {row.action === 'criar' ? 'Criar' : row.action === 'atualizar' ? 'Atualizar' : 'Erro'}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1 font-mono">{row.data.codigoProduto || '—'}</td>
+                    <td className="px-2 py-1">{row.data.descricao || '—'}</td>
+                    <td className="px-2 py-1">{row.data.unidade || '—'}</td>
+                    <td className="px-2 py-1">{row.data.fornecedorId ?? '—'}</td>
+                    <td className="px-2 py-1">{row.data.divisaoId ?? '—'}</td>
+                    <td className="px-2 py-1 text-muted-foreground">{row.error || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter className="mt-3">
+            <Button variant="outline" onClick={() => { setImportDialogOpen(false); setImportRows([]); }} disabled={importLoading}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void handleConfirmImport()} disabled={importLoading || !importRows.some((r) => r.action !== 'erro')}>
+              {importLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirmar importação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="w-[95vw] max-w-5xl max-h-[90dvh] overflow-hidden !flex !flex-col">

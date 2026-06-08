@@ -9,6 +9,13 @@ export interface StockEntry {
   descricao_produto: string;
   unidade: string;
   marca?: string;
+  apresentacao?: string | null;
+  codigo_fabrica?: string | null;
+  ean13?: string | null;
+  fornecedor_id?: number | null;
+  nome_fornecedor?: string | null;
+  divisao_id?: number | null;
+  descricao_divisao?: string | null;
   produto_inativo?: boolean;
   estoque: number;
   quantidade_reservada: number;
@@ -106,6 +113,13 @@ function normalizeStock(raw: any): StockEntry {
     descricao_produto: String(raw?.descricao_produto ?? raw?.descricaoProduto ?? '').trim(),
     unidade: String(raw?.unidade ?? raw?.un ?? 'UN').trim() || 'UN',
     marca: raw?.marca ? String(raw.marca).trim() : undefined,
+    apresentacao: raw?.apresentacao ? String(raw.apresentacao).trim() : undefined,
+    codigo_fabrica: raw?.codigo_fabrica ? String(raw.codigo_fabrica).trim() : undefined,
+    ean13: raw?.ean13 ? String(raw.ean13).trim() : undefined,
+    fornecedor_id: raw?.fornecedor_id ? Number(raw.fornecedor_id) : undefined,
+    nome_fornecedor: raw?.nome_fornecedor ? String(raw.nome_fornecedor).trim() : undefined,
+    divisao_id: raw?.divisao_id ? Number(raw.divisao_id) : undefined,
+    descricao_divisao: raw?.descricao_divisao ? String(raw.descricao_divisao).trim() : undefined,
     produto_inativo: raw?.produto_inativo ?? raw?.produtoInativo ?? false,
     estoque: toNumber(raw?.estoque),
     quantidade_reservada: toNumber(raw?.quantidade_reservada ?? raw?.quantidadeReservada),
