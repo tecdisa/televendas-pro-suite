@@ -22,7 +22,7 @@ function fmt2(v: number) {
 type Modelo = 'representante' | 'cliente';
 type AgrupadorKey = 'divisao' | 'marca' | 'fornecedor' | 'grupo' | '';
 
-const LETRAS = ['A', 'B', 'C', 'D', 'E'] as const;
+const LETRAS = ['1', '2', '3', '4', '5'] as const;
 type Letra = typeof LETRAS[number];
 
 interface TabelaSlot { letra: Letra; tabelaId: string }
@@ -188,7 +188,10 @@ export function ListaConfiguravelTab() {
       // Build labels map
       const labMap: Partial<Record<Letra, string>> = {};
       for (const { letra, tabelaId } of slotsAtivos) {
-        labMap[letra] = tabelas.find((t) => String(t.id) === tabelaId)?.descricao ?? tabelaId;
+        const tab = tabelas.find((t) => String(t.id) === tabelaId);
+        labMap[letra] = tab
+          ? tab.codigo ? `[${tab.codigo}] ${tab.descricao}` : tab.descricao
+          : tabelaId;
       }
       setSlotsLabels(labMap);
 
@@ -213,7 +216,7 @@ export function ListaConfiguravelTab() {
       const priceCols = letras.map((l) =>
         `<th style="text-align:right;width:56px">Preço&nbsp;${l}</th>
          <th style="text-align:right;width:40px">%Desc&nbsp;${l}</th>
-         <th style="text-align:right;width:52px">Pr.Un.&nbsp;${l}</th>
+         <th style="text-align:right;width:52px">Preço&nbsp;${l}</th>
          ${preco_final ? `<th style="text-align:right;width:52px">Pr.Final&nbsp;${l}</th>` : ''}`
       ).join('');
       return `<tr>
@@ -234,8 +237,7 @@ export function ListaConfiguravelTab() {
 
     const buildHeaderCli = () => {
       const priceCols = letras.map((l) =>
-        `<th style="text-align:right;width:56px">Pr.Emb.&nbsp;${l}</th>
-         <th style="text-align:right;width:52px">Pr.Un.&nbsp;${l}</th>
+        `<th style="text-align:right;width:52px">Preço&nbsp;${l}</th>
          ${preco_final ? `<th style="text-align:right;width:52px">Pr.Final&nbsp;${l}</th>` : ''}`
       ).join('');
       return `<tr>
@@ -278,8 +280,7 @@ export function ListaConfiguravelTab() {
           </tr>`;
         } else {
           const priceCells = letras.map((l) =>
-            `<td style="padding:1px 4px;text-align:right;font-weight:600">${fmt2(item.precos[l] ?? 0)}</td>
-             <td style="padding:1px 4px;text-align:right">${fmt2(prUnit(item, l))}</td>
+            `<td style="padding:1px 4px;text-align:right">${fmt2(prUnit(item, l))}</td>
              ${preco_final ? `<td style="padding:1px 4px;text-align:right">${fmt2(item.pvsMap[l] ?? 0)}</td>` : ''}`
           ).join('');
           return `<tr>
@@ -317,7 +318,7 @@ export function ListaConfiguravelTab() {
             <td colspan="99" style="padding:4px 4px 1px">
               <div style="display:flex;justify-content:space-between;align-items:baseline">
                 <span style="font-size:9pt">${nomeEmpresa}</span>
-                <span style="font-weight:bold;font-size:12pt">${modeloLabel}</span>
+                <span style="font-weight:bold;font-size:12pt">Tabelas de Preço</span>
                 <span style="font-size:8.5pt">${hoje}</span>
               </div>
             </td>
@@ -357,7 +358,7 @@ export function ListaConfiguravelTab() {
     let header: string[];
     if (modelo === 'representante') {
       const priceCols = letras.flatMap((l) => [
-        `Preço ${l}`, `%Desc ${l}`, `Pr.Unit ${l}`,
+        `Preço ${l}`, `%Desc ${l}`, `Preço ${l}`,
         ...(preco_final ? [`Pr.Final ${l}`] : []),
       ]);
       header = [
@@ -367,7 +368,7 @@ export function ListaConfiguravelTab() {
       ];
     } else {
       const priceCols = letras.flatMap((l) => [
-        `Pr.Emb. ${l}`, `Pr.Unit. ${l}`,
+        `Preço ${l}`,
         ...(preco_final ? [`Pr.Final ${l}`] : []),
       ]);
       header = ['Produto', 'Descrição', 'Apresentação', 'Marca', 'EAN', 'Cod.Fab.', 'UN', ...priceCols];
@@ -393,7 +394,7 @@ export function ListaConfiguravelTab() {
           ]);
         } else {
           const priceCells = letras.flatMap((l) => [
-            item.precos[l] ?? 0, prUnit(item, l),
+            prUnit(item, l),
             ...(preco_final ? [item.pvsMap[l] ?? 0] : []),
           ]);
           dataRows.push([
@@ -580,7 +581,7 @@ export function ListaConfiguravelTab() {
       )}
 
       {/* Tabela */}
-      <div className="flex-1 overflow-auto border rounded-lg">
+      <div className="flex-1 overflow-auto min-w-0 border rounded-lg">
         {modelo === 'representante' ? (
           <table className="w-full text-xs border-collapse" style={{ minWidth: 800 + slotsAtivos.length * 320 }}>
             <thead className="sticky top-0 bg-muted/90 z-10">
@@ -600,7 +601,7 @@ export function ListaConfiguravelTab() {
                   <>
                     <th key={`p${s.letra}`} className="w-20 px-2 py-2 text-right font-semibold">Preço&nbsp;{s.letra}</th>
                     <th key={`d${s.letra}`} className="w-14 px-2 py-2 text-right">%Desc&nbsp;{s.letra}</th>
-                    <th key={`u${s.letra}`} className="w-20 px-2 py-2 text-right">Pr.Un.&nbsp;{s.letra}</th>
+                    <th key={`u${s.letra}`} className="w-20 px-2 py-2 text-right">Preço&nbsp;{s.letra}</th>
                     {preco_final && <th key={`f${s.letra}`} className="w-20 px-2 py-2 text-right text-blue-600">PVS&nbsp;{s.letra}</th>}
                   </>
                 ))}
@@ -621,8 +622,7 @@ export function ListaConfiguravelTab() {
                 <th className="w-8 px-2 py-2 text-center">UN</th>
                 {slotsAtivos.map((s) => (
                   <>
-                    <th key={`p${s.letra}`} className="w-20 px-2 py-2 text-right font-semibold">Pr.Emb.&nbsp;{s.letra}</th>
-                    <th key={`u${s.letra}`} className="w-20 px-2 py-2 text-right">Pr.Un.&nbsp;{s.letra}</th>
+                    <th key={`p${s.letra}`} className="w-20 px-2 py-2 text-right">Preço&nbsp;{s.letra}</th>
                     {preco_final && <th key={`f${s.letra}`} className="w-20 px-2 py-2 text-right text-blue-600">PVS&nbsp;{s.letra}</th>}
                   </>
                 ))}
@@ -686,8 +686,7 @@ export function ListaConfiguravelTab() {
               <td className="px-2 py-0.5 text-center text-muted-foreground">{item.un}</td>
               {letras.map((l) => (
                 <>
-                  <td key={`p${l}`} className="px-2 py-0.5 text-right font-semibold">{item.precos[l] !== undefined ? fmt2(item.precos[l]!) : '—'}</td>
-                  <td key={`u${l}`} className="px-2 py-0.5 text-right text-muted-foreground">{item.precos[l] !== undefined ? fmt2(prUnit(item, l)) : '—'}</td>
+                  <td key={`p${l}`} className="px-2 py-0.5 text-right">{item.precos[l] !== undefined ? fmt2(prUnit(item, l)) : '—'}</td>
                   {preco_final && <td key={`f${l}`} className="px-2 py-0.5 text-right text-blue-600">{item.pvsMap[l] !== undefined ? fmt2(item.pvsMap[l]!) : '—'}</td>}
                 </>
               ))}

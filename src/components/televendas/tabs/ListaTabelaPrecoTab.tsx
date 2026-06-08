@@ -156,7 +156,6 @@ export function ListaTabelaPrecoTab() {
             <td style="padding:1px 4px;font-family:monospace">${item.ean13 || ''}</td>
             <td style="padding:1px 4px">${item.codigo_fabrica || ''}</td>
             <td style="padding:1px 4px;text-align:center">${item.un}</td>
-            <td style="padding:1px 4px;text-align:right;font-weight:600">${fmt2(item.preco)}</td>
             <td style="padding:1px 4px;text-align:right">${fmt2(prUnit(item))}</td>
           </tr>`).join('');
 
@@ -176,7 +175,7 @@ export function ListaTabelaPrecoTab() {
       <th style="text-align:right;width:40px">%Com</th>
       <th style="text-align:right;width:56px">Preço</th>
       <th style="text-align:right;width:40px">%Desc</th>
-      <th style="text-align:right;width:52px">Pr.Unit</th>
+      <th style="text-align:right;width:52px">Preço</th>
     </tr>`;
 
     const theadCli = `<tr>
@@ -187,8 +186,7 @@ export function ListaTabelaPrecoTab() {
       <th style="text-align:left;width:100px">EAN</th>
       <th style="text-align:left;width:64px">Cod.Fab.</th>
       <th style="text-align:center;width:26px">Un</th>
-      <th style="text-align:right;width:56px">Pr.Emb.</th>
-      <th style="text-align:right;width:52px">Pr.Unit.</th>
+      <th style="text-align:right;width:52px">Preço</th>
     </tr>`;
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${modeloLabel}</title>
@@ -244,8 +242,8 @@ export function ListaTabelaPrecoTab() {
       [],
     ];
 
-    const headerRep = ['Produto', 'Descrição', 'Apresentação', 'UN', 'Marca', 'Cod.Fab', 'Muv', 'Pno', 'DC', '%Comissão', 'Preço', '%Desc', 'Pr.Unit'];
-    const headerCli = ['Produto', 'Descrição', 'Apresentação', 'Marca', 'EAN', 'Cod.Fab.', 'UN', 'Pr.Emb.', 'Pr.Unit.'];
+    const headerRep = ['Produto', 'Descrição', 'Apresentação', 'UN', 'Marca', 'Cod.Fab', 'Muv', 'Pno', 'DC', '%Comissão', 'Preço', '%Desc', 'Preço'];
+    const headerCli = ['Produto', 'Descrição', 'Apresentação', 'Marca', 'EAN', 'Cod.Fab.', 'UN', 'Preço'];
 
     const dataRows: (string | number)[][] = [];
     for (const g of grupos_dados) {
@@ -264,7 +262,7 @@ export function ListaTabelaPrecoTab() {
           dataRows.push([
             item.codigo_produto, item.descricao_produto, item.apresentacao,
             item.marca, item.ean13, item.codigo_fabrica, item.un,
-            item.preco, prUnit(item),
+            prUnit(item),
           ]);
         }
       }
@@ -277,11 +275,11 @@ export function ListaTabelaPrecoTab() {
     if (modelo === 'representante') {
       ws['!cols'] = [{ wch: 10 }, { wch: 38 }, { wch: 14 }, { wch: 5 }, { wch: 14 }, { wch: 12 }, { wch: 5 }, { wch: 5 }, { wch: 5 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
     } else {
-      ws['!cols'] = [{ wch: 10 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 5 }, { wch: 12 }, { wch: 12 }];
+      ws['!cols'] = [{ wch: 10 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 5 }, { wch: 12 }];
     }
 
     const numColsRep = [9, 10, 11, 12];
-    const numColsCli = [7, 8];
+    const numColsCli = [7];
     const numCols = modelo === 'representante' ? numColsRep : numColsCli;
     const dataStartRow = infoRows.length + 1;
     for (let r = dataStartRow; r < wsData.length; r++) {
@@ -429,7 +427,7 @@ export function ListaTabelaPrecoTab() {
                 <th className="w-14 px-2 py-2 text-right">%Com</th>
                 <th className="w-20 px-2 py-2 text-right font-semibold">Preço</th>
                 <th className="w-14 px-2 py-2 text-right">%Desc</th>
-                <th className="w-20 px-2 py-2 text-right">Pr.Unit</th>
+                <th className="w-20 px-2 py-2 text-right">Preço</th>
               </tr>
             </thead>
             <tbody>{renderRows('representante')}</tbody>
@@ -445,8 +443,7 @@ export function ListaTabelaPrecoTab() {
                 <th className="w-32 px-2 py-2 text-left">EAN</th>
                 <th className="w-24 px-2 py-2 text-left">Cod.Fab.</th>
                 <th className="w-8 px-2 py-2 text-center">UN</th>
-                <th className="w-20 px-2 py-2 text-right font-semibold">Pr.Emb.</th>
-                <th className="w-20 px-2 py-2 text-right">Pr.Unit.</th>
+                <th className="w-20 px-2 py-2 text-right">Preço</th>
               </tr>
             </thead>
             <tbody>{renderRows('cliente')}</tbody>
@@ -494,8 +491,7 @@ export function ListaTabelaPrecoTab() {
               <td className="px-2 py-0.5 font-mono text-[11px] text-muted-foreground">{item.ean13 || '-'}</td>
               <td className="px-2 py-0.5 font-mono text-[11px] text-muted-foreground">{item.codigo_fabrica || '-'}</td>
               <td className="px-2 py-0.5 text-center text-muted-foreground">{item.un}</td>
-              <td className="px-2 py-0.5 text-right font-semibold">{fmt2(item.preco)}</td>
-              <td className="px-2 py-0.5 text-right text-muted-foreground">{fmt2(prUnit(item))}</td>
+              <td className="px-2 py-0.5 text-right">{fmt2(prUnit(item))}</td>
             </tr>
           )
         )}
