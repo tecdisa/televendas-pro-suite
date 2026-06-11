@@ -1572,7 +1572,7 @@ export function TabelasPrecoTab() {
                   <th className="w-20 px-1 py-1.5 text-right">Múlt.Venda</th>
                   <th className="w-28 px-1 py-1.5 text-right">Pr.Nac.Cons.</th>
                   <th className="w-32 px-1 py-1.5 text-left">Princ.Ativo</th>
-                  <th className="w-8 px-1 py-1.5 text-center"></th>
+                  <th className="sticky right-0 z-30 w-8 px-1 py-1.5 text-center bg-muted/90 shadow-[-1px_0_0_hsl(var(--border))]"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1672,7 +1672,7 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas != null ? fmt(item.multiplo_de_vendas, 3) : '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{item.preco_nacional_consumidor != null ? fmt(item.preco_nacional_consumidor) : '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.principio_ativo ?? ''}>{item.principio_ativo || '-'}</td>
-                        <td className="px-1 py-0.5 text-center">
+                        <td className={`sticky right-0 z-10 px-1 py-0.5 text-center shadow-[-1px_0_0_hsl(var(--border))] ${stickyBg}`}>
                           <div className="flex items-center gap-0.5">
                             <TooltipProvider>
                               <Tooltip>
@@ -2108,7 +2108,7 @@ export function TabelasPrecoTab() {
                       <TableHead className="w-28 text-right">Índice fin.</TableHead>
                       <TableHead className="w-28">Validade</TableHead>
                       <TableHead className="w-20 text-center">Status</TableHead>
-                      <TableHead className="w-32 text-center">Ações</TableHead>
+                      <TableHead className="sticky right-0 z-30 w-32 text-center bg-background shadow-[-1px_0_0_hsl(var(--border))]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2122,7 +2122,7 @@ export function TabelasPrecoTab() {
                       </TableCell></TableRow>
                     ) : (
                       tabelas.map((t) => (
-                        <TableRow key={t.tabela_preco_id} className={t.inativo ? 'opacity-50' : ''}>
+                        <TableRow key={t.tabela_preco_id} className={`group ${t.inativo ? 'opacity-50' : ''}`}>
                           <TableCell className="font-mono text-xs">{t.codigo_tabela_preco || '-'}</TableCell>
                           <TableCell className="font-medium">{t.descricao_tabela_preco}</TableCell>
                           <TableCell className="text-right text-sm">{t.prazo_medio != null ? `${t.prazo_medio}d` : '-'}</TableCell>
@@ -2139,7 +2139,7 @@ export function TabelasPrecoTab() {
                               {t.inativo ? 'Inativo' : 'Ativo'}
                             </span>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="sticky right-0 z-20 text-center bg-background group-hover:bg-muted/50 shadow-[-1px_0_0_hsl(var(--border))]">
                             <TooltipProvider>
                               <div className="flex items-center justify-center gap-0.5">
                                 <Tooltip>
