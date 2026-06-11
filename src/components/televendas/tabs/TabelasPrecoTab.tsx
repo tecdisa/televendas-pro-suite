@@ -1539,14 +1539,15 @@ export function TabelasPrecoTab() {
         {/* Grid */}
         <div className="flex-1 overflow-hidden border-x">
           <div className="h-full overflow-auto" onScroll={handleItensScroll}>
-            <table className="w-full text-xs border-collapse" style={{ minWidth: 1700 }}>
+            <table className="w-full text-xs border-collapse" style={{ minWidth: 1760 }}>
               <thead className="sticky top-0 z-20 bg-muted/90">
                 <tr className="border-b">
                   <th className="sticky left-0 z-30 w-7 px-1 py-1.5 text-center bg-muted/90">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
                   </th>
                   <th className="sticky left-7 z-30 w-16 px-1 py-1.5 text-left bg-muted/90">Prod.</th>
-                  <th className="sticky left-[92px] z-30 w-[260px] pl-1 pr-4 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
+                  <th className="sticky left-[92px] z-30 w-[320px] pl-1 pr-4 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
+                  <th className="w-24 px-1 py-1.5 text-left">Cód.Fábrica</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
                   <th className="w-16 pl-12 pr-1 py-1.5 text-right">Custo</th>
@@ -1567,7 +1568,6 @@ export function TabelasPrecoTab() {
                   <th className="w-32 px-1 py-1.5 text-left">Divisão</th>
                   <th className="w-36 px-1 py-1.5 text-left">Fornecedor</th>
                   <th className="w-24 px-1 py-1.5 text-left">EAN13</th>
-                  <th className="w-24 px-1 py-1.5 text-left">Cód.Fábrica</th>
                   <th className="w-28 px-1 py-1.5 text-left">Marca</th>
                   <th className="w-20 px-1 py-1.5 text-right">Múlt.Venda</th>
                   <th className="w-28 px-1 py-1.5 text-right">Pr.Nac.Cons.</th>
@@ -1609,9 +1609,10 @@ export function TabelasPrecoTab() {
                           <Checkbox checked={isSelected} onCheckedChange={() => toggleRow(item.produto_id)} />
                         </td>
                         <td className={`sticky left-7 z-10 px-1 py-0.5 font-mono text-[11px] ${stickyBg}`}>{item.codigo_produto}</td>
-                        <td className={`sticky left-[92px] z-10 pl-1 pr-4 py-0.5 w-[260px] max-w-[260px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
+                        <td className={`sticky left-[92px] z-10 pl-1 pr-4 py-0.5 w-[320px] max-w-[320px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
+                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
                         <td className="pl-12 pr-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
@@ -1667,7 +1668,6 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[144px]" title={item.fornecedor}>{item.fornecedor || '-'}</td>
                         <td className="px-1 py-0.5 font-mono text-[11px]">{item.ean13 || '-'}</td>
-                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[112px]" title={item.marca}>{item.marca || '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas != null ? fmt(item.multiplo_de_vendas, 3) : '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{item.preco_nacional_consumidor != null ? fmt(item.preco_nacional_consumidor) : '-'}</td>
