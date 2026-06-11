@@ -99,7 +99,8 @@ export function ListaTabelaPrecoTab() {
 
   async function handleListar() {
     if (!tabelaId) { toast.error('Selecione a tabela'); return; }
-    const lab = tabelas.find((t) => String(t.id) === tabelaId)?.descricao ?? '';
+    const tabSel = tabelas.find((t) => String(t.id) === tabelaId);
+    const lab = tabSel ? (tabSel.codigo ? `[${tabSel.codigo}] ${tabSel.descricao}` : tabSel.descricao) : '';
     setTabelaLabel(lab);
     setIsLoading(true);
     try {
@@ -126,6 +127,10 @@ export function ListaTabelaPrecoTab() {
   // ── Impressão ─────────────────────────────────────────────────────────────
   function handleImprimir() {
     if (!grupos_dados.length) { toast.error('Realize a listagem antes de imprimir'); return; }
+
+    const session = authService.getSession();
+    const nomeUsuario = session?.nome ?? session?.usuario ?? '';
+    const agora = new Date().toLocaleString('pt-BR');
 
     const linhas = grupos_dados.map((g) => {
       const header = g.label
@@ -200,6 +205,7 @@ export function ListaTabelaPrecoTab() {
         thead{display:table-header-group}
         @page{margin:8mm 8mm 12mm 8mm;size:A4 landscape}
         @page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-size:8pt;color:#555}}
+        .rodape-imp{position:fixed;bottom:6mm;left:8mm;font-size:7.5pt;color:#555}
       </style></head><body>
       <table>
         <thead>
@@ -222,6 +228,7 @@ export function ListaTabelaPrecoTab() {
         <tbody>${linhas}</tbody>
       </table>
       <div style="margin-top:6px;font-size:8.5pt;color:#555">${totalItens} produto(s)</div>
+      <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 

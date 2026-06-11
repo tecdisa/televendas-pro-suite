@@ -15,6 +15,7 @@ export interface TabelaPreco {
   forma_pagto_id: number | null;
   prazo_pagto_id: number | null;
   inativo: boolean;
+  padrao: boolean;
   tabela_referencia_id: number | null;
   tabela_referencia_percentual: number | null;
 }
@@ -67,6 +68,7 @@ function normalizeTabelaPreco(raw: any): TabelaPreco {
     forma_pagto_id: raw?.forma_pagto_id != null ? Number(raw.forma_pagto_id) : null,
     prazo_pagto_id: raw?.prazo_pagto_id != null ? Number(raw.prazo_pagto_id) : null,
     inativo: Boolean(raw?.inativo ?? false),
+    padrao: Boolean(raw?.padrao ?? false),
     tabela_referencia_id: raw?.tabela_referencia_id != null ? Number(raw.tabela_referencia_id) : null,
     tabela_referencia_percentual: raw?.tabela_referencia_percentual != null ? Number(raw.tabela_referencia_percentual) : null,
   };
@@ -302,6 +304,26 @@ export const tabelasPrecoService = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao atualizar tabela de preço');
+    }
+    return normalizeTabelaPreco(await response.json());
+  },
+
+  async setPadrao(id: number, padrao: boolean): Promise<TabelaPreco> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${id}/padrao?empresaId=${empresaId}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ padrao }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao definir tabela padrão');
     }
     return normalizeTabelaPreco(await response.json());
   },

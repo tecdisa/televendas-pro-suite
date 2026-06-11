@@ -35,6 +35,7 @@ import {
 } from '@/services/productsService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
+import { tabelasPrecoService } from '@/services/tabelasPrecoService';
 import { cn } from '@/lib/utils';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
@@ -412,10 +413,8 @@ function validateRequiredProductFields(form: ProductFormState): RequiredProductE
 
 interface ImportRow {
   rowIndex: number;
-  action: 'criar' | 'atualizar' | 'erro';
-  productId?: number;
+  action: 'criar' | 'erro';
   data: Partial<ProductFormState>;
-  originalData?: Product;
   error?: string;
 }
 
@@ -477,6 +476,7 @@ export function ProdutosTab() {
   const [kitQuantity, setKitQuantity] = useState(1);
   const formSnapshotRef = useRef<string>(JSON.stringify(initialFormData));
   const kitSnapshotRef = useRef<string>(JSON.stringify([] as ProductKitFormItem[]));
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importRows, setImportRows] = useState<ImportRow[]>([]);
@@ -576,6 +576,7 @@ export function ProdutosTab() {
       const result = await productsService.listCadastro(params, 1, 500);
       setProdutos(result.data || []);
       setTotalProdutos(result.total ?? (result.data || []).length);
+      setSelectedRows(new Set());
     } catch (error: any) {
       console.error('Erro ao buscar produtos:', error);
       toast.error(error?.message || 'Erro ao buscar produtos');
@@ -613,6 +614,25 @@ export function ProdutosTab() {
       // Ignore localStorage errors.
     }
   }, [fixActionsColumn]);
+
+  const allSelected = produtos.length > 0 && produtos.every((p) => selectedRows.has(p.id));
+  const someSelected = !allSelected && produtos.some((p) => selectedRows.has(p.id));
+
+  const toggleRow = (id: number) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(produtos.map((p) => p.id)));
+    }
+  };
 
   const togglePinnedColumn = (
     columnKey: ProductsGridColumnKey,
@@ -858,6 +878,7 @@ export function ProdutosTab() {
 
   function handleExportarExcel() {
     if (!produtos.length) { toast.error('Realize a pesquisa antes de exportar'); return; }
+    const exportList = selectedRows.size > 0 ? produtos.filter((p) => selectedRows.has(p.id)) : produtos;
 
     const wb = XLSX.utils.book_new();
     const hoje = new Date().toLocaleDateString('pt-BR');
@@ -868,73 +889,61 @@ export function ProdutosTab() {
     ];
 
     const header = [
-      'Produto', 'Descrição', 'Unidade', 'Tipo Item', 'Cód. Fábrica', 'EAN13', 'DUN14',
-      'Apresentação', 'Marca', 'ID Fornecedor', 'ID Divisão',
-      'Fator Compra', 'Fator Venda', 'Múltiplo Vendas',
-      'Peso Bruto', 'Peso Líquido', 'Controla Lote', 'B2B', 'B2C', 'Possui Foto',
-      'Princípio Ativo', 'Preço Nac. Consumidor', 'Preço Fábrica',
-      'Desc. Complementar', 'Cód. Site B2C', 'NCM', 'CEST',
-      'Msg. Nota Fiscal', 'Reg. MS', 'Origem', 'Validade',
-      'Lançamento', 'Inativo',
+      'produto_id', 'descricao', 'apresentacao', 'marca', 'codfab', 'ean13', 'ncm', 'cest',
+      'estoque', 'unidade', 'fator_cv', 'muv', 'divisao_id', 'fornece', 'fornec_id',
+      'custo', 'prvenda', 'desconto', 'comissao',
     ];
 
-    const dataRows = produtos.map((p) => [
+    const dataRows = exportList.map((p) => [
       p.codigoProduto ?? '',
       p.descricao ?? '',
-      p.un ?? '',
-      p.tipoItem ?? '',
-      p.codigoFabrica ?? '',
-      p.ean13 ?? '',
-      p.dun14 ?? '',
       p.apresentacao ?? '',
       p.marca ?? '',
-      p.fornecedorId ?? '',
-      p.divisaoId ?? '',
-      p.fatorCompra ?? '',
-      p.fatorVenda ?? '',
-      p.multiploDeVendas ?? '',
-      p.pesoBruto ?? '',
-      p.pesoLiquido ?? '',
-      p.controlaLote ? 'Sim' : 'Não',
-      p.permiteVendaB2b ? 'Sim' : 'Não',
-      p.permiteVendaB2c ? 'Sim' : 'Não',
-      p.possuiFoto ? 'Sim' : 'Não',
-      p.principioAtivo ?? '',
-      p.precoNacionalConsumidor ?? '',
-      p.precoFabrica ?? '',
-      p.descricaoComplementar ?? '',
-      p.codigoSiteB2c ?? '',
+      p.codigoFabrica ?? '',
+      p.ean13 ?? '',
       p.ncm ?? '',
       p.cest ?? '',
-      p.mensagemNotaFiscal ?? '',
-      p.regMs ?? '',
-      p.origemProduto ?? '',
-      p.validade ?? '',
-      p.lancamento ? 'Sim' : 'Não',
-      p.inativo ? 'Sim' : 'Não',
+      p.estoque ?? 0,
+      p.un ?? '',
+      p.fatorVenda ?? '',
+      p.multiploDeVendas ?? '',
+      p.divisaoId ?? '',
+      p.fornecedor ?? '',
+      p.fornecedorId ?? '',
+      p.custoMedio ?? '',
+      p.preco ?? '',
+      p.descontoMaximo ?? '',
+      p.comissao ?? '',
     ]);
 
     const wsData = [...infoRows, header, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [
-      { wch: 14 }, { wch: 40 }, { wch: 8 }, { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
-      { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
-      { wch: 12 }, { wch: 12 }, { wch: 14 },
-      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
-      { wch: 20 }, { wch: 20 }, { wch: 14 },
-      { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 10 },
-      { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 12 },
-      { wch: 10 }, { wch: 10 },
+      { wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 25 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
     XLSX.writeFile(wb, `produtos_${hoje.replace(/\//g, '-')}.xlsx`);
     toast.success('Arquivo exportado com sucesso');
   }
 
-  function handleImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+
+    try {
+      const tabelas = await tabelasPrecoService.getAll('', 1, 500, 'ativos');
+      const temPadrao = tabelas.data.some((t) => t.padrao);
+      if (!temPadrao) {
+        toast.error('Nenhuma tabela de preços padrão definida. Cadastre e marque uma tabela como padrão antes de importar produtos.');
+        return;
+      }
+    } catch {
+      toast.error('Não foi possível verificar as tabelas de preços. Tente novamente.');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -946,60 +955,63 @@ export function ProdutosTab() {
 
         if (!rows.length) { toast.error('Planilha vazia'); return; }
 
-        const prodByCode = new Map<string, Product>(
-          produtos.filter((p) => p.codigoProduto).map((p) => [String(p.codigoProduto!).toUpperCase(), p])
+        const byEan13 = new Map<string, Product>(
+          produtos
+            .filter((p) => p.ean13)
+            .map((p) => [String(p.ean13!).replace(/\D/g, '').trim(), p]),
+        );
+        const byCodFabFornecedor = new Map<string, Product>(
+          produtos
+            .filter((p) => p.codigoFabrica && p.fornecedorId != null)
+            .map((p) => [
+              `${String(p.codigoFabrica!).trim().toUpperCase()}|${p.fornecedorId}`,
+              p,
+            ]),
         );
 
         const parsed: ImportRow[] = rows.map((row, idx) => {
-          const codigoProduto = String(row['Produto'] ?? '').trim();
-          const descricao = String(row['Descrição'] ?? '').trim().toUpperCase();
+          const codigoProduto = String(row['produto_id'] ?? '').trim();
+          const descricao = String(row['descricao'] ?? '').trim().toUpperCase();
+
+          const num = (v: any) => (v !== '' && v != null ? Number(v) || undefined : undefined);
 
           const data: Partial<ProductFormState> = {
             codigoProduto: codigoProduto || undefined,
             descricao: descricao || undefined,
-            unidade: String(row['Unidade'] ?? '').trim().toUpperCase() || undefined,
-            tipoItem: String(row['Tipo Item'] ?? '').trim() || undefined,
-            codigoFabrica: String(row['Cód. Fábrica'] ?? '').trim().toUpperCase() || undefined,
-            ean13: String(row['EAN13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
-            dun14: String(row['DUN14'] ?? '').replace(/\D/g, '').slice(0, 14) || undefined,
-            apresentacao: String(row['Apresentação'] ?? '').trim().toUpperCase() || undefined,
-            marca: String(row['Marca'] ?? '').trim().toUpperCase() || undefined,
-            fornecedorId: row['ID Fornecedor'] ? Number(row['ID Fornecedor']) || undefined : undefined,
-            divisaoId: row['ID Divisão'] ? Number(row['ID Divisão']) || undefined : undefined,
-            fatorCompra: row['Fator Compra'] ? Number(row['Fator Compra']) || undefined : undefined,
-            fatorVenda: row['Fator Venda'] ? Number(row['Fator Venda']) || undefined : undefined,
-            multiploDeVendas: row['Múltiplo Vendas'] !== '' ? Number(row['Múltiplo Vendas']) : undefined,
-            pesoBruto: row['Peso Bruto'] !== '' ? Number(row['Peso Bruto']) : undefined,
-            pesoLiquido: row['Peso Líquido'] !== '' ? Number(row['Peso Líquido']) : undefined,
-            controlaLote: row['Controla Lote'] !== '' ? parseXlsxBool(row['Controla Lote']) : undefined,
-            permiteVendaB2b: row['B2B'] !== '' ? parseXlsxBool(row['B2B']) : undefined,
-            permiteVendaB2c: row['B2C'] !== '' ? parseXlsxBool(row['B2C']) : undefined,
-            possuiFoto: row['Possui Foto'] !== '' ? parseXlsxBool(row['Possui Foto']) : undefined,
-            principioAtivo: String(row['Princípio Ativo'] ?? '').trim() || undefined,
-            precoNacionalConsumidor: row['Preço Nac. Consumidor'] !== '' ? Number(row['Preço Nac. Consumidor']) : undefined,
-            precoFabrica: row['Preço Fábrica'] !== '' ? Number(row['Preço Fábrica']) : undefined,
-            descricaoComplementar: String(row['Desc. Complementar'] ?? '').trim() || undefined,
-            codigoSiteB2c: String(row['Cód. Site B2C'] ?? '').trim() || undefined,
-            ncm: String(row['NCM'] ?? '').trim() || undefined,
-            cest: String(row['CEST'] ?? '').trim() || undefined,
-            mensagemNotaFiscal: String(row['Msg. Nota Fiscal'] ?? '').trim() || undefined,
-            regMs: String(row['Reg. MS'] ?? '').trim() || undefined,
-            origemProduto: String(row['Origem'] ?? '').trim() || undefined,
-            validade: String(row['Validade'] ?? '').trim() || undefined,
-            lancamento: row['Lançamento'] !== '' ? parseXlsxBool(row['Lançamento']) : undefined,
-            inativo: row['Inativo'] !== '' ? parseXlsxBool(row['Inativo']) : undefined,
+            apresentacao: String(row['apresentacao'] ?? '').trim().toUpperCase() || undefined,
+            marca: String(row['marca'] ?? '').trim().toUpperCase() || undefined,
+            codigoFabrica: String(row['codfab'] ?? '').trim().toUpperCase() || undefined,
+            ean13: String(row['ean13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
+            ncm: String(row['ncm'] ?? '').trim() || undefined,
+            cest: String(row['cest'] ?? '').trim() || undefined,
+            // estoque: ignorado na importação
+            unidade: String(row['unidade'] ?? '').trim().toUpperCase() || undefined,
+            fatorVenda: num(row['fator_cv']),
+            multiploDeVendas: num(row['muv']),
+            divisaoId: num(row['divisao_id']),
+            // fornece: ignorado (somente leitura)
+            fornecedorId: num(row['fornec_id']),
+            custoMedio: num(row['custo']),
+            // prvenda, desconto, comissao: ignorados (campos da tabela de preços)
           };
 
-          if (codigoProduto) {
-            const existing = prodByCode.get(codigoProduto.toUpperCase());
-            if (!existing) {
-              return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto "${codigoProduto}" não encontrado na lista atual` };
-            }
-            return { rowIndex: idx + 1, action: 'atualizar' as const, productId: existing.id, data, originalData: existing };
+          if (!codigoProduto && !descricao) {
+            return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
           }
 
-          if (!descricao) {
-            return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
+          const ean13Val = data.ean13;
+          const codFab = data.codigoFabrica;
+          const fornId = data.fornecedorId;
+
+          if (ean13Val) {
+            if (byEan13.has(ean13Val)) {
+              return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (EAN13: ${ean13Val})` };
+            }
+          } else if (codFab && fornId != null) {
+            const key = `${codFab}|${fornId}`;
+            if (byCodFabFornecedor.has(key)) {
+              return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
+            }
           }
 
           return { rowIndex: idx + 1, action: 'criar' as const, data };
@@ -1023,25 +1035,19 @@ export function ProdutosTab() {
     const validRows = importRows.filter((r) => r.action !== 'erro');
     if (!validRows.length) return;
     setImportLoading(true);
-    let created = 0, updated = 0, errors = 0;
+    let created = 0, errors = 0;
     try {
       for (const row of validRows) {
         try {
-          const base = row.originalData ? mapProductToForm(row.originalData) : { ...initialFormData };
-          const merged: ProductFormState = { ...base, ...Object.fromEntries(Object.entries(row.data).filter(([, v]) => v !== undefined)) } as ProductFormState;
+          const merged: ProductFormState = { ...initialFormData, ...Object.fromEntries(Object.entries(row.data).filter(([, v]) => v !== undefined)) } as ProductFormState;
           const payload = mapFormToPayload(merged);
-          if (row.action === 'atualizar' && row.productId) {
-            await productsService.updateCadastro(row.productId, payload);
-            updated++;
-          } else {
-            await productsService.createCadastro(payload);
-            created++;
-          }
+          await productsService.createCadastro(payload);
+          created++;
         } catch {
           errors++;
         }
       }
-      toast.success(`Importação concluída: ${created} criado(s), ${updated} atualizado(s)${errors ? `, ${errors} erro(s)` : ''}`);
+      toast.success(`Importação concluída: ${created} produto(s) criado(s)${errors ? `, ${errors} erro(s)` : ''}`);
       setImportDialogOpen(false);
       setImportRows([]);
       await loadProdutos();
@@ -1443,9 +1449,9 @@ export function ProdutosTab() {
                 <Upload className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Importar Excel</span>
               </Button>
-              <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={handleExportarExcel}>
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={handleExportarExcel} disabled={produtos.length === 0}>
                 <FileSpreadsheet className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Exportar Excel</span>
+                <span className="hidden sm:inline">{selectedRows.size > 0 ? `Excel (${selectedRows.size} sel.)` : 'Excel (todos)'}</span>
               </Button>
               <Popover>
                 <PopoverTrigger asChild>
@@ -1499,6 +1505,14 @@ export function ProdutosTab() {
             <Table style={{ minWidth: tableMinWidth }}>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8 px-2 sticky left-0 z-30 bg-muted/90">
+                    <Checkbox
+                      checked={allSelected}
+                      data-indeterminate={someSelected}
+                      onCheckedChange={toggleAll}
+                      className={someSelected ? 'opacity-60' : ''}
+                    />
+                  </TableHead>
                   {PRODUCTS_GRID_COLUMNS.map((column) => (
                     <TableHead
                       key={column.key}
@@ -1517,7 +1531,7 @@ export function ProdutosTab() {
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={PRODUCTS_GRID_COLUMNS.length}
+                      colSpan={PRODUCTS_GRID_COLUMNS.length + 1}
                       className="text-center py-8"
                     >
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -1526,7 +1540,7 @@ export function ProdutosTab() {
                 ) : produtos.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={PRODUCTS_GRID_COLUMNS.length}
+                      colSpan={PRODUCTS_GRID_COLUMNS.length + 1}
                       className="text-center py-8 text-muted-foreground"
                     >
                       Nenhum produto encontrado
@@ -1534,6 +1548,7 @@ export function ProdutosTab() {
                   </TableRow>
                 ) : (
                   produtos.map((product) => {
+                    const isSelected = selectedRows.has(product.id);
                     const fornecedorNome =
                       product.fornecedor?.trim() ||
                       fornecedoresMap.get(Number(product.fornecedorId ?? 0)) ||
@@ -1546,9 +1561,12 @@ export function ProdutosTab() {
                     return (
                       <TableRow
                         key={product.id}
-                        className="group cursor-pointer hover:bg-muted/50"
+                        className={cn('group cursor-pointer hover:bg-muted/50', isSelected && 'bg-primary/5')}
                         onDoubleClick={() => void openEdit(product)}
                       >
+                        <TableCell className="w-8 px-2 sticky left-0 z-10 bg-background group-hover:bg-muted/50" style={isSelected ? { background: 'hsl(var(--primary)/.05)' } : undefined}>
+                          <Checkbox checked={isSelected} onCheckedChange={() => toggleRow(product.id)} />
+                        </TableCell>
                         {PRODUCTS_GRID_COLUMNS.map((column) => (
                           <TableCell
                             key={column.key}
@@ -1583,7 +1601,6 @@ export function ProdutosTab() {
           </DialogHeader>
           <div className="text-xs text-muted-foreground mb-2">
             {importRows.filter((r) => r.action === 'criar').length} a criar &nbsp;|&nbsp;
-            {importRows.filter((r) => r.action === 'atualizar').length} a atualizar &nbsp;|&nbsp;
             {importRows.filter((r) => r.action === 'erro').length} com erro (ignorados)
           </div>
           <div className="flex-1 overflow-auto border rounded-md">
@@ -1601,10 +1618,10 @@ export function ProdutosTab() {
               </thead>
               <tbody>
                 {importRows.map((row) => (
-                  <tr key={row.rowIndex} className={`border-b ${row.action === 'erro' ? 'bg-red-50 dark:bg-red-950/20' : row.action === 'criar' ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}>
+                  <tr key={row.rowIndex} className={`border-b ${row.action === 'erro' ? 'bg-red-50 dark:bg-red-950/20' : 'bg-green-50/50 dark:bg-green-950/20'}`}>
                     <td className="px-2 py-1">
-                      <span className={`font-semibold ${row.action === 'erro' ? 'text-red-600' : row.action === 'criar' ? 'text-green-700' : 'text-blue-600'}`}>
-                        {row.action === 'criar' ? 'Criar' : row.action === 'atualizar' ? 'Atualizar' : 'Erro'}
+                      <span className={`font-semibold ${row.action === 'erro' ? 'text-red-600' : 'text-green-700'}`}>
+                        {row.action === 'criar' ? 'Criar' : 'Erro'}
                       </span>
                     </td>
                     <td className="px-2 py-1 font-mono">{row.data.codigoProduto || '—'}</td>

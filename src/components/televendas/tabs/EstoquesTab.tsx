@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, ChevronUp, Loader2, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -15,6 +15,7 @@ import { divisionsService, Divisao } from '@/services/divisionsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { StockEntry, StockListFilters, stocksService } from '@/services/stocksService';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
+import { cn } from '@/lib/utils';
 
 interface StockFormData {
   produto_id: number;
@@ -35,7 +36,6 @@ interface StockFormData {
   pauta_icms: number;
   reducao_st: number;
   reducao_convenio: number;
-  repasse_icms: boolean;
   cst_pis: string;
   cst_cofins: string;
   aliquota_pis: number;
@@ -63,7 +63,6 @@ const initialFormData: StockFormData = {
   pauta_icms: 0,
   reducao_st: 0,
   reducao_convenio: 0,
-  repasse_icms: false,
   cst_pis: '',
   cst_cofins: '',
   aliquota_pis: 0,
@@ -92,7 +91,6 @@ function mapStockToForm(stock: StockEntry): StockFormData {
     pauta_icms: Number(stock.pauta_icms ?? 0) || 0,
     reducao_st: Number(stock.reducao_st ?? 0) || 0,
     reducao_convenio: Number(stock.reducao_convenio ?? 0) || 0,
-    repasse_icms: Boolean(stock.repasse_icms ?? false),
     cst_pis: String(stock.cst_pis ?? '').trim(),
     cst_cofins: String(stock.cst_cofins ?? '').trim(),
     aliquota_pis: Number(stock.aliquota_pis ?? 0) || 0,
@@ -106,6 +104,26 @@ const toFixedNumber = (value: number, decimals = 3) =>
   Number.isFinite(value) ? value.toFixed(decimals) : '0.000';
 
 type StatusType = 'ativos' | 'inativos' | 'todos';
+
+const GRID_COLS = [
+  { key: 'codigo_produto',    label: 'Código',       width: 132 },
+  { key: 'descricao_produto', label: 'Descrição',    width: 320 },
+  { key: 'apresentacao',      label: 'Apresentação', width: 180 },
+  { key: 'codigo_fabrica',    label: 'Cód. Fábrica', width: 156 },
+  { key: 'ean13',             label: 'EAN13',        width: 156 },
+  { key: 'nome_fornecedor',   label: 'Fornecedor',   width: 240 },
+  { key: 'descricao_divisao', label: 'Divisão',      width: 200 },
+  { key: 'unidade',           label: 'UN',           width: 72  },
+  { key: 'estoque',           label: 'Estoque',      width: 110 },
+  { key: 'disponivel',        label: 'Disponível',   width: 110 },
+  { key: 'custo_medio',       label: 'Custo médio',  width: 130 },
+  { key: 'acoes',             label: '',             width: 96  },
+] as const;
+
+const TABLE_MIN_WIDTH = GRID_COLS.reduce((acc, c) => acc + c.width, 0);
+
+const RIGHT_ALIGN = new Set(['estoque', 'disponivel', 'custo_medio']);
+const MONO_COLS   = new Set(['codigo_produto', 'codigo_fabrica', 'ean13']);
 
 export function EstoquesTab() {
   const { canInsert } = useModuleCrudPermission('ESTOQUES');
@@ -154,22 +172,8 @@ export function EstoquesTab() {
   const loadOptions = async () => {
     try {
       const [fornRes, divRes] = await Promise.all([
-        suppliersService.getAll(
-          undefined,
-          1,
-          500,
-          'ativos',
-          true,
-          empresaCadastroId || undefined,
-        ),
-        divisionsService.getAll(
-          undefined,
-          undefined,
-          1,
-          500,
-          'ativos',
-          empresaCadastroId || undefined,
-        ),
+        suppliersService.getAll(undefined, 1, 500, 'ativos', true, empresaCadastroId || undefined),
+        divisionsService.getAll(undefined, undefined, 1, 500, 'ativos', empresaCadastroId || undefined),
       ]);
       setFornecedores(fornRes.data || []);
       setDivisoes(divRes.data || []);
@@ -235,69 +239,35 @@ export function EstoquesTab() {
     setSubmitting(true);
     try {
       const detail = await stocksService.getById(stock.produto_id);
-      if (!detail) {
-        toast.error('Estoque não encontrado');
-        return;
-      }
+      if (!detail) { toast.error('Estoque não encontrado'); return; }
       setEditingStock(detail);
       setFormData(mapStockToForm(detail));
       setDialogOpen(true);
     } catch (error: any) {
-      console.error('Erro ao carregar estoque:', error);
       toast.error(error?.message || 'Erro ao carregar estoque');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSearch = async () => {
-    await loadStocks();
-  };
+  const handleSearch = async () => { await loadStocks(); };
 
   const handleClear = async () => {
-    setFilters({
-      status: 'ativos',
-      search: '',
-      fornecedor: 'all',
-      divisao: 'all',
-      marca: '',
-      possuiFoto: undefined,
-      permiteVendaB2b: undefined,
-      permiteVendaB2c: undefined,
-      lancamento: undefined,
-    });
-    await loadStocks({
-      status: 'ativos',
-      search: '',
-      fornecedorId: undefined,
-      divisaoId: undefined,
-      marca: '',
-      possuiFoto: undefined,
-      permiteVendaB2b: undefined,
-      permiteVendaB2c: undefined,
-      lancamento: undefined,
-    });
+    setFilters({ status: 'ativos', search: '', fornecedor: 'all', divisao: 'all', marca: '', possuiFoto: undefined, permiteVendaB2b: undefined, permiteVendaB2c: undefined, lancamento: undefined });
+    await loadStocks({ status: 'ativos', search: '', fornecedorId: undefined, divisaoId: undefined, marca: '', possuiFoto: undefined, permiteVendaB2b: undefined, permiteVendaB2c: undefined, lancamento: undefined });
   };
 
   const updateFilter = (key: string, value: any) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
   const handleSearchProducts = async () => {
-    if (!productSearch.trim()) {
-      toast.error('Digite algo para buscar o produto');
-      return;
-    }
+    if (!productSearch.trim()) { toast.error('Digite algo para buscar o produto'); return; }
     setProductSearchLoading(true);
     try {
-      const result = await productsService.listCadastro(
-        { status: 'ativos', search: productSearch.trim() },
-        1,
-        20,
-      );
+      const result = await productsService.listCadastro({ status: 'ativos', search: productSearch.trim() }, 1, 20);
       setProductResults(result.data || []);
       setSelectedProductId('none');
     } catch (error: any) {
-      console.error('Erro ao buscar produtos:', error);
       toast.error(error?.message || 'Erro ao buscar produtos');
     } finally {
       setProductSearchLoading(false);
@@ -321,11 +291,7 @@ export function EstoquesTab() {
     setFormData((prev) => ({ ...prev, [key]: value }));
 
   const handleSave = async () => {
-    if (!formData.produto_id) {
-      toast.error('Selecione o produto do estoque');
-      return;
-    }
-
+    if (!formData.produto_id) { toast.error('Selecione o produto do estoque'); return; }
     setSubmitting(true);
     try {
       const payload = {
@@ -344,7 +310,6 @@ export function EstoquesTab() {
         pauta_icms: formData.pauta_icms,
         reducao_st: formData.reducao_st,
         reducao_convenio: formData.reducao_convenio,
-        repasse_icms: formData.repasse_icms,
         cst_pis: formData.cst_pis.trim() || null,
         cst_cofins: formData.cst_cofins.trim() || null,
         aliquota_pis: formData.aliquota_pis,
@@ -365,7 +330,6 @@ export function EstoquesTab() {
       resetForm();
       await loadStocks();
     } catch (error: any) {
-      console.error('Erro ao salvar estoque:', error);
       toast.error(error?.message || 'Erro ao salvar estoque');
     } finally {
       setSubmitting(false);
@@ -381,7 +345,6 @@ export function EstoquesTab() {
       setDeleteStock(null);
       await loadStocks();
     } catch (error: any) {
-      console.error('Erro ao excluir estoque:', error);
       toast.error(error?.message || 'Erro ao excluir estoque');
     } finally {
       setDeleteLoading(false);
@@ -390,8 +353,41 @@ export function EstoquesTab() {
 
   const disponivel = Number(formData.estoque || 0) - Number(formData.quantidade_reservada || 0);
 
+  function renderCell(stock: StockEntry, key: string) {
+    switch (key) {
+      case 'codigo_produto':    return <span className="font-mono text-xs">{stock.codigo_produto || stock.produto_id}</span>;
+      case 'descricao_produto': return (
+        <span>
+          <div className="font-medium">{stock.descricao_produto}</div>
+          {stock.marca ? <div className="text-[11px] text-muted-foreground">{stock.marca}</div> : null}
+        </span>
+      );
+      case 'apresentacao':      return stock.apresentacao || '—';
+      case 'codigo_fabrica':    return <span className="font-mono">{stock.codigo_fabrica || '—'}</span>;
+      case 'ean13':             return <span className="font-mono">{stock.ean13 || '—'}</span>;
+      case 'nome_fornecedor':   return stock.nome_fornecedor || '—';
+      case 'descricao_divisao': return stock.descricao_divisao || '—';
+      case 'unidade':           return stock.unidade;
+      case 'estoque':           return toFixedNumber(stock.estoque, 3);
+      case 'disponivel':        return toFixedNumber(stock.disponivel, 3);
+      case 'custo_medio':       return toFixedNumber(Number(stock.custo_medio ?? 0), 5);
+      case 'acoes':             return (
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => void openEdit(stock)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => setDeleteStock(stock)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      );
+      default: return null;
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {/* Filters card */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -411,13 +407,8 @@ export function EstoquesTab() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium mb-1 block">Status</label>
-                  <Select
-                    value={filters.status}
-                    onValueChange={(v: StatusType) => updateFilter('status', v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={filters.status} onValueChange={(v: StatusType) => updateFilter('status', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ativos">Ativos</SelectItem>
                       <SelectItem value="inativos">Inativos</SelectItem>
@@ -436,32 +427,18 @@ export function EstoquesTab() {
                 </div>
                 <div className="md:col-span-2">
                   <Button onClick={() => void handleSearch()} disabled={loading} className="w-full">
-                    {loading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Search className="h-4 w-4 mr-2" />
-                    )}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                     Buscar
                   </Button>
                 </div>
                 <div className="md:col-span-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => void handleClear()}
-                    disabled={loading}
-                    className="w-full"
-                  >
+                  <Button variant="outline" onClick={() => void handleClear()} disabled={loading} className="w-full">
                     Limpar
                   </Button>
                 </div>
                 <div className="md:col-span-1">
                   <CollapsibleTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full md:h-10"
-                      aria-label={filtersOpen ? 'Ocultar filtros avançados' : 'Exibir filtros avançados'}
-                    >
+                    <Button type="button" variant="outline" className="w-full md:h-10" aria-label={filtersOpen ? 'Ocultar filtros avançados' : 'Exibir filtros avançados'}>
                       {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                   </CollapsibleTrigger>
@@ -471,60 +448,34 @@ export function EstoquesTab() {
               <CollapsibleContent>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end pt-1">
                   <div className="md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Marca
-                    </label>
-                    <Input
-                      value={filters.marca}
-                      onChange={(e) => updateFilter('marca', e.target.value)}
-                      placeholder="Filtrar por marca"
-                    />
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Marca</label>
+                    <Input value={filters.marca} onChange={(e) => updateFilter('marca', e.target.value)} placeholder="Filtrar por marca" />
                   </div>
-
                   <div className="md:col-span-4">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Flags
-                    </label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Flags</label>
                     <div className="flex flex-wrap items-center gap-4 rounded-md border px-3 py-2 min-h-10">
                       <label className="flex items-center gap-2 text-xs">
-                        <Checkbox
-                          checked={filters.possuiFoto === true}
-                          onCheckedChange={(v) => updateFilter('possuiFoto', v ? true : undefined)}
-                        />
+                        <Checkbox checked={filters.possuiFoto === true} onCheckedChange={(v) => updateFilter('possuiFoto', v ? true : undefined)} />
                         Possui foto
                       </label>
                       <label className="flex items-center gap-2 text-xs">
-                        <Checkbox
-                          checked={filters.permiteVendaB2b === true}
-                          onCheckedChange={(v) => updateFilter('permiteVendaB2b', v ? true : undefined)}
-                        />
+                        <Checkbox checked={filters.permiteVendaB2b === true} onCheckedChange={(v) => updateFilter('permiteVendaB2b', v ? true : undefined)} />
                         B2B
                       </label>
                       <label className="flex items-center gap-2 text-xs">
-                        <Checkbox
-                          checked={filters.permiteVendaB2c === true}
-                          onCheckedChange={(v) => updateFilter('permiteVendaB2c', v ? true : undefined)}
-                        />
+                        <Checkbox checked={filters.permiteVendaB2c === true} onCheckedChange={(v) => updateFilter('permiteVendaB2c', v ? true : undefined)} />
                         B2C
                       </label>
                       <label className="flex items-center gap-2 text-xs">
-                        <Checkbox
-                          checked={filters.lancamento === true}
-                          onCheckedChange={(v) => updateFilter('lancamento', v ? true : undefined)}
-                        />
+                        <Checkbox checked={filters.lancamento === true} onCheckedChange={(v) => updateFilter('lancamento', v ? true : undefined)} />
                         Lançamento
                       </label>
                     </div>
                   </div>
-
                   <div className="md:col-span-2">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Fornecedor
-                    </label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Fornecedor</label>
                     <Select value={filters.fornecedor} onValueChange={(v) => updateFilter('fornecedor', v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         {fornecedores.map((f) => (
@@ -535,15 +486,10 @@ export function EstoquesTab() {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="md:col-span-2">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Divisão
-                    </label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Divisão</label>
                     <Select value={filters.divisao} onValueChange={(v) => updateFilter('divisao', v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todas" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todas</SelectItem>
                         {divisoes.map((d) => (
@@ -561,78 +507,62 @@ export function EstoquesTab() {
         </CardContent>
       </Card>
 
+      {/* Grid card — same style as ProdutosTab */}
       <Card>
-        <CardContent className="p-0">
-          <div className="overflow-auto">
-            <Table>
+        <CardContent className="pt-4">
+          <div className="max-h-[60vh] overflow-auto scrollbar-thin border rounded-md">
+            <Table style={{ minWidth: TABLE_MIN_WIDTH }}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-24">Código</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="w-28">Apres.</TableHead>
-                  <TableHead className="w-28">Cód. Fábrica</TableHead>
-                  <TableHead className="w-28">EAN13</TableHead>
-                  <TableHead className="w-36">Fornecedor</TableHead>
-                  <TableHead className="w-36">Divisão</TableHead>
-                  <TableHead className="w-14">UN</TableHead>
-                  <TableHead className="w-28 text-right">Estoque</TableHead>
-                  <TableHead className="w-28 text-right">Disponível</TableHead>
-                  <TableHead className="w-28 text-right">Custo Médio</TableHead>
-                  <TableHead className="w-20 text-center">Repasse</TableHead>
-                  <TableHead className="w-24" />
+                  {GRID_COLS.map((col) => (
+                    <TableHead
+                      key={col.key}
+                      style={{ width: col.width, minWidth: col.width }}
+                      className={cn(
+                        'bg-muted/90 text-xs font-medium py-2 px-2',
+                        RIGHT_ALIGN.has(col.key) && 'text-right',
+                        col.key === 'acoes' && 'sticky right-0 z-30 bg-muted/90 shadow-[-1px_0_0_hsl(var(--border))]',
+                      )}
+                    >
+                      {col.label}
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8">
+                    <TableCell colSpan={GRID_COLS.length} className="text-center py-8">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : stocks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={GRID_COLS.length} className="text-center py-8 text-muted-foreground">
                       Nenhum estoque encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
                   stocks.map((stock) => (
-                    <TableRow key={stock.produto_id}>
-                      <TableCell className="text-xs">{stock.codigo_produto || stock.produto_id}</TableCell>
-                      <TableCell className="text-xs">
-                        <div className="font-medium">{stock.descricao_produto}</div>
-                        {stock.marca ? <div className="text-[11px] text-muted-foreground">{stock.marca}</div> : null}
-                      </TableCell>
-                      <TableCell className="text-xs">{stock.apresentacao || '—'}</TableCell>
-                      <TableCell className="text-xs font-mono">{stock.codigo_fabrica || '—'}</TableCell>
-                      <TableCell className="text-xs font-mono">{stock.ean13 || '—'}</TableCell>
-                      <TableCell className="text-xs">{stock.nome_fornecedor || '—'}</TableCell>
-                      <TableCell className="text-xs">{stock.descricao_divisao || '—'}</TableCell>
-                      <TableCell className="text-xs">{stock.unidade}</TableCell>
-                      <TableCell className="text-xs text-right">{toFixedNumber(stock.estoque, 3)}</TableCell>
-                      <TableCell className="text-xs text-right">{toFixedNumber(stock.disponivel, 3)}</TableCell>
-                      <TableCell className="text-xs text-right">{toFixedNumber(Number(stock.custo_medio ?? 0), 5)}</TableCell>
-                      <TableCell className="text-xs text-center">{stock.repasse_icms ? 'Sim' : 'Não'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => void openEdit(stock)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-600 hover:text-red-700"
-                            onClick={() => setDeleteStock(stock)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                    <TableRow
+                      key={stock.produto_id}
+                      className="group cursor-pointer hover:bg-muted/50"
+                      onDoubleClick={() => void openEdit(stock)}
+                    >
+                      {GRID_COLS.map((col) => (
+                        <TableCell
+                          key={col.key}
+                          style={{ width: col.width, minWidth: col.width }}
+                          className={cn(
+                            'text-xs py-2 px-2',
+                            RIGHT_ALIGN.has(col.key) && 'text-right tabular-nums',
+                            MONO_COLS.has(col.key) && 'font-mono',
+                            col.key === 'acoes' && 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50',
+                          )}
+                        >
+                          {renderCell(stock, col.key)}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))
                 )}
@@ -642,6 +572,7 @@ export function EstoquesTab() {
         </CardContent>
       </Card>
 
+      {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
@@ -649,7 +580,7 @@ export function EstoquesTab() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {!editingStock ? (
+            {!editingStock && (
               <div className="rounded-md border p-3 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="md:col-span-8">
@@ -663,29 +594,16 @@ export function EstoquesTab() {
                     />
                   </div>
                   <div className="md:col-span-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => void handleSearchProducts()}
-                      disabled={productSearchLoading}
-                    >
-                      {productSearchLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Search className="h-4 w-4 mr-2" />
-                      )}
+                    <Button type="button" variant="outline" className="w-full" onClick={() => void handleSearchProducts()} disabled={productSearchLoading}>
+                      {productSearchLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                       Buscar produto
                     </Button>
                   </div>
                 </div>
-
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Produto</label>
                   <Select value={selectedProductId} onValueChange={applySelectedProduct}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Selecione o produto" />
-                    </SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Selecione</SelectItem>
                       {productResults.map((product) => (
@@ -697,7 +615,7 @@ export function EstoquesTab() {
                   </Select>
                 </div>
               </div>
-            ) : null}
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-2">
@@ -717,34 +635,15 @@ export function EstoquesTab() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-3">
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Estoque</label>
-                <Input
-                  type="number"
-                  step="0.001"
-                  className="h-9 text-sm"
-                  value={formData.estoque}
-                  onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)}
-                />
+                <Input type="number" step="0.001" className="h-9 text-sm" value={formData.estoque} onChange={(e) => updateForm('estoque', Number(e.target.value) || 0)} />
               </div>
               <div className="md:col-span-3">
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Quantidade reservada</label>
-                <Input
-                  type="number"
-                  step="0.001"
-                  className="h-9 text-sm bg-muted"
-                  value={formData.quantidade_reservada}
-                  readOnly
-                />
+                <Input type="number" step="0.001" className="h-9 text-sm bg-muted" value={formData.quantidade_reservada} readOnly />
               </div>
               <div className="md:col-span-3">
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Disponível</label>
                 <Input className="h-9 text-sm bg-muted" value={toFixedNumber(disponivel, 3)} readOnly />
-              </div>
-              <div className="md:col-span-3 flex items-center gap-2 pt-6">
-                <Checkbox
-                  checked={formData.repasse_icms}
-                  onCheckedChange={(checked) => updateForm('repasse_icms', Boolean(checked))}
-                />
-                <label className="text-sm">Repasse ICMS</label>
               </div>
             </div>
 
@@ -831,9 +730,7 @@ export function EstoquesTab() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>Cancelar</Button>
             <Button onClick={() => void handleSave()} disabled={submitting}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editingStock ? 'Salvar' : 'Criar'}
@@ -842,19 +739,16 @@ export function EstoquesTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete confirmation */}
       <Dialog open={Boolean(deleteStock)} onOpenChange={(open) => !open && setDeleteStock(null)}>
         <DialogContent className="w-[95vw] max-w-md">
-          <DialogHeader>
-            <DialogTitle>Excluir Estoque</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Excluir Estoque</DialogTitle></DialogHeader>
           <div className="text-sm text-muted-foreground">
             Tem certeza que deseja excluir o estoque de{' '}
             <strong>{deleteStock?.descricao_produto || deleteStock?.codigo_produto}</strong>?
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteStock(null)} disabled={deleteLoading}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteStock(null)} disabled={deleteLoading}>Cancelar</Button>
             <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
               {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Excluir

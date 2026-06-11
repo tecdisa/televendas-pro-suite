@@ -57,8 +57,10 @@ export function ComparacaoTabelasTab() {
 
   const [grupos_dados, setGruposDados] = useState<GrupoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [tabelaALabel, setTabelaALabel] = useState('A');
-  const [tabelaBLabel, setTabelaBLabel] = useState('B');
+  const [tabelaALabel, setTabelaALabel] = useState('1');
+  const [tabelaBLabel, setTabelaBLabel] = useState('2');
+  const [tabelaACodigo, setTabelaACodigo] = useState('1');
+  const [tabelaBCodigo, setTabelaBCodigo] = useState('2');
 
 
   useEffect(() => {
@@ -76,14 +78,20 @@ export function ComparacaoTabelasTab() {
   }, []);
 
   async function handleComparar() {
-    if (!tabelaAId) { toast.error('Selecione a Tabela A'); return; }
-    if (!tabelaBId) { toast.error('Selecione a Tabela B'); return; }
+    if (!tabelaAId) { toast.error('Selecione a Tabela 1'); return; }
+    if (!tabelaBId) { toast.error('Selecione a Tabela 2'); return; }
     if (tabelaAId === tabelaBId) { toast.error('As tabelas devem ser diferentes'); return; }
 
-    const labA = tabelas.find((t) => String(t.id) === tabelaAId)?.descricao ?? 'A';
-    const labB = tabelas.find((t) => String(t.id) === tabelaBId)?.descricao ?? 'B';
+    const tabA = tabelas.find((t) => String(t.id) === tabelaAId);
+    const tabB = tabelas.find((t) => String(t.id) === tabelaBId);
+    const labA = tabA ? (tabA.codigo ? `[${tabA.codigo}] ${tabA.descricao}` : tabA.descricao) : '1';
+    const labB = tabB ? (tabB.codigo ? `[${tabB.codigo}] ${tabB.descricao}` : tabB.descricao) : '2';
+    const codA = tabA?.codigo ?? '1';
+    const codB = tabB?.codigo ?? '2';
     setTabelaALabel(labA);
     setTabelaBLabel(labB);
+    setTabelaACodigo(codA);
+    setTabelaBCodigo(codB);
 
     setIsLoading(true);
     try {
@@ -105,6 +113,10 @@ export function ComparacaoTabelasTab() {
 
   function handleImprimir() {
     if (!grupos_dados.length) { toast.error('Realize a comparação antes de imprimir'); return; }
+
+    const session = authService.getSession();
+    const nomeUsuario = session?.nome ?? session?.usuario ?? '';
+    const agora = new Date().toLocaleString('pt-BR');
 
     const linhasGrupos = grupos_dados.map((g) => {
       const linhasItens = g.itens.map((item) => {
@@ -136,6 +148,7 @@ export function ComparacaoTabelasTab() {
         thead { display: table-header-group; }
         @page { margin: 10mm 10mm 14mm 10mm; size: A4 landscape; }
         @page { @bottom-right { content: "Página " counter(page) " / " counter(pages); font-size: 8pt; color: #555; } }
+        .rodape-imp{position:fixed;bottom:6mm;left:10mm;font-size:7.5pt;color:#555}
       </style></head><body>
       <table>
         <thead>
@@ -150,7 +163,7 @@ export function ComparacaoTabelasTab() {
           </tr>
           <tr>
             <td colspan="99" style="padding:0 4px 6px;font-size:9pt;text-align:center;color:#555;border-bottom:1px solid #ccc">
-              A: ${tabelaALabel} &nbsp;|&nbsp; B: ${tabelaBLabel}
+              1: ${tabelaALabel} &nbsp;|&nbsp; 2: ${tabelaBLabel}
             </td>
           </tr>
           <tr>
@@ -158,10 +171,10 @@ export function ComparacaoTabelasTab() {
             <th style="text-align:left">Descrição</th>
             <th style="text-align:left;width:90px">Apresentação</th>
             <th style="text-align:center;width:30px">UN</th>
-            <th style="text-align:right;width:55px">A</th>
-            <th style="text-align:right;width:40px">Desc A</th>
-            <th style="text-align:right;width:55px">B</th>
-            <th style="text-align:right;width:40px">Desc B</th>
+            <th style="text-align:right;width:55px">Preço ${tabelaACodigo}</th>
+            <th style="text-align:right;width:40px">Desc ${tabelaACodigo}</th>
+            <th style="text-align:right;width:55px">Preço ${tabelaBCodigo}</th>
+            <th style="text-align:right;width:40px">Desc ${tabelaBCodigo}</th>
             <th style="text-align:right;width:60px">Dif. R$</th>
             <th style="text-align:right;width:44px">(%)</th>
           </tr>
@@ -169,6 +182,7 @@ export function ComparacaoTabelasTab() {
         <tbody>${linhasGrupos}</tbody>
       </table>
       <div style="margin-top:8px;font-size:9pt;color:#555">${totalItens} produto(s)</div>
+      <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 
@@ -185,15 +199,15 @@ export function ComparacaoTabelasTab() {
     const infoRows = [
       [nomeEmpresa, '', '', '', '', '', '', '', '', ''],
       ['COMPARAÇÃO DE TABELAS', '', '', '', '', '', '', '', '', ''],
-      [`A: ${tabelaALabel}`, '', '', `B: ${tabelaBLabel}`, '', '', '', '', '', ''],
+      [`1: ${tabelaALabel}`, '', '', `2: ${tabelaBLabel}`, '', '', '', '', '', ''],
       [`Data: ${hoje}`, '', '', '', '', '', '', '', '', ''],
       [],
     ];
 
     // Cabeçalho das colunas
     const header = ['Produto', 'Descrição', 'Apresentação', 'UN',
-      `Preço A (${tabelaALabel})`, 'Desc A (%)',
-      `Preço B (${tabelaBLabel})`, 'Desc B (%)',
+      `Preço ${tabelaACodigo}`, `Desc ${tabelaACodigo} (%)`,
+      `Preço ${tabelaBCodigo}`, `Desc ${tabelaBCodigo} (%)`,
       'Dif. R$', 'Dif. %'];
 
     const dataRows: (string | number)[][] = [];
@@ -258,10 +272,10 @@ export function ComparacaoTabelasTab() {
         {/* Filtros */}
         <div className="flex flex-wrap items-end gap-4 border rounded-lg p-4 bg-muted/30">
           <div className="flex flex-col gap-1 min-w-[200px]">
-            <Label className="text-xs font-semibold">Tabela A *</Label>
+            <Label className="text-xs font-semibold">Tabela 1 *</Label>
             <Select value={tabelaAId} onValueChange={setTabelaAId}>
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Selecione tabela A" />
+                <SelectValue placeholder="Selecione tabela 1" />
               </SelectTrigger>
               <SelectContent>
                 {tabelas.map((t) => (
@@ -272,10 +286,10 @@ export function ComparacaoTabelasTab() {
           </div>
 
           <div className="flex flex-col gap-1 min-w-[200px]">
-            <Label className="text-xs font-semibold">Tabela B *</Label>
+            <Label className="text-xs font-semibold">Tabela 2 *</Label>
             <Select value={tabelaBId} onValueChange={setTabelaBId}>
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Selecione tabela B" />
+                <SelectValue placeholder="Selecione tabela 2" />
               </SelectTrigger>
               <SelectContent>
                 {tabelas.map((t) => (
@@ -351,8 +365,8 @@ export function ComparacaoTabelasTab() {
         {/* Legenda tabelas */}
         {grupos_dados.length > 0 && (
           <div className="flex gap-4 text-xs text-muted-foreground px-1">
-            <span><strong>A</strong> = {tabelaALabel}</span>
-            <span><strong>B</strong> = {tabelaBLabel}</span>
+            <span><strong>1</strong> = {tabelaALabel}</span>
+            <span><strong>2</strong> = {tabelaBLabel}</span>
           </div>
         )}
 
@@ -365,10 +379,10 @@ export function ComparacaoTabelasTab() {
                 <th className="px-2 py-2 text-left">Descrição</th>
                 <th className="w-28 px-2 py-2 text-left">Apresentação</th>
                 <th className="w-10 px-2 py-2 text-center">UN</th>
-                <th className="w-20 px-2 py-2 text-right">Preço A</th>
-                <th className="w-16 px-2 py-2 text-right text-muted-foreground">Desc A</th>
-                <th className="w-20 px-2 py-2 text-right">Preço B</th>
-                <th className="w-16 px-2 py-2 text-right text-muted-foreground">Desc B</th>
+                <th className="w-20 px-2 py-2 text-right">Preço {tabelaACodigo}</th>
+                <th className="w-16 px-2 py-2 text-right text-muted-foreground">Desc {tabelaACodigo}</th>
+                <th className="w-20 px-2 py-2 text-right">Preço {tabelaBCodigo}</th>
+                <th className="w-16 px-2 py-2 text-right text-muted-foreground">Desc {tabelaBCodigo}</th>
                 <th className="w-20 px-2 py-2 text-right">Dif. R$</th>
                 <th className="w-16 px-2 py-2 text-right">Dif. %</th>
               </tr>

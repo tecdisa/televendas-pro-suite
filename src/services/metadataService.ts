@@ -16,6 +16,7 @@ export interface Tabela {
   descricao: string;
   prazoMedio?: number; // dias; 0 ou undefined = sem limite
   principal?: boolean;
+  padrao?: boolean;
 }
 
 export interface FormaPagamento {
@@ -171,6 +172,7 @@ export const metadataService = {
         descricao: String(desc || '').trim(),
         prazoMedio: Number(raw?.prazo_medio ?? 0) || 0,
         principal: Boolean(raw?.principal ?? false),
+        padrao: raw?.padrao != null ? Boolean(raw.padrao) : undefined,
       };
     };
 
@@ -224,6 +226,7 @@ export const metadataService = {
         descricao: String(desc || '').trim(),
         prazoMedio: Number(raw?.prazo_medio ?? 0) || 0,
         principal: Boolean(raw?.principal ?? false),
+        padrao: raw?.padrao != null ? Boolean(raw.padrao) : undefined,
       };
     };
 
@@ -454,6 +457,7 @@ export const metadataService = {
         descricao: String(desc || '').trim(),
         prazoMedio: Number(raw?.prazo_medio ?? 0) || 0,
         principal: Boolean(raw?.principal ?? false),
+        padrao: raw?.padrao != null ? Boolean(raw.padrao) : undefined,
       };
     };
 

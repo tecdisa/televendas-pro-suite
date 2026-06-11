@@ -210,15 +210,26 @@ export function ListaConfiguravelTab() {
   function handleImprimir() {
     if (!grupos_dados.length) { toast.error('Realize a listagem antes de imprimir'); return; }
 
+    const session = authService.getSession();
+    const nomeUsuario = session?.nome ?? session?.usuario ?? '';
+    const agora = new Date().toLocaleString('pt-BR');
+
     const letras = slotsAtivos.map((s) => s.letra);
+    const codigoMap: Partial<Record<Letra, string>> = Object.fromEntries(
+      slotsAtivos.map((s) => {
+        const tab = tabelas.find((t) => String(t.id) === s.tabelaId);
+        return [s.letra, tab?.codigo ?? s.letra];
+      }),
+    ) as Partial<Record<Letra, string>>;
 
     const buildHeaderRep = () => {
-      const priceCols = letras.map((l) =>
-        `<th style="text-align:right;width:56px">Preço&nbsp;${l}</th>
-         <th style="text-align:right;width:40px">%Desc&nbsp;${l}</th>
-         <th style="text-align:right;width:52px">Preço&nbsp;${l}</th>
-         ${preco_final ? `<th style="text-align:right;width:52px">Pr.Final&nbsp;${l}</th>` : ''}`
-      ).join('');
+      const priceCols = letras.map((l) => {
+        const cod = codigoMap[l] ?? l;
+        return `<th style="text-align:right;width:56px">Preço&nbsp;${cod}</th>
+         <th style="text-align:right;width:40px">%Desc&nbsp;${cod}</th>
+         <th style="text-align:right;width:52px">Comissão&nbsp;${cod}</th>
+         ${preco_final ? `<th style="text-align:right;width:52px">Pr.Final&nbsp;${cod}</th>` : ''}`;
+      }).join('');
       return `<tr>
         <th style="text-align:left;width:52px">Produto</th>
         <th style="text-align:left">Descrição</th>
@@ -236,10 +247,11 @@ export function ListaConfiguravelTab() {
     };
 
     const buildHeaderCli = () => {
-      const priceCols = letras.map((l) =>
-        `<th style="text-align:right;width:52px">Preço&nbsp;${l}</th>
-         ${preco_final ? `<th style="text-align:right;width:52px">Pr.Final&nbsp;${l}</th>` : ''}`
-      ).join('');
+      const priceCols = letras.map((l) => {
+        const cod = codigoMap[l] ?? l;
+        return `<th style="text-align:right;width:52px">Preço&nbsp;${cod}</th>
+         ${preco_final ? `<th style="text-align:right;width:52px">Pr.Final&nbsp;${cod}</th>` : ''}`;
+      }).join('');
       return `<tr>
         <th style="text-align:left;width:52px">Produto</th>
         <th style="text-align:left">Descrição</th>
@@ -311,6 +323,7 @@ export function ListaConfiguravelTab() {
         thead{display:table-header-group}
         @page{margin:8mm 8mm 12mm 8mm;size:A4 landscape}
         @page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-size:8pt;color:#555}}
+        .rodape-imp{position:fixed;bottom:6mm;left:8mm;font-size:7.5pt;color:#555}
       </style></head><body>
       <table>
         <thead>
@@ -333,6 +346,7 @@ export function ListaConfiguravelTab() {
         <tbody>${buildRows()}</tbody>
       </table>
       <div style="margin-top:6px;font-size:8pt;color:#555">${totalItens} produto(s)</div>
+      <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 
@@ -345,6 +359,12 @@ export function ListaConfiguravelTab() {
     if (!grupos_dados.length) { toast.error('Realize a listagem antes de exportar'); return; }
 
     const letras = slotsAtivos.map((s) => s.letra);
+    const codigoMap: Partial<Record<Letra, string>> = Object.fromEntries(
+      slotsAtivos.map((s) => {
+        const tab = tabelas.find((t) => String(t.id) === s.tabelaId);
+        return [s.letra, tab?.codigo ?? s.letra];
+      }),
+    ) as Partial<Record<Letra, string>>;
     const wb = XLSX.utils.book_new();
 
     const infoRows: (string | number)[][] = [
@@ -357,20 +377,21 @@ export function ListaConfiguravelTab() {
 
     let header: string[];
     if (modelo === 'representante') {
-      const priceCols = letras.flatMap((l) => [
-        `Preço ${l}`, `%Desc ${l}`, `Preço ${l}`,
-        ...(preco_final ? [`Pr.Final ${l}`] : []),
-      ]);
+      const priceCols = letras.flatMap((l) => {
+        const cod = codigoMap[l] ?? l;
+        return [`Preço ${cod}`, `%Desc ${cod}`, `Comissão ${cod}`,
+          ...(preco_final ? [`Pr.Final ${cod}`] : [])];
+      });
       header = [
         'Produto', 'Descrição', 'Apresentação', 'UN', 'Marca', 'Cod.Fab', 'Muv', 'Pno', 'DC', '%Com',
         ...(incluir_custo ? ['Custo'] : []),
         ...priceCols,
       ];
     } else {
-      const priceCols = letras.flatMap((l) => [
-        `Preço ${l}`,
-        ...(preco_final ? [`Pr.Final ${l}`] : []),
-      ]);
+      const priceCols = letras.flatMap((l) => {
+        const cod = codigoMap[l] ?? l;
+        return [`Preço ${cod}`, ...(preco_final ? [`Pr.Final ${cod}`] : [])];
+      });
       header = ['Produto', 'Descrição', 'Apresentação', 'Marca', 'EAN', 'Cod.Fab.', 'UN', ...priceCols];
     }
 

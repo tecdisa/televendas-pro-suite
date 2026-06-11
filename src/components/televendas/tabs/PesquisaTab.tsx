@@ -35,6 +35,7 @@ interface PesquisaTabProps {
 
 export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   const { canInsert } = useModuleCrudPermission('PEDIDOS');
+  const nomeEmpresa = authService.getEmpresa()?.nome_empresa ?? '';
   const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
   const today = getTodayStr();
   const ORDER_LIMIT = 100;
@@ -461,6 +462,9 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
 
   const buildPrintableHtml = (order: Order) => {
     const items = Array.isArray(order.itens) ? order.itens : [];
+    const session = authService.getSession();
+    const nomeUsuario = session?.nome ?? session?.usuario ?? '';
+    const agora = new Date().toLocaleString('pt-BR');
     const opLabel = formatOperacao(order);
     const codigoCliente = formatClienteCodigo(order);
     const clienteCodigoLabel = codigoCliente ? ` (Cód.: ${codigoCliente})` : '';
@@ -502,9 +506,11 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           .totais div { display: flex; justify-content: space-between; padding: 4px 0; }
           .bold { font-weight: 700; }
           @media print { body { padding: 0; } }
+          .rodape-imp { position: fixed; bottom: 6mm; left: 0; font-size: 9px; color: #6B7280; }
         </style>
       </head>
       <body>
+        <div style="font-size:13px;font-weight:bold;margin-bottom:6px">${nomeEmpresa}</div>
         <h1>Pedido #${order.id}</h1>
         <div class="meta">
           <div>Data: ${new Date(order.data).toLocaleDateString('pt-BR')}</div>
@@ -533,6 +539,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           <div><span>Descontos:</span><span>${formatCurrency(order.totais?.descontos ?? 0)} (${(order.totais?.descontosPerc ?? 0).toFixed?.(2) ?? 0}%)</span></div>
           <div class="bold"><span>Total do Pedido:</span><span>${formatCurrency(order.totais?.liquido ?? order.valor ?? 0)}</span></div>
         </div>
+        <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       </body>
       </html>`;
   };

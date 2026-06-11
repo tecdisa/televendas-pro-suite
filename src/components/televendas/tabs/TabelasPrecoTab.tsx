@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent, Layers, FileSpreadsheet, Upload, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent, Layers, FileSpreadsheet, Upload, AlertCircle, AlertTriangle, CheckCircle2, Star } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
@@ -110,6 +110,7 @@ const initialFormData = {
   forma_pagto_id: '',
   prazo_pagto_id: '',
   inativo: false,
+  padrao: false,
   tabela_referencia_id: '',
   tabela_referencia_percentual: '',
 };
@@ -431,6 +432,7 @@ export function TabelasPrecoTab() {
           forma_pagto_id: detail.forma_pagto_id != null ? String(detail.forma_pagto_id) : '',
           prazo_pagto_id: detail.prazo_pagto_id != null ? String(detail.prazo_pagto_id) : '',
           inativo: detail.inativo || false,
+          padrao: detail.padrao || false,
           tabela_referencia_id: detail.tabela_referencia_id != null ? String(detail.tabela_referencia_id) : '',
           tabela_referencia_percentual: detail.tabela_referencia_percentual != null ? String(detail.tabela_referencia_percentual) : '',
         });
@@ -488,6 +490,33 @@ export function TabelasPrecoTab() {
       loadTabelas(true);
     } catch (e: any) { toast.error(e?.message || 'Erro ao excluir tabela'); }
     finally { setDeleteLoading(null); }
+  };
+
+  const [padraoLoading, setPadraoLoading] = useState<number | null>(null);
+
+  const handleSetPadrao = async (t: TabelaPreco) => {
+    if (t.padrao) {
+      setPadraoLoading(t.tabela_preco_id);
+      try {
+        await tabelasPrecoService.setPadrao(t.tabela_preco_id, false);
+        toast.success('Tabela padrão removida');
+        loadTabelas(true);
+      } catch (e: any) { toast.error(e?.message || 'Erro ao remover padrão'); }
+      finally { setPadraoLoading(null); }
+      return;
+    }
+    const outra = tabelas.find((x) => x.padrao && x.tabela_preco_id !== t.tabela_preco_id);
+    if (outra) {
+      toast.error(`Desmarque "${outra.descricao_tabela_preco}" como padrão antes`);
+      return;
+    }
+    setPadraoLoading(t.tabela_preco_id);
+    try {
+      await tabelasPrecoService.setPadrao(t.tabela_preco_id, true);
+      toast.success(`"${t.descricao_tabela_preco}" definida como tabela padrão`);
+      loadTabelas(true);
+    } catch (e: any) { toast.error(e?.message || 'Erro ao definir padrão'); }
+    finally { setPadraoLoading(null); }
   };
 
   // ── Items view ──────────────────────────────────────────────────────────
@@ -2108,16 +2137,17 @@ export function TabelasPrecoTab() {
                       <TableHead className="w-28 text-right">Índice fin.</TableHead>
                       <TableHead className="w-28">Validade</TableHead>
                       <TableHead className="w-20 text-center">Status</TableHead>
-                      <TableHead className="sticky right-0 z-30 w-32 text-center bg-background shadow-[-1px_0_0_hsl(var(--border))]">Ações</TableHead>
+                      <TableHead className="w-20 text-center">Padrão</TableHead>
+                      <TableHead className="sticky right-0 z-30 w-36 text-center bg-background shadow-[-1px_0_0_hsl(var(--border))]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isInitialLoading ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                       </TableCell></TableRow>
                     ) : tabelas.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         Nenhuma tabela de preço encontrada
                       </TableCell></TableRow>
                     ) : (
@@ -2139,9 +2169,26 @@ export function TabelasPrecoTab() {
                               {t.inativo ? 'Inativo' : 'Ativo'}
                             </span>
                           </TableCell>
+                          <TableCell className="text-center">
+                            {t.padrao && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium">Padrão</span>
+                            )}
+                          </TableCell>
                           <TableCell className="sticky right-0 z-20 text-center bg-background group-hover:bg-muted/50 shadow-[-1px_0_0_hsl(var(--border))]">
                             <TooltipProvider>
                               <div className="flex items-center justify-center gap-0.5">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7"
+                                      onClick={() => handleSetPadrao(t)}
+                                      disabled={padraoLoading === t.tabela_preco_id}>
+                                      {padraoLoading === t.tabela_preco_id
+                                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        : <Star className={`h-3.5 w-3.5 ${t.padrao ? 'fill-amber-400 text-amber-400' : ''}`} />}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t.padrao ? 'Remover padrão' : 'Definir como padrão'}</TooltipContent>
+                                </Tooltip>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(t)}>
@@ -2177,7 +2224,7 @@ export function TabelasPrecoTab() {
                       ))
                     )}
                     {isLoadingMore && (
-                      <TableRow><TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
+                      <TableRow><TableCell colSpan={10} className="text-center py-4 text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                       </TableCell></TableRow>
                     )}

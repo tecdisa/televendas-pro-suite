@@ -14,6 +14,7 @@ import {
   Target,
   Route,
   CreditCard,
+  Tag,
   ChevronDown,
   ChevronRight,
   LayoutDashboard,
@@ -72,11 +73,17 @@ const baseNavGroups: NavGroup[] = [
           { title: 'Grupos', tab: 'grupos', icon: Layers },
           { title: 'Divisões', tab: 'divisoes', icon: Grid3X3 },
           { title: 'Estoques', tab: 'estoques', icon: Package },
-          { title: 'Tabelas de Preço', tab: 'tabelas-preco', icon: CreditCard },
-          { title: 'Atualização Linear de Preços', tab: 'ajuste-linear-preco', icon: CreditCard },
-          { title: 'Lista de Preços', tab: 'lista-tabela-preco', icon: CreditCard },
-          { title: 'Lista Configurável', tab: 'lista-configuravel', icon: CreditCard },
-          { title: 'Comparação de Tabelas', tab: 'comparacao-tabelas', icon: CreditCard },
+          {
+            title: 'Preços',
+            icon: Tag,
+            children: [
+              { title: 'Tabelas de Preço', tab: 'tabelas-preco', icon: CreditCard },
+              { title: 'Atualização Linear de Preços', tab: 'ajuste-linear-preco', icon: CreditCard },
+              { title: 'Lista de Preços', tab: 'lista-tabela-preco', icon: CreditCard },
+              { title: 'Lista Configurável', tab: 'lista-configuravel', icon: CreditCard },
+              { title: 'Comparação de Tabelas', tab: 'comparacao-tabelas', icon: CreditCard },
+            ],
+          },
         ],
       },
     ],
@@ -141,7 +148,6 @@ export function TopNavbar({
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
@@ -153,6 +159,7 @@ export function TopNavbar({
   }, []);
 
   const [expandedChild, setExpandedChild] = useState<string | null>(null);
+  const [expandedSub, setExpandedSub] = useState<string | null>(null);
 
   const isChildActive = (child: NavChild): boolean => {
     if (child.tab) return child.tab === activeTab;
@@ -161,6 +168,12 @@ export function TopNavbar({
 
   const isGroupActive = (group: NavGroup) =>
     group.children.some((c) => isChildActive(c));
+
+  const closeAll = () => {
+    setOpenGroup(null);
+    setExpandedChild(null);
+    setExpandedSub(null);
+  };
 
   return (
     <nav ref={navRef} className="hidden md:flex items-center gap-1">
@@ -176,12 +189,13 @@ export function TopNavbar({
                 } else {
                   const next = openGroup === group.title ? null : group.title;
                   setOpenGroup(next);
-                  // Auto-expand nested child if we're on one of its routes
                   if (next) {
                     const activeNested = group.children.find(c => c.children && isChildActive(c));
                     setExpandedChild(activeNested?.title ?? null);
+                    setExpandedSub(null);
                   } else {
                     setExpandedChild(null);
+                    setExpandedSub(null);
                   }
                 }
               }}
@@ -202,7 +216,7 @@ export function TopNavbar({
               )}
             </button>
 
-            {/* Dropdown */}
+            {/* Level-1 dropdown */}
             {!isSingleChild && openGroup === group.title && (
               <div className="absolute top-full left-0 mt-1 min-w-[240px] bg-popover border rounded-md shadow-lg py-1 z-50">
                 {group.children.map((child) =>
@@ -210,7 +224,7 @@ export function TopNavbar({
                     <div key={child.title} className="relative">
                       <button
                         onClick={() => setExpandedChild(expandedChild === child.title ? null : child.title)}
-                        onMouseEnter={() => setExpandedChild(child.title)}
+                        onMouseEnter={() => { setExpandedChild(child.title); setExpandedSub(null); }}
                         className={cn(
                           'w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
                           isChildActive(child) && 'text-primary font-medium'
@@ -222,35 +236,78 @@ export function TopNavbar({
                         </span>
                         <ChevronRight className="h-3.5 w-3.5" />
                       </button>
+
+                      {/* Level-2 flyout */}
                       {expandedChild === child.title && (
                         <div className="absolute left-full top-0 ml-1 min-w-[200px] bg-popover border rounded-md shadow-lg py-1 z-50">
-                          {child.children.map((sub) => (
-                            <button
-                              key={sub.tab}
-                              onClick={() => {
-                                onTabChange(sub.tab!);
-                                setOpenGroup(null);
-                                setExpandedChild(null);
-                              }}
-                              className={cn(
-                                'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
-                                sub.tab === activeTab && 'bg-primary/10 text-primary font-medium'
-                              )}
-                            >
-                              <sub.icon className="h-4 w-4" />
-                              <span>{sub.title}</span>
-                            </button>
-                          ))}
+                          {child.children.map((sub) =>
+                            sub.children ? (
+                              <div key={sub.title} className="relative">
+                                <button
+                                  onClick={() => setExpandedSub(expandedSub === sub.title ? null : sub.title)}
+                                  onMouseEnter={() => setExpandedSub(sub.title)}
+                                  className={cn(
+                                    'w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                                    isChildActive(sub) && 'text-primary font-medium'
+                                  )}
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <sub.icon className="h-4 w-4" />
+                                    <span>{sub.title}</span>
+                                  </span>
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
+
+                                {/* Level-3 flyout */}
+                                {expandedSub === sub.title && (
+                                  <div className="absolute left-full top-0 ml-1 min-w-[200px] bg-popover border rounded-md shadow-lg py-1 z-50">
+                                    {sub.children.map((leaf) => (
+                                      <button
+                                        key={leaf.tab}
+                                        onClick={() => {
+                                          onTabChange(leaf.tab!);
+                                          closeAll();
+                                        }}
+                                        className={cn(
+                                          'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                                          leaf.tab === activeTab && 'bg-primary/10 text-primary font-medium'
+                                        )}
+                                      >
+                                        <leaf.icon className="h-4 w-4" />
+                                        <span>{leaf.title}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                key={sub.tab}
+                                onMouseEnter={() => setExpandedSub(null)}
+                                onClick={() => {
+                                  onTabChange(sub.tab!);
+                                  closeAll();
+                                }}
+                                className={cn(
+                                  'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
+                                  sub.tab === activeTab && 'bg-primary/10 text-primary font-medium'
+                                )}
+                              >
+                                <sub.icon className="h-4 w-4" />
+                                <span>{sub.title}</span>
+                              </button>
+                            )
+                          )}
                         </div>
                       )}
                     </div>
                   ) : (
                     <button
                       key={child.tab}
+                      onMouseEnter={() => { setExpandedChild(null); setExpandedSub(null); }}
                       onClick={() => {
                         onTabChange(child.tab!);
-                        setOpenGroup(null);
-                        setExpandedChild(null);
+                        closeAll();
                       }}
                       className={cn(
                         'w-full flex items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors whitespace-nowrap',
