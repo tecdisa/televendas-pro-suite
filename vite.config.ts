@@ -14,9 +14,7 @@ const buildDate = new Date().toISOString().slice(0, 10);
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const base =
-    env.VITE_BASE_PATH?.trim() ||
-    (mode === "development" ? "/" : "/televendas-pro-suite/");
+  const base = env.VITE_BASE_PATH?.trim() || "/";
 
   return {
     base,
