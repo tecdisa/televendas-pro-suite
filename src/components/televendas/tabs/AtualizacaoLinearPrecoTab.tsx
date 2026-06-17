@@ -195,7 +195,7 @@ export function AtualizacaoLinearPrecoTab() {
 
         <Button variant="outline" size="sm" onClick={() => loadItems(tabelaId)} disabled={!tabelaId || isLoading}>
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
-          Filtrar
+          Buscar
         </Button>
       </div>
 
@@ -213,7 +213,7 @@ export function AtualizacaoLinearPrecoTab() {
           <Calculator className="h-4 w-4 mr-1" />
           Calcular
         </Button>
-        <Button size="sm" onClick={handleSalvar} disabled={isSalvando || !calculado || !items.length}>
+        <Button variant="default" size="sm" onClick={handleSalvar} disabled={isSalvando || !calculado || !items.length}>
           {isSalvando ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
           Salvar
         </Button>

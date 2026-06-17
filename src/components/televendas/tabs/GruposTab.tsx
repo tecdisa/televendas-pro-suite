@@ -198,7 +198,7 @@ export function GruposTab() {
               <Layers className="h-5 w-5" />
               Grupos de Produtos ({grupos.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
+            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Grupo
             </Button>
@@ -223,7 +223,7 @@ export function GruposTab() {
                 <SelectItem value="todos">Todos</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+            <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Buscar</span>
             </Button>
@@ -269,7 +269,7 @@ export function GruposTab() {
                             <div className="flex items-center justify-center gap-0.5">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
+                                  <Button variant="secondary" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
                                 </TooltipTrigger>
@@ -278,7 +278,7 @@ export function GruposTab() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="destructive"
                                     size="icon"
                                     className="h-7 w-7"
                                     onClick={() => handleDelete(g.grupo_id)}
@@ -323,7 +323,7 @@ export function GruposTab() {
           {formContent}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={formLoading}>
+            <Button variant="default" onClick={handleCreate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>
@@ -346,7 +346,7 @@ export function GruposTab() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-            <Button onClick={handleUpdate} disabled={formLoading}>
+            <Button variant="default" onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>

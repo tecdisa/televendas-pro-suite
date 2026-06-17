@@ -139,7 +139,7 @@ const createInitialFormData = () => ({
   empresas_autorizadas: getDefaultAuthorizedCompaniesValue(),
   obs: '',
   inativo: false,
-  revenda: false,
+  revenda: true,
 });
 
 export function FornecedoresTab() {
@@ -1086,7 +1086,7 @@ export function FornecedoresTab() {
               <Truck className="h-5 w-5" />
               Fornecedores ({fornecedores.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
+            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Fornecedor
             </Button>
@@ -1123,7 +1123,7 @@ export function FornecedoresTab() {
               />
               <label htmlFor="filtroRevenda" className="text-sm whitespace-nowrap">Somente revenda</label>
             </div>
-            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+            <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="sm:inline">Buscar</span>
             </Button>
@@ -1167,7 +1167,7 @@ export function FornecedoresTab() {
                             <div className="flex items-center justify-center gap-0.5">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(f)}>
+                                  <Button variant="secondary" size="icon" className="h-7 w-7" onClick={() => openEdit(f)}>
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
                                 </TooltipTrigger>
@@ -1176,7 +1176,7 @@ export function FornecedoresTab() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="destructive"
                                     size="icon"
                                     className="h-7 w-7"
                                     onClick={() => handleDelete(f.fornecedor_id)}
@@ -1224,6 +1224,7 @@ export function FornecedoresTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => requestCloseDialog('create')}>Cancelar</Button>
             <Button
+              variant="default"
               onClick={handleCreate}
               disabled={
                 formLoading ||
@@ -1255,7 +1256,7 @@ export function FornecedoresTab() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => requestCloseDialog('edit')}>Cancelar</Button>
-            <Button onClick={handleUpdate} disabled={formLoading}>
+            <Button variant="default" onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>

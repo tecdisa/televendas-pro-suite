@@ -20,6 +20,30 @@ export interface TabelaPreco {
   tabela_referencia_percentual: number | null;
 }
 
+export interface PrecoPorProduto {
+  tabela_preco_id: number;
+  produto_id: number;
+  empresa_id: number;
+  codigo_tabela_preco: string;
+  descricao_tabela_preco: string;
+  preco: number;
+  pvs: number;
+  preco_aplicado: number;
+  desconto_maximo: number | null;
+  comissao: number | null;
+  quantidade_minima: number | null;
+  despesa: number;
+  lucro: number;
+  frete: number;
+  majoracao: number;
+  markup: number;
+  custo_compra: number;
+  permite_debito_credito: boolean;
+  permite_bonificacao: boolean;
+  permite_venda_especial: boolean;
+  produto_em_promocao: boolean;
+}
+
 export interface TabelaPrecoItem {
   tabela_preco_id: number;
   produto_id: number;
@@ -768,5 +792,43 @@ export const tabelasPrecoService = {
       throw new Error(err?.message || 'Erro ao carregar lista');
     }
     return response.json();
+  },
+
+  async getPrecosPorProduto(produtoId: number): Promise<PrecoPorProduto[]> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/produtos/${produtoId}/tabelas-precos?empresaId=${empresaId}`,
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || 'Erro ao carregar preços do produto');
+    }
+    const data = await response.json();
+    const arr: any[] = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+    return arr.map((r): PrecoPorProduto => ({
+      tabela_preco_id: Number(r.tabela_preco_id ?? 0),
+      produto_id: Number(r.produto_id ?? 0),
+      empresa_id: Number(r.empresa_id ?? 0),
+      codigo_tabela_preco: String(r.codigo_tabela_preco ?? '').trim(),
+      descricao_tabela_preco: String(r.descricao_tabela_preco ?? '').trim(),
+      preco: Number(r.preco ?? 0),
+      pvs: Number(r.pvs ?? 0),
+      preco_aplicado: Number(r.preco_aplicado ?? r.pvs ?? r.preco ?? 0),
+      desconto_maximo: r.desconto_maximo != null ? Number(r.desconto_maximo) : null,
+      comissao: r.comissao != null ? Number(r.comissao) : null,
+      quantidade_minima: r.quantidade_minima != null ? Number(r.quantidade_minima) : null,
+      despesa: Number(r.despesa ?? 0),
+      lucro: Number(r.lucro ?? 0),
+      frete: Number(r.frete ?? 0),
+      majoracao: Number(r.majoracao ?? 0),
+      markup: Number(r.markup ?? 0),
+      custo_compra: Number(r.custo_compra ?? 0),
+      permite_debito_credito: Boolean(r.permite_debito_credito ?? false),
+      permite_bonificacao: Boolean(r.permite_bonificacao ?? false),
+      permite_venda_especial: Boolean(r.permite_venda_especial ?? false),
+      produto_em_promocao: Boolean(r.produto_em_promocao ?? false),
+    }));
   },
 };

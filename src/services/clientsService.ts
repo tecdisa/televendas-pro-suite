@@ -446,6 +446,8 @@ type ClientSearchFilters = {
   cadastradosAte?: string;
   cadastroDe?: string; // compat legado
   cadastroAte?: string; // compat legado
+  ultimaCompraDe?: string;
+  ultimaCompraAte?: string;
   status?: 'ativos' | 'inativos' | 'todos';
 };
 
@@ -574,6 +576,8 @@ async function fetchFromApi({
     const cadastradosAte = clean.cadastradosAte ?? clean.cadastroAte;
     if (cadastradosDe) params.set('cadastradosDe', cadastradosDe);
     if (cadastradosAte) params.set('cadastradosAte', cadastradosAte);
+    setParam('ultimaCompraDe', clean.ultimaCompraDe);
+    setParam('ultimaCompraAte', clean.ultimaCompraAte);
 
     if (page) params.set('page', String(page));
     if (limit) params.set('limit', String(limit));

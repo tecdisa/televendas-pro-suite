@@ -266,7 +266,7 @@ export function CidadesTab() {
               <MapPinned className="h-5 w-5" />
               Cidades ({cidades.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
+            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Cidade
             </Button>
@@ -294,7 +294,7 @@ export function CidadesTab() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+            <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Buscar</span>
             </Button>
@@ -341,7 +341,7 @@ export function CidadesTab() {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
-                                      variant="ghost"
+                                      variant="secondary"
                                       size="icon"
                                       className="h-8 w-8"
                                       onClick={() => openEdit(cidade)}
@@ -383,7 +383,7 @@ export function CidadesTab() {
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={formLoading}>
               Cancelar
             </Button>
-            <Button onClick={handleCreate} disabled={formLoading}>
+            <Button variant="default" onClick={handleCreate} disabled={formLoading}>
               {formLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Salvar
             </Button>
@@ -413,7 +413,7 @@ export function CidadesTab() {
                 <Button variant="outline" onClick={() => setEditOpen(false)} disabled={formLoading}>
                   Cancelar
                 </Button>
-                <Button onClick={handleUpdate} disabled={formLoading}>
+                <Button variant="default" onClick={handleUpdate} disabled={formLoading}>
                   Salvar
                 </Button>
               </DialogFooter>

@@ -606,7 +606,7 @@ export function PerfilTab() {
             </div>
 
             <div className="pt-2">
-              <Button onClick={handleSave} disabled={saving}>
+              <Button variant="default" onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

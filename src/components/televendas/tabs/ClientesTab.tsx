@@ -139,16 +139,15 @@ type ClientListFilters = {
   classe: string;
   formaPagto: string;
   prazoPagto: string;
-  boletoBancario: boolean;
   rota: string;
   rede: string;
   tabelaPreco: string;
-  limiteCredito: string;
   situacaoCredito: 'todos' | 'com_disponivel' | 'sem_disponivel' | 'com_aberto' | 'sem_aberto';
-  dependencia: string;
   naoPositivadoDesde: string;
   cadastroDe: string;
   cadastroAte: string;
+  ultimaCompraDe: string;
+  ultimaCompraAte: string;
 };
 
 const defaultClientFilters: ClientListFilters = {
@@ -165,16 +164,15 @@ const defaultClientFilters: ClientListFilters = {
   classe: 'all',
   formaPagto: 'all',
   prazoPagto: 'all',
-  boletoBancario: false,
   rota: 'all',
   rede: 'all',
   tabelaPreco: 'all',
-  limiteCredito: '',
   situacaoCredito: 'todos',
-  dependencia: '',
   naoPositivadoDesde: '',
   cadastroDe: '',
   cadastroAte: '',
+  ultimaCompraDe: '',
+  ultimaCompraAte: '',
 };
 const CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY = 'televendas:clientes:filtersOpen';
 const CLIENTES_PINNED_COLUMNS_STORAGE_KEY = 'televendas:clientes:pinnedColumns';
@@ -980,7 +978,10 @@ export const ClientesTab = () => {
     setTabelasLoading(true);
     try {
       const data = await metadataService.getTabelas();
-      setTabelas(data);
+      const sorted = [...data].sort((a, b) =>
+        a.descricao.localeCompare(b.descricao, 'pt-BR', { sensitivity: 'base' }),
+      );
+      setTabelas(sorted);
     } catch (e) {
       console.error('Erro ao carregar tabelas:', e);
     } finally {
@@ -1051,7 +1052,6 @@ export const ClientesTab = () => {
   const buildClientSearchFilters = (active: typeof filters) => {
     const trimmedSearch = active.search.trim();
     const effectiveStatus = active.todos ? 'todos' : active.status;
-    const limiteCredito = active.limiteCredito ? parseDecimalInput(active.limiteCredito) : undefined;
     const cidadeId =
       active.filtrarCidades && active.cidade !== 'all'
         ? filterCidades.find((c) => c.nome_cidade === active.cidade)?.cidade_id
@@ -1069,17 +1069,15 @@ export const ClientesTab = () => {
       classeId: active.classe !== 'all' ? Number(active.classe) : undefined,
       formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
       prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
-      boletoBancario: active.boletoBancario ? true : undefined,
       tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
       rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
       redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
-      limite: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
-      limiteMin: Number.isFinite(limiteCredito ?? NaN) ? limiteCredito : undefined,
       situacaoCredito: active.situacaoCredito,
-      dependencia: active.dependencia.trim() || undefined,
       naoPositivadoDesde: active.naoPositivadoDesde || undefined,
       cadastradosDe: active.cadastroDe || undefined,
       cadastradosAte: active.cadastroAte || undefined,
+      ultimaCompraDe: active.ultimaCompraDe || undefined,
+      ultimaCompraAte: active.ultimaCompraAte || undefined,
       status: effectiveStatus,
     } as const;
   };
@@ -1180,7 +1178,7 @@ export const ClientesTab = () => {
   const getStickyCellClass = (key: ClientsGridColumnKey) => {
     if (key === 'acoes') {
       return fixActionsColumn
-        ? 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50'
+        ? 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))]'
         : '';
     }
     return pinnedLeftOffsets.has(key)
@@ -1791,8 +1789,8 @@ const validateFormData = (data: ClientFormData): string[] => {
               />
             </div>
             <div className="md:col-span-2">
-              <Button onClick={() => loadClients(undefined, true)} className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md">
-                <Search className="h-4 w-4 mr-2" /> Pesquisar
+              <Button variant="default" onClick={() => loadClients(undefined, true)} className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md">
+                <Search className="h-4 w-4 mr-2" /> Buscar
               </Button>
             </div>
             <div className="md:col-span-2">
@@ -1953,23 +1951,6 @@ const validateFormData = (data: ClientFormData): string[] => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-            <div className="md:col-span-2 flex items-center gap-2 pt-5">
-              <Checkbox
-                id="boletoBancario"
-                checked={filters.boletoBancario}
-                onCheckedChange={(checked) => setFilters({ ...filters, boletoBancario: checked === true })}
-              />
-              <label htmlFor="boletoBancario" className="text-sm">Boleto bancário</label>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium mb-1 block">Limite</label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={filters.limiteCredito}
-                onChange={(e) => setFilters({ ...filters, limiteCredito: e.target.value })}
-              />
-            </div>
             <div className="md:col-span-3">
               <label className="text-sm font-medium mb-1 block">Situação do Crédito</label>
               <Select value={filters.situacaoCredito} onValueChange={(v: ClientListFilters['situacaoCredito']) => setFilters({ ...filters, situacaoCredito: v })}>
@@ -1993,10 +1974,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <SelectItem value="juridica">Jurídica</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="md:col-span-3">
-              <label className="text-sm font-medium mb-1 block">Dependência</label>
-              <Input value={filters.dependencia} onChange={(e) => setFilters({ ...filters, dependencia: e.target.value })} />
             </div>
           </div>
 
@@ -2073,6 +2050,25 @@ const validateFormData = (data: ClientFormData): string[] => {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Última compra (de)</label>
+              <Input
+                type="date"
+                value={filters.ultimaCompraDe}
+                onChange={(e) => setFilters({ ...filters, ultimaCompraDe: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Última compra (até)</label>
+              <Input
+                type="date"
+                value={filters.ultimaCompraAte}
+                onChange={(e) => setFilters({ ...filters, ultimaCompraAte: e.target.value })}
+              />
+            </div>
+          </div>
         </CardContent>
         </CollapsibleContent>
       </Card>
@@ -2124,7 +2120,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </PopoverContent>
               </Popover>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={openAjusteGeralDialog}
                 disabled={selectedClients.length === 0}
@@ -2133,7 +2129,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <Pencil className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Ajuste Geral ({selectedClients.length})</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={openCreateDialog} className="flex-1 sm:flex-none" disabled={!canInsert}>
+              <Button variant="default" size="sm" onClick={openCreateDialog} className="flex-1 sm:flex-none" disabled={!canInsert}>
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo</span>
               </Button>
@@ -2564,7 +2560,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="secondary"
                                     size="icon"
                                     className="h-7 w-7"
                                     onClick={() => openEditDialog(client.id)}
@@ -2577,9 +2573,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="destructive"
                                     size="icon"
-                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    className="h-7 w-7"
                                     onClick={() => handleDelete(client.id)}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -3065,7 +3061,7 @@ const validateFormData = (data: ClientFormData): string[] => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleProcessAjusteGeral} disabled={ajusteGeralLoading}>
+            <Button variant="default" onClick={handleProcessAjusteGeral} disabled={ajusteGeralLoading}>
               {ajusteGeralLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -3106,7 +3102,7 @@ const validateFormData = (data: ClientFormData): string[] => {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmCadastro}>
+            <Button variant="default" onClick={handleConfirmCadastro}>
               Confirmar
             </Button>
           </DialogFooter>
@@ -3848,10 +3844,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                  <div className="col-span-1 md:col-span-6 flex items-center gap-2">
-                    <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
-                    <label className="text-sm">Boleto bancário</label>
-                  </div>
                   <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">% Despesas nota fiscal</label>
                     <div className="flex items-center gap-1">
@@ -3951,6 +3943,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => requestCloseDialog('create')} disabled={formLoading}>Cancelar</Button>
             <Button
+              variant="default"
               onClick={submitCreate}
               disabled={
                 formLoading ||
@@ -4612,10 +4605,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-1 md:col-span-6 flex items-center gap-2 pt-5">
-                      <Checkbox checked={formData.boleto} onCheckedChange={(c) => setFormData({ ...formData, boleto: c as boolean })} />
-                      <label className="text-sm">Boleto bancário</label>
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
@@ -4742,7 +4731,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           )}
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => requestCloseDialog('edit')} disabled={formLoading}>Cancelar</Button>
-            <Button onClick={submitEdit} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
+            <Button variant="default" onClick={submitEdit} disabled={formLoading}>{formLoading ? 'Salvando...' : 'Salvar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

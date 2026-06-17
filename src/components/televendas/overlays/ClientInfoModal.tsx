@@ -55,6 +55,7 @@ interface ClientDetail {
   aberto?: number;
   disponivel?: number;
   observacaoFinanceiro?: string;
+  ultimaCompra?: string | null;
   
   // Itinerário
   representantes?: Array<{ id?: string | number; nome?: string }>;
@@ -245,6 +246,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
           aberto: raw?.aberto ?? raw?.valor_aberto ?? 0,
           disponivel: raw?.disponivel ?? raw?.limite_disponivel ?? 0,
           observacaoFinanceiro: raw?.observacao_financeiro ?? raw?.observacaoFinanceiro ?? '',
+          ultimaCompra: raw?.ultima_compra ?? raw?.ultimaCompra ?? null,
           
           // Itinerário
           representantes: Array.isArray(raw?.representantes) ? raw.representantes.map((r: any) => ({
@@ -273,6 +275,13 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
   const formatCurrency = (value?: number) => {
     if (value == null) return '';
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('pt-BR');
   };
 
   return (
@@ -428,7 +437,13 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                     <ReadOnlyField label="Disponível" value={formatCurrency(data?.disponivel)} />
                   </div>
                 </div>
-                
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-start-3">
+                    <ReadOnlyField label="Última compra" value={formatDate(data?.ultimaCompra) || 'Sem compras'} />
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações</label>
                   <Textarea 

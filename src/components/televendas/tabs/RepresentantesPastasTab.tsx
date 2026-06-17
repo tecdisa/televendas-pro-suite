@@ -720,7 +720,7 @@ export function RepresentantesPastasTab() {
                 onChange={(event) => setIncludeSearch(event.target.value)}
                 onKeyDown={handleIncludeSearchKeyDown}
               />
-              <Button onClick={handleIncludeSearch} disabled={includeLoading} className="shrink-0">
+              <Button variant="default" onClick={handleIncludeSearch} disabled={includeLoading} className="shrink-0">
                 <Search className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Buscar</span>
               </Button>
@@ -758,6 +758,7 @@ export function RepresentantesPastasTab() {
                           <TableCell className="font-mono text-xs">{fornecedor.cnpj_cpf || '-'}</TableCell>
                           <TableCell className="text-right">
                             <Button
+                              variant="default"
                               size="sm"
                               onClick={() => handleIncludeFornecedor(fornecedor.fornecedor_id)}
                               disabled={includeSubmittingId === fornecedor.fornecedor_id}
@@ -848,7 +849,7 @@ export function RepresentantesPastasTab() {
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={handleCopyFornecedores} disabled={copySubmitting || !copyFromRep}>
+              <Button variant="default" onClick={handleCopyFornecedores} disabled={copySubmitting || !copyFromRep}>
                 {copySubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirmar cópia
               </Button>

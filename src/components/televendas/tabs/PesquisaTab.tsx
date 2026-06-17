@@ -21,7 +21,7 @@ import { Search, X, FileEdit, Trash2, Mail, Download, Printer, File, Eye, Loader
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ordersService, type Order } from '@/services/ordersService';
 import { clientsService, type Client } from '@/services/clientsService';
-import { authService } from '@/services/authService';
+import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { useStore } from '@/store/useStore';
 import { situacoes } from '@/mocks/data';
 import { metadataService, type Operacao } from '@/services/metadataService';
@@ -33,9 +33,14 @@ interface PesquisaTabProps {
   onNavigateToDigitacao?: () => void;
 }
 
+function escapeCssContent(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   const { canInsert } = useModuleCrudPermission('PEDIDOS');
-  const nomeEmpresa = authService.getEmpresa()?.nome_empresa ?? '';
+  const empresaAtual = authService.getEmpresa();
+  const nomeEmpresa = empresaAtual ? getEmpresaDisplayName(empresaAtual) : '';
   const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
   const today = getTodayStr();
   const ORDER_LIMIT = 100;
@@ -496,6 +501,8 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Pedido ${order.id}</title>
         <style>
+          @page { margin: 12mm 12mm 16mm 12mm; }
+          @page { @bottom-left { content: "Impresso por: ${escapeCssContent(nomeUsuario)} — ${escapeCssContent(agora)}"; font-size: 7.5pt; color: #6B7280; } }
           body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 24px; color: #111827; }
           h1 { font-size: 18px; margin: 0 0 8px; }
           .meta { margin-bottom: 12px; font-size: 12px; color: #6B7280; }
@@ -506,7 +513,6 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           .totais div { display: flex; justify-content: space-between; padding: 4px 0; }
           .bold { font-weight: 700; }
           @media print { body { padding: 0; } }
-          .rodape-imp { position: fixed; bottom: 6mm; left: 0; font-size: 9px; color: #6B7280; }
         </style>
       </head>
       <body>
@@ -539,7 +545,6 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           <div><span>Descontos:</span><span>${formatCurrency(order.totais?.descontos ?? 0)} (${(order.totais?.descontosPerc ?? 0).toFixed?.(2) ?? 0}%)</span></div>
           <div class="bold"><span>Total do Pedido:</span><span>${formatCurrency(order.totais?.liquido ?? order.valor ?? 0)}</span></div>
         </div>
-        <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       </body>
       </html>`;
   };
@@ -814,13 +819,13 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           Digitar Pedido
         </Button>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={handlePesquisar} className="w-full sm:w-auto">
+          <Button variant="default" onClick={handlePesquisar} className="w-full sm:w-auto">
             <Search className="h-4 w-4 mr-2" />
-            Pesquisar
+            Buscar
           </Button>
           <Button variant="outline" onClick={handleLimparFiltros} className="w-full sm:w-auto">
             <X className="h-4 w-4 mr-2" />
-            Limpa filtros
+            Limpar filtros
           </Button>
         </div>
       </div>

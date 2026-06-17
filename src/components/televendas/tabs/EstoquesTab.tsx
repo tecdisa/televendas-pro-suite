@@ -395,7 +395,7 @@ export function EstoquesTab() {
               <Package className="h-5 w-5" />
               Estoques ({totalStocks})
             </CardTitle>
-            <Button size="sm" onClick={openCreate} disabled={!canInsert}>
+            <Button variant="default" size="sm" onClick={openCreate} disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Estoque
             </Button>
@@ -426,14 +426,14 @@ export function EstoquesTab() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <Button onClick={() => void handleSearch()} disabled={loading} className="w-full">
+                  <Button variant="default" onClick={() => void handleSearch()} disabled={loading} className="w-full">
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                     Buscar
                   </Button>
                 </div>
                 <div className="md:col-span-2">
                   <Button variant="outline" onClick={() => void handleClear()} disabled={loading} className="w-full">
-                    Limpar
+                    Limpar filtros
                   </Button>
                 </div>
                 <div className="md:col-span-1">
@@ -557,7 +557,7 @@ export function EstoquesTab() {
                             'text-xs py-2 px-2',
                             RIGHT_ALIGN.has(col.key) && 'text-right tabular-nums',
                             MONO_COLS.has(col.key) && 'font-mono',
-                            col.key === 'acoes' && 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50',
+                            col.key === 'acoes' && 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))]',
                           )}
                         >
                           {renderCell(stock, col.key)}

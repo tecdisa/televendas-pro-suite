@@ -157,7 +157,7 @@ export const ItinerariosTab = () => {
                             <Calendar className="h-3 w-3" />
                             <span className="hidden xl:inline ml-1">Re-agendar</span>
                           </Button>
-                          <Button size="sm" onClick={() => handleNovoPedido(codigoCliente)} className="h-7 px-2">
+                          <Button variant="default" size="sm" onClick={() => handleNovoPedido(codigoCliente)} className="h-7 px-2">
                             <Plus className="h-3 w-3" />
                             <span className="hidden xl:inline ml-1">Pedido</span>
                           </Button>

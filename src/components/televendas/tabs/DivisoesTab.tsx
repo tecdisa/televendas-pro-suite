@@ -250,7 +250,7 @@ export function DivisoesTab() {
               <Grid3X3 className="h-5 w-5" />
               Divisões de Produtos ({divisoes.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
+            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Divisão
             </Button>
@@ -291,7 +291,7 @@ export function DivisoesTab() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+            <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Buscar</span>
             </Button>
@@ -341,7 +341,7 @@ export function DivisoesTab() {
                             <div className="flex items-center justify-center gap-0.5">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}>
+                                  <Button variant="secondary" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}>
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
                                 </TooltipTrigger>
@@ -350,7 +350,7 @@ export function DivisoesTab() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="destructive"
                                     size="icon"
                                     className="h-7 w-7"
                                     onClick={() => handleDelete(d.divisao_id)}
@@ -395,7 +395,7 @@ export function DivisoesTab() {
           {formContent}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={formLoading}>
+            <Button variant="default" onClick={handleCreate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>
@@ -418,7 +418,7 @@ export function DivisoesTab() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-            <Button onClick={handleUpdate} disabled={formLoading}>
+            <Button variant="default" onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>

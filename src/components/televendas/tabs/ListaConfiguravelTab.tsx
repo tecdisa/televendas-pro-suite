@@ -11,12 +11,16 @@ import { metadataService, type Tabela } from '@/services/metadataService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
-import { authService } from '@/services/authService';
+import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import * as XLSX from 'xlsx';
 
 function fmt2(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeCssContent(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 type Modelo = 'representante' | 'cliente';
@@ -134,7 +138,7 @@ export function ListaConfiguravelTab() {
   const [slotsLabels, setSlotsLabels] = useState<Partial<Record<Letra, string>>>({});
 
   const empresa = authService.getEmpresa();
-  const nomeEmpresa = empresa?.nome_empresa ?? '';
+  const nomeEmpresa = empresa ? getEmpresaDisplayName(empresa) : '';
   const hoje = new Date().toLocaleDateString('pt-BR');
   const ordemAtual = ORDENS.find((o) => o.value === ordem) ?? ORDENS[0];
   const slotsAtivos = slots.filter((s) => s.tabelaId !== '');
@@ -321,9 +325,9 @@ export function ListaConfiguravelTab() {
         tbody tr:nth-child(even) td{background:#f9f9f9}
         thead td{border:none!important;background:#fff!important;padding:1px 4px}
         thead{display:table-header-group}
-        @page{margin:8mm 8mm 12mm 8mm;size:A4 landscape}
+        @page{margin:8mm 8mm 14mm 8mm;size:A4 landscape}
         @page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-size:8pt;color:#555}}
-        .rodape-imp{position:fixed;bottom:6mm;left:8mm;font-size:7.5pt;color:#555}
+        @page{@bottom-left{content:"Impresso por: ${escapeCssContent(nomeUsuario)} — ${escapeCssContent(agora)}";font-size:7.5pt;color:#555}}
       </style></head><body>
       <table>
         <thead>
@@ -346,7 +350,6 @@ export function ListaConfiguravelTab() {
         <tbody>${buildRows()}</tbody>
       </table>
       <div style="margin-top:6px;font-size:8pt;color:#555">${totalItens} produto(s)</div>
-      <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 
@@ -574,9 +577,9 @@ export function ListaConfiguravelTab() {
 
         {/* Botões */}
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleListar} disabled={isLoading || !slotsAtivos.length}>
+          <Button variant="default" size="sm" onClick={handleListar} disabled={isLoading || !slotsAtivos.length}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
-            Listar
+            Buscar
           </Button>
           {grupos_dados.length > 0 && (<>
             <Button variant="outline" size="sm" onClick={handleImprimir}>
@@ -660,7 +663,7 @@ export function ListaConfiguravelTab() {
     if (isLoading)
       return <tr><td colSpan={colCount} className="text-center py-16"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>;
     if (!slotsAtivos.length)
-      return <tr><td colSpan={colCount} className="text-center py-16 text-muted-foreground">Selecione ao menos uma tabela e clique em Listar</td></tr>;
+      return <tr><td colSpan={colCount} className="text-center py-16 text-muted-foreground">Selecione ao menos uma tabela e clique em Buscar</td></tr>;
     if (!grupos_dados.length)
       return <tr><td colSpan={colCount} className="text-center py-16 text-muted-foreground">Nenhum produto encontrado</td></tr>;
 

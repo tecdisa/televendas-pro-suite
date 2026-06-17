@@ -103,7 +103,7 @@ export const VisitasTab = () => {
                       <span className="hidden sm:inline">Registrar</span>
                     </Button>
                   )}
-                  <Button size="sm" onClick={handleNovoPedido} className="flex-1 sm:flex-none">
+                  <Button variant="default" size="sm" onClick={handleNovoPedido} className="flex-1 sm:flex-none">
                     <Plus className="h-4 w-4 sm:mr-1" />
                     <span className="hidden sm:inline">Novo Pedido</span>
                     <span className="sm:hidden">Pedido</span>
@@ -116,12 +116,12 @@ export const VisitasTab = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 justify-end">
-        <Button onClick={handleRegistrarVisita} className="w-full sm:w-auto">
+        <Button variant="outline" onClick={handleRegistrarVisita} className="w-full sm:w-auto">
           <UserCheck className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Registrar Visita</span>
           <span className="sm:hidden">Registrar</span>
         </Button>
-        <Button onClick={handleNovoPedido} className="w-full sm:w-auto">
+        <Button variant="default" onClick={handleNovoPedido} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Novo Pedido</span>
           <span className="sm:hidden">Pedido</span>

@@ -1710,6 +1710,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             </div>
             <div>
               <Button
+                variant="default"
                 onClick={handleAddItem}
                 className="w-full"
                 disabled={!formData.operacao || !formData.clienteId || !formData.representanteId || loadingProductByCode}
@@ -1923,7 +1924,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           <Undo className="h-4 w-4 sm:mr-2" />
           <span>Desfazer</span>
         </Button>
-        <Button onClick={handleSave} size="sm" className="w-full sm:w-auto" disabled={!!(currentOrder && currentOrder.transmitido)}>
+        <Button variant="default" onClick={handleSave} size="sm" className="w-full sm:w-auto" disabled={!!(currentOrder && currentOrder.transmitido)}>
           <Save className="h-4 w-4 sm:mr-2" />
           <span>Salvar Pedido</span>
         </Button>

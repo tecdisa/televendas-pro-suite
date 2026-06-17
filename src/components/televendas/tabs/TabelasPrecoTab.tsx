@@ -1444,7 +1444,7 @@ export function TabelasPrecoTab() {
             </Button>
             <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => xlsxFileRef.current?.click()} disabled={itens.length === 0}>
               <Upload className="h-3.5 w-3.5" />
-              Importar
+              Importar Excel
             </Button>
             <input
               ref={xlsxFileRef}
@@ -1533,11 +1533,11 @@ export function TabelasPrecoTab() {
             />
 
             <Button size="sm" className="h-7 px-3 text-xs" onClick={handleItensSearch} disabled={itensLoading}>
-              Pesquisar
+              Buscar
             </Button>
             <Button size="sm" variant="outline" className="h-7 px-3 text-xs gap-1" onClick={() => { resetItensFilters(); loadItens(true); }}>
               <X className="h-3 w-3" />
-              Limpar
+              Limpar filtros
             </Button>
           </div>
 
@@ -1576,16 +1576,11 @@ export function TabelasPrecoTab() {
                   </th>
                   <th className="sticky left-7 z-30 w-16 px-1 py-1.5 text-left bg-muted/90">Prod.</th>
                   <th className="sticky left-[92px] z-30 w-[320px] pl-1 pr-4 py-1.5 text-left bg-muted/90 after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border">Descrição</th>
-                  <th className="w-24 px-1 py-1.5 text-left">Cód.Fábrica</th>
+                  <th className="w-24 px-1 py-1.5 text-left" style={{ paddingLeft: '60px' }}>Cód.Fábrica</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
                   <th className="w-16 pl-12 pr-1 py-1.5 text-right">Custo</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Lucro</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
                   <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
@@ -1601,6 +1596,11 @@ export function TabelasPrecoTab() {
                   <th className="w-20 px-1 py-1.5 text-right">Múlt.Venda</th>
                   <th className="w-28 px-1 py-1.5 text-right">Pr.Nac.Cons.</th>
                   <th className="w-32 px-1 py-1.5 text-left">Princ.Ativo</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Lucro</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
                   <th className="sticky right-0 z-30 w-8 px-1 py-1.5 text-center bg-muted/90 shadow-[-1px_0_0_hsl(var(--border))]"></th>
                 </tr>
               </thead>
@@ -1626,6 +1626,11 @@ export function TabelasPrecoTab() {
                       : hasPendingRow
                         ? 'bg-amber-50/50 dark:bg-amber-950/20'
                         : 'bg-background group-hover:bg-muted/30';
+                    const stickyBgAcoes = isSelected
+                      ? 'bg-primary/5'
+                      : hasPendingRow
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20'
+                        : 'bg-background';
 
                     return (
                       <tr
@@ -1641,27 +1646,12 @@ export function TabelasPrecoTab() {
                         <td className={`sticky left-[92px] z-10 pl-1 pr-4 py-0.5 w-[320px] max-w-[320px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border ${stickyBg}`}>
                           <span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span>
                         </td>
-                        <td className="px-1 py-0.5 font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
+                        <td className="px-1 py-0.5 font-mono text-[11px]" style={{ paddingLeft: '60px' }}>{item.codigo_fabrica || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
                         <td className="pl-12 pr-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.markup} field="markup" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.despesa} field="despesa" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.lucro} field="lucro" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.comissao} field="comissao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.frete} field="frete" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.majoracao} field="majoracao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className="px-1 py-0.5 text-right font-medium">
                           <EditableCell value={item.preco} field="preco" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
@@ -1701,7 +1691,22 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas != null ? fmt(item.multiplo_de_vendas, 3) : '-'}</td>
                         <td className="px-1 py-0.5 text-right text-muted-foreground">{item.preco_nacional_consumidor != null ? fmt(item.preco_nacional_consumidor) : '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.principio_ativo ?? ''}>{item.principio_ativo || '-'}</td>
-                        <td className={`sticky right-0 z-10 px-1 py-0.5 text-center shadow-[-1px_0_0_hsl(var(--border))] ${stickyBg}`}>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.despesa} field="despesa" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.lucro} field="lucro" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.comissao} field="comissao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.frete} field="frete" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.majoracao} field="majoracao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className={`sticky right-0 z-10 px-1 py-0.5 text-center shadow-[-1px_0_0_hsl(var(--border))] ${stickyBgAcoes}`}>
                           <div className="flex items-center gap-0.5">
                             <TooltipProvider>
                               <Tooltip>
@@ -2060,7 +2065,7 @@ export function TabelasPrecoTab() {
                   }
                 >
                   {xlsxImporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Importar ({Object.keys(xlsxParsedChanges).length})
+                  Confirmar importação ({Object.keys(xlsxParsedChanges).length})
                 </Button>
               </div>
             </div>
@@ -2099,7 +2104,7 @@ export function TabelasPrecoTab() {
               <Tag className="h-5 w-5" />
               Tabelas de Preço ({tabelas.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
+            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Tabela
             </Button>
@@ -2117,7 +2122,7 @@ export function TabelasPrecoTab() {
                 <SelectItem value="todos">Todos</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+            <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
               <Search className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Buscar</span>
             </Button>
@@ -2174,7 +2179,7 @@ export function TabelasPrecoTab() {
                               <span className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium">Padrão</span>
                             )}
                           </TableCell>
-                          <TableCell className="sticky right-0 z-20 text-center bg-background group-hover:bg-muted/50 shadow-[-1px_0_0_hsl(var(--border))]">
+                          <TableCell className="sticky right-0 z-20 text-center bg-background shadow-[-1px_0_0_hsl(var(--border))]">
                             <TooltipProvider>
                               <div className="flex items-center justify-center gap-0.5">
                                 <Tooltip>
@@ -2340,7 +2345,7 @@ export function TabelasPrecoTab() {
                   disabled={divisoesLoading}
                 >
                   {divisoesLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                  Pesquisar
+                  Buscar
                 </Button>
               </div>
 

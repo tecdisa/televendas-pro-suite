@@ -591,7 +591,7 @@ export function RepresentantesTab() {
                     <div className="flex justify-end">
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() =>
                           setFormData({
@@ -681,7 +681,7 @@ export function RepresentantesTab() {
                     <SelectItem value="todos">Todos</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
+                <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full sm:w-auto">
                   <Search className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Buscar</span>
                 </Button>
@@ -739,7 +739,7 @@ export function RepresentantesTab() {
                                   <div className="flex items-center justify-center">
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
+                                        <Button variant="secondary" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
                                           <Pencil className="h-3.5 w-3.5" />
                                         </Button>
                                       </TooltipTrigger>
@@ -794,7 +794,7 @@ export function RepresentantesTab() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={requestCloseDialog}>Cancelar</Button>
-            <Button onClick={handleUpdate} disabled={formLoading}>
+            <Button variant="default" onClick={handleUpdate} disabled={formLoading}>
               {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Salvar
             </Button>

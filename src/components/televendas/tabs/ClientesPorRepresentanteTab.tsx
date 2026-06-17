@@ -493,10 +493,10 @@ export function ClientesPorRepresentanteTab() {
                 className="h-8 text-sm"
               />
               <div className="flex gap-1">
-                <Button size="sm" className="flex-1" onClick={() => loadClients()}>
-                  <Search className="h-4 w-4 mr-1" /> Filtrar
+                <Button variant="default" size="sm" className="flex-1" onClick={() => loadClients()}>
+                  <Search className="h-4 w-4 mr-1" /> Buscar
                 </Button>
-                <Button size="sm" variant="outline" onClick={handleClearFilters}>Limpar</Button>
+                <Button size="sm" variant="outline" onClick={handleClearFilters}>Limpar filtros</Button>
               </div>
             </div>
 
@@ -612,7 +612,7 @@ export function ClientesPorRepresentanteTab() {
                 </Select>
               </div>
             </div>
-            <Button size="sm" onClick={handleImportSearch} disabled={importPreviewLoading}>
+            <Button variant="default" size="sm" onClick={handleImportSearch} disabled={importPreviewLoading}>
               {importPreviewLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
               Buscar clientes
             </Button>
@@ -654,7 +654,7 @@ export function ClientesPorRepresentanteTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
-            <Button onClick={handleImportConfirm} disabled={importLoading || importSelectedIds.size === 0}>
+            <Button variant="default" onClick={handleImportConfirm} disabled={importLoading || importSelectedIds.size === 0}>
               {importLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Importar {importSelectedIds.size > 0 ? `(${importSelectedIds.size})` : ''}
             </Button>
@@ -710,13 +710,13 @@ export function ClientesPorRepresentanteTab() {
                 <span className="text-sm font-medium">
                   {copyFromRep.codigo_representante} - {copyFromRep.nome_representante}
                 </span>
-                <Button variant="ghost" size="sm" onClick={() => setCopyFromRep(null)}>Trocar</Button>
+                <Button variant="outline" size="sm" onClick={() => setCopyFromRep(null)}>Trocar</Button>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCopyOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCopyConfirm} disabled={copyLoading || !copyFromRep}>
+            <Button variant="default" onClick={handleCopyConfirm} disabled={copyLoading || !copyFromRep}>
               {copyLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Copiar todos os clientes
             </Button>

@@ -194,8 +194,9 @@ export const ClientPurchasesModal = ({
                   <TabsTrigger value="itens">Itens do pedido</TabsTrigger>
                 </TabsList>
                 
-                <Button 
-                  size="sm" 
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={handleDuplicate}
                   disabled={!selectedOrder}
                   className="gap-2"

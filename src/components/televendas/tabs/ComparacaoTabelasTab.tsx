@@ -10,7 +10,7 @@ import { metadataService, type Tabela } from '@/services/metadataService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
-import { authService } from '@/services/authService';
+import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import * as XLSX from 'xlsx';
 
@@ -24,6 +24,10 @@ const ORDENS: { value: OrdemLista; label: string }[] = [
 
 function fmt2(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeCssContent(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 interface GrupoItem {
@@ -148,7 +152,7 @@ export function ComparacaoTabelasTab() {
         thead { display: table-header-group; }
         @page { margin: 10mm 10mm 14mm 10mm; size: A4 landscape; }
         @page { @bottom-right { content: "Página " counter(page) " / " counter(pages); font-size: 8pt; color: #555; } }
-        .rodape-imp{position:fixed;bottom:6mm;left:10mm;font-size:7.5pt;color:#555}
+        @page { @bottom-left { content: "Impresso por: ${escapeCssContent(nomeUsuario)} — ${escapeCssContent(agora)}"; font-size: 7.5pt; color: #555; } }
       </style></head><body>
       <table>
         <thead>
@@ -182,7 +186,6 @@ export function ComparacaoTabelasTab() {
         <tbody>${linhasGrupos}</tbody>
       </table>
       <div style="margin-top:8px;font-size:9pt;color:#555">${totalItens} produto(s)</div>
-      <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 
@@ -261,7 +264,7 @@ export function ComparacaoTabelasTab() {
   }
 
   const empresa = authService.getEmpresa();
-  const nomeEmpresa = empresa?.nome_empresa ?? '';
+  const nomeEmpresa = empresa ? getEmpresaDisplayName(empresa) : '';
   const hoje = new Date().toLocaleDateString('pt-BR');
   const totalItens = grupos_dados.reduce((s, g) => s + g.itens.length, 0);
 
@@ -338,7 +341,7 @@ export function ComparacaoTabelasTab() {
             </Select>
           </div>
 
-          <Button size="sm" onClick={handleComparar} disabled={isLoading || !tabelaAId || !tabelaBId}>
+          <Button variant="default" size="sm" onClick={handleComparar} disabled={isLoading || !tabelaAId || !tabelaBId}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
             Comparar
           </Button>

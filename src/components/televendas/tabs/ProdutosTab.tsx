@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -37,6 +37,7 @@ import { divisionsService, Divisao } from '@/services/divisionsService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { tabelasPrecoService } from '@/services/tabelasPrecoService';
 import { cn } from '@/lib/utils';
+import { ProdutoInfoModal } from '@/components/televendas/overlays/ProdutoInfoModal';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const UNIDADES = ['UN', 'CX', 'PC', 'KG', 'LT', 'DP', 'FR', 'TB', 'CT'];
@@ -79,7 +80,7 @@ const PRODUCTS_GRID_COLUMNS = [
   { key: 'codigoSiteB2c', label: 'Código site B2C', width: 210, pinnable: true },
   { key: 'lancamento', label: 'Lançamento', width: 112, pinnable: true },
   { key: 'inativo', label: 'Inativo', width: 90, pinnable: true },
-  { key: 'acoes', label: 'Ações', width: 112, pinnable: false },
+  { key: 'acoes', label: 'Ações', width: 144, pinnable: false },
 ] as const;
 
 type ProductsGridColumnKey = (typeof PRODUCTS_GRID_COLUMNS)[number]['key'];
@@ -181,7 +182,7 @@ const initialFormData: ProductFormState = {
   produtoSimilar: 0,
   fatorCompra: 1,
   fatorVenda: 1,
-  multiploDeVendas: 0,
+  multiploDeVendas: 1,
   pesoBruto: 0,
   pesoLiquido: 0,
   controlaLote: false,
@@ -481,6 +482,8 @@ export function ProdutosTab() {
   const [importLoading, setImportLoading] = useState(false);
   const [importRows, setImportRows] = useState<ImportRow[]>([]);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewProdutoId, setViewProdutoId] = useState<number>(0);
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
   const empresaCadastroId =
@@ -648,6 +651,8 @@ export function ProdutosTab() {
     });
   };
 
+  const CHECKBOX_COL_WIDTH = 40; // w-8 (32px) + px-2 (8px padding)
+
   const columnWidthMap = useMemo(() => {
     const map = new Map<ProductsGridColumnKey, number>();
     PRODUCTS_GRID_COLUMNS.forEach((column) => map.set(column.key, column.width));
@@ -664,7 +669,7 @@ export function ProdutosTab() {
 
   const pinnedLeftOffsets = useMemo(() => {
     const offsets = new Map<ProductsGridColumnKey, number>();
-    let left = 0;
+    let left = CHECKBOX_COL_WIDTH; // checkbox column always occupies the first 32px
     for (const key of pinnedLeftColumnsInOrder) {
       offsets.set(key, left);
       left += columnWidthMap.get(key) ?? 0;
@@ -686,7 +691,7 @@ export function ProdutosTab() {
   const getStickyCellClass = (key: ProductsGridColumnKey) => {
     if (key === 'acoes') {
       return fixActionsColumn
-        ? 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50'
+        ? 'sticky right-0 z-20 bg-background shadow-[-1px_0_0_hsl(var(--border))]'
         : '';
     }
     return pinnedLeftOffsets.has(key)
@@ -710,7 +715,7 @@ export function ProdutosTab() {
   };
 
   const tableMinWidth = useMemo(
-    () => PRODUCTS_GRID_COLUMNS.reduce((total, column) => total + column.width, 0),
+    () => CHECKBOX_COL_WIDTH + PRODUCTS_GRID_COLUMNS.reduce((total, column) => total + column.width, 0),
     [],
   );
 
@@ -1035,7 +1040,8 @@ export function ProdutosTab() {
     const validRows = importRows.filter((r) => r.action !== 'erro');
     if (!validRows.length) return;
     setImportLoading(true);
-    let created = 0, errors = 0;
+    let created = 0;
+    const failed: ImportRow[] = [];
     try {
       for (const row of validRows) {
         try {
@@ -1043,13 +1049,19 @@ export function ProdutosTab() {
           const payload = mapFormToPayload(merged);
           await productsService.createCadastro(payload);
           created++;
-        } catch {
-          errors++;
+        } catch (err: any) {
+          failed.push({ ...row, action: 'erro', error: typeof err === 'string' ? err : (err?.message || 'Erro ao criar produto') });
         }
       }
-      toast.success(`Importação concluída: ${created} produto(s) criado(s)${errors ? `, ${errors} erro(s)` : ''}`);
-      setImportDialogOpen(false);
-      setImportRows([]);
+
+      if (failed.length) {
+        toast.error(`${created} produto(s) criado(s), ${failed.length} com erro. Veja o detalhe na tabela.`);
+        setImportRows(failed);
+      } else {
+        toast.success(`Importação concluída: ${created} produto(s) criado(s)`);
+        setImportDialogOpen(false);
+        setImportRows([]);
+      }
       await loadProdutos();
     } finally {
       setImportLoading(false);
@@ -1273,6 +1285,18 @@ export function ProdutosTab() {
               className="h-7 w-7"
               onClick={(e) => {
                 e.stopPropagation();
+                setViewProdutoId(product.id);
+                setViewModalOpen(true);
+              }}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
                 void openEdit(product);
               }}
             >
@@ -1329,9 +1353,9 @@ export function ProdutosTab() {
                 />
               </div>
               <div className="md:col-span-2">
-                <Button onClick={handleSearch} disabled={loading} className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md">
+                <Button variant="default" onClick={handleSearch} disabled={loading} className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-                  Pesquisar
+                  Buscar
                 </Button>
               </div>
               <div className="md:col-span-2">
@@ -1493,7 +1517,7 @@ export function ProdutosTab() {
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button size="sm" onClick={openCreate} className="flex-1 sm:flex-none" disabled={!canInsert}>
+              <Button variant="default" size="sm" onClick={openCreate} className="flex-1 sm:flex-none" disabled={!canInsert}>
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Produto</span>
               </Button>
@@ -1502,7 +1526,13 @@ export function ProdutosTab() {
         </CardHeader>
         <CardContent>
           <div className="max-h-[60vh] overflow-auto scrollbar-thin">
-            <Table style={{ minWidth: tableMinWidth }}>
+            <Table style={{ minWidth: tableMinWidth, tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: CHECKBOX_COL_WIDTH }} />
+                {PRODUCTS_GRID_COLUMNS.map((column) => (
+                  <col key={column.key} style={{ width: column.width }} />
+                ))}
+              </colgroup>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8 px-2 sticky left-0 z-30 bg-muted/90">
@@ -1891,7 +1921,16 @@ export function ProdutosTab() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                  <div className="col-span-1 md:col-span-3">
+                  <div className="col-span-1 md:col-span-4">
+                    <Label className="text-xs">Múltiplo de vendas</Label>
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={formData.multiploDeVendas}
+                      onChange={(e) => updateForm('multiploDeVendas', Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Fator compra *</Label>
                     <Input
                       type="number"
@@ -1913,7 +1952,7 @@ export function ProdutosTab() {
                       <p className="mt-1 text-[11px] text-destructive">{requiredErrors.fatorCompra}</p>
                     ) : null}
                   </div>
-                  <div className="col-span-1 md:col-span-3">
+                  <div className="col-span-1 md:col-span-4">
                     <Label className="text-xs">Fator venda *</Label>
                     <Input
                       type="number"
@@ -1977,15 +2016,6 @@ export function ProdutosTab() {
                       maxLength={7}
                       value={formData.cest}
                       onChange={(e) => updateForm('cest', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <Label className="text-xs">Múltiplo de vendas</Label>
-                    <Input
-                      type="number"
-                      className="h-8 text-xs"
-                      value={formData.multiploDeVendas}
-                      onChange={(e) => updateForm('multiploDeVendas', Number(e.target.value) || 0)}
                     />
                   </div>
                 </div>
@@ -2463,6 +2493,12 @@ export function ProdutosTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ProdutoInfoModal
+        open={viewModalOpen}
+        onOpenChange={setViewModalOpen}
+        produtoId={viewProdutoId}
+      />
 
       <AlertDialog open={Boolean(deleteProduct)} onOpenChange={(open) => !open && setDeleteProduct(null)}>
         <AlertDialogContent>

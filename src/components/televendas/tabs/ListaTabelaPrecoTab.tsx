@@ -11,12 +11,16 @@ import { metadataService, type Tabela } from '@/services/metadataService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { groupsService, Grupo } from '@/services/groupsService';
-import { authService } from '@/services/authService';
+import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import * as XLSX from 'xlsx';
 
 function fmt2(v: number) {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeCssContent(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 type Modelo = 'representante' | 'cliente';
@@ -73,7 +77,7 @@ export function ListaTabelaPrecoTab() {
   const [tabelaLabel, setTabelaLabel] = useState('');
 
   const empresa = authService.getEmpresa();
-  const nomeEmpresa = empresa?.nome_empresa ?? '';
+  const nomeEmpresa = empresa ? getEmpresaDisplayName(empresa) : '';
   const hoje = new Date().toLocaleDateString('pt-BR');
   const totalItens = grupos_dados.reduce((s, g) => s + g.itens.length, 0);
   const ordemAtual = ORDENS.find((o) => o.value === ordem) ?? ORDENS[0];
@@ -203,9 +207,9 @@ export function ListaTabelaPrecoTab() {
         tbody tr:nth-child(even) td{background:#f9f9f9}
         thead td{border:none!important;background:#fff!important;padding:1px 4px}
         thead{display:table-header-group}
-        @page{margin:8mm 8mm 12mm 8mm;size:A4 landscape}
+        @page{margin:8mm 8mm 14mm 8mm;size:A4 landscape}
         @page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-size:8pt;color:#555}}
-        .rodape-imp{position:fixed;bottom:6mm;left:8mm;font-size:7.5pt;color:#555}
+        @page{@bottom-left{content:"Impresso por: ${escapeCssContent(nomeUsuario)} — ${escapeCssContent(agora)}";font-size:7.5pt;color:#555}}
       </style></head><body>
       <table>
         <thead>
@@ -228,7 +232,6 @@ export function ListaTabelaPrecoTab() {
         <tbody>${linhas}</tbody>
       </table>
       <div style="margin-top:6px;font-size:8.5pt;color:#555">${totalItens} produto(s)</div>
-      <div class="rodape-imp">Impresso por: ${nomeUsuario} — ${agora}</div>
       <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
     </body></html>`;
 
@@ -393,9 +396,9 @@ export function ListaTabelaPrecoTab() {
 
         {/* Botões */}
         <div className="flex items-center gap-2 w-full">
-          <Button size="sm" onClick={handleListar} disabled={isLoading || !tabelaId}>
+          <Button variant="default" size="sm" onClick={handleListar} disabled={isLoading || !tabelaId}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
-            Listar
+            Buscar
           </Button>
           {grupos_dados.length > 0 && (<>
             <Button variant="outline" size="sm" onClick={handleImprimir}>
@@ -419,38 +422,63 @@ export function ListaTabelaPrecoTab() {
       {/* Tabela */}
       <div className="flex-1 overflow-auto border rounded-lg">
         {modelo === 'representante' ? (
-          <table className="w-full text-xs border-collapse" style={{ minWidth: 860 }}>
+          <table className="text-xs border-collapse" style={{ minWidth: 1050, tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 80 }} />
+              <col style={{ width: 280 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 32 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 40 }} />
+              <col style={{ width: 40 }} />
+              <col style={{ width: 40 }} />
+              <col style={{ width: 50 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 50 }} />
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead className="sticky top-0 bg-muted/90 z-10">
               <tr className="border-b">
-                <th className="w-20 px-2 py-2 text-left">Produto</th>
+                <th className="px-2 py-2 text-left">Produto</th>
                 <th className="px-2 py-2 text-left">Descrição</th>
-                <th className="w-24 px-2 py-2 text-left">Apres.</th>
-                <th className="w-8 px-2 py-2 text-center">UN</th>
-                <th className="w-20 px-2 py-2 text-left">Marca</th>
-                <th className="w-20 px-2 py-2 text-left">Cod.Fab</th>
-                <th className="w-10 px-2 py-2 text-right">Muv</th>
-                <th className="w-10 px-2 py-2 text-center" title="Permite Bonificação">Pno</th>
-                <th className="w-10 px-2 py-2 text-center" title="Permite Déb/Créd">DC</th>
-                <th className="w-14 px-2 py-2 text-right">%Com</th>
-                <th className="w-20 px-2 py-2 text-right font-semibold">Preço</th>
-                <th className="w-14 px-2 py-2 text-right">%Desc</th>
-                <th className="w-20 px-2 py-2 text-right">Preço</th>
+                <th className="px-2 py-2 text-left">Apres.</th>
+                <th className="px-2 py-2 text-center">UN</th>
+                <th className="px-2 py-2 text-left">Marca</th>
+                <th className="px-2 py-2 text-left">Cod.Fab</th>
+                <th className="px-2 py-2 text-right">Muv</th>
+                <th className="px-2 py-2 text-center" title="Permite Bonificação">Pno</th>
+                <th className="px-2 py-2 text-center" title="Permite Déb/Créd">DC</th>
+                <th className="px-2 py-2 text-right">%Com</th>
+                <th className="px-2 py-2 text-right font-semibold">Preço</th>
+                <th className="px-2 py-2 text-right">%Desc</th>
+                <th className="px-2 py-2 text-right">Preço</th>
               </tr>
             </thead>
             <tbody>{renderRows('representante')}</tbody>
           </table>
         ) : (
-          <table className="w-full text-xs border-collapse" style={{ minWidth: 780 }}>
+          <table className="text-xs border-collapse" style={{ minWidth: 880, tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 80 }} />
+              <col style={{ width: 260 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 32 }} />
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead className="sticky top-0 bg-muted/90 z-10">
               <tr className="border-b">
-                <th className="w-20 px-2 py-2 text-left">Produto</th>
+                <th className="px-2 py-2 text-left">Produto</th>
                 <th className="px-2 py-2 text-left">Descrição</th>
-                <th className="w-24 px-2 py-2 text-left">Apres.</th>
-                <th className="w-20 px-2 py-2 text-left">Marca</th>
-                <th className="w-32 px-2 py-2 text-left">EAN</th>
-                <th className="w-24 px-2 py-2 text-left">Cod.Fab.</th>
-                <th className="w-8 px-2 py-2 text-center">UN</th>
-                <th className="w-20 px-2 py-2 text-right">Preço</th>
+                <th className="px-2 py-2 text-left">Apres.</th>
+                <th className="px-2 py-2 text-left">Marca</th>
+                <th className="px-2 py-2 text-left">EAN</th>
+                <th className="px-2 py-2 text-left">Cod.Fab.</th>
+                <th className="px-2 py-2 text-center">UN</th>
+                <th className="px-2 py-2 text-right">Preço</th>
               </tr>
             </thead>
             <tbody>{renderRows('cliente')}</tbody>
@@ -462,7 +490,7 @@ export function ListaTabelaPrecoTab() {
 
   function renderRows(m: Modelo) {
     if (isLoading) return <tr><td colSpan={13} className="text-center py-16"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>;
-    if (!tabelaId) return <tr><td colSpan={13} className="text-center py-16 text-muted-foreground">Selecione uma tabela e clique em Listar</td></tr>;
+    if (!tabelaId) return <tr><td colSpan={13} className="text-center py-16 text-muted-foreground">Selecione uma tabela e clique em Buscar</td></tr>;
     if (grupos_dados.length === 0) return <tr><td colSpan={13} className="text-center py-16 text-muted-foreground">Nenhum produto encontrado</td></tr>;
 
     return grupos_dados.map((g, gi) => (
@@ -475,12 +503,12 @@ export function ListaTabelaPrecoTab() {
         {g.itens.map((item) =>
           m === 'representante' ? (
             <tr key={item.produto_id} className="border-b hover:bg-muted/20">
-              <td className="px-2 py-0.5 pl-4 font-mono text-[11px]">{item.codigo_produto}</td>
-              <td className="px-2 py-0.5 max-w-0"><span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span></td>
+              <td className="px-2 py-0.5 font-mono text-[11px]">{item.codigo_produto}</td>
+              <td className="px-2 py-0.5"><span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span></td>
               <td className="px-2 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
               <td className="px-2 py-0.5 text-center text-muted-foreground">{item.un}</td>
               <td className="px-2 py-0.5 text-muted-foreground">{item.marca || '-'}</td>
-              <td className="px-2 py-0.5 text-muted-foreground font-mono text-[11px]">{item.codigo_fabrica || '-'}</td>
+              <td className="px-2 py-0.5 text-muted-foreground font-mono text-[11px]" style={{ paddingLeft: '60px' }}>{item.codigo_fabrica || '-'}</td>
               <td className="px-2 py-0.5 text-right text-muted-foreground">{item.multiplo_de_vendas ?? 1}</td>
               <td className="px-2 py-0.5 text-center font-medium">{item.permite_bonificacao ? 'P' : 'N'}</td>
               <td className="px-2 py-0.5 text-center text-muted-foreground">{item.permite_debito_credito ? 'X' : ''}</td>
@@ -491,8 +519,8 @@ export function ListaTabelaPrecoTab() {
             </tr>
           ) : (
             <tr key={item.produto_id} className="border-b hover:bg-muted/20">
-              <td className="px-2 py-0.5 pl-4 font-mono text-[11px]">{item.codigo_produto}</td>
-              <td className="px-2 py-0.5 max-w-0"><span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span></td>
+              <td className="px-2 py-0.5 font-mono text-[11px]">{item.codigo_produto}</td>
+              <td className="px-2 py-0.5"><span className="block truncate" title={item.descricao_produto}>{item.descricao_produto}</span></td>
               <td className="px-2 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
               <td className="px-2 py-0.5 text-muted-foreground">{item.marca || '-'}</td>
               <td className="px-2 py-0.5 font-mono text-[11px] text-muted-foreground">{item.ean13 || '-'}</td>

@@ -596,9 +596,9 @@ export function UsuariosTab() {
               <UserRoundCog className="h-5 w-5" />
               Usuarios ({usuarios.length})
             </CardTitle>
-            <Button onClick={openCreate} size="sm" disabled={!canInsert}>
+            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
               <Plus className="h-4 w-4 mr-2" />
-              Cadastrar Login
+              Novo Usuário
             </Button>
           </div>
         </CardHeader>
@@ -629,7 +629,7 @@ export function UsuariosTab() {
                 <SelectItem value="todos">Todos</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={handleSearch}>
+            <Button variant="default" size="sm" onClick={handleSearch}>
               Buscar
             </Button>
           </div>
