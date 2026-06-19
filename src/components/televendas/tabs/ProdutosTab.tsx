@@ -1945,14 +1945,6 @@ export function ProdutosTab() {
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Checkbox
-                        checked={formData.lancamento}
-                        onCheckedChange={(v) => updateForm('lancamento', Boolean(v))}
-                        className="h-3.5 w-3.5"
-                      />
-                      Lançamento
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs">
-                      <Checkbox
                         checked={!formData.inativo}
                         onCheckedChange={(checked) => updateForm('inativo', checked !== true)}
                         className="h-3.5 w-3.5"
