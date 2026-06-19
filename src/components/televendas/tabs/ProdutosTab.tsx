@@ -502,6 +502,8 @@ export function ProdutosTab() {
     permiteVendaB2b?: boolean;
     permiteVendaB2c?: boolean;
     lancamento?: boolean;
+    cadastroDe: string;
+    cadastroAte: string;
   }>({
     status: 'ativos',
     search: '',
@@ -512,6 +514,8 @@ export function ProdutosTab() {
     permiteVendaB2b: undefined,
     permiteVendaB2c: undefined,
     lancamento: undefined,
+    cadastroDe: '',
+    cadastroAte: '',
   });
 
   const fornecedoresMap = useMemo(() => {
@@ -577,6 +581,8 @@ export function ProdutosTab() {
         permiteVendaB2c:
           overrideFilters?.permiteVendaB2c ?? filters.permiteVendaB2c,
         lancamento: overrideFilters?.lancamento ?? filters.lancamento,
+        cadastroDe: overrideFilters?.cadastroDe ?? (filters.cadastroDe || undefined),
+        cadastroAte: overrideFilters?.cadastroAte ?? (filters.cadastroAte || undefined),
       };
 
       const result = await productsService.listCadastro(params, 1, 500);
@@ -737,6 +743,8 @@ export function ProdutosTab() {
       permiteVendaB2b: undefined,
       permiteVendaB2c: undefined,
       lancamento: undefined,
+      cadastroDe: '',
+      cadastroAte: '',
     };
     setFilters(resetFilters);
     await loadProdutos(resetFilters);
@@ -1434,6 +1442,25 @@ export function ProdutosTab() {
                     />
                     Lançamento
                   </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <div className="md:col-span-4">
+                  <label className="text-sm font-medium mb-1 block">Cadastrado em (de)</label>
+                  <Input
+                    type="date"
+                    value={filters.cadastroDe}
+                    onChange={(e) => setFilters({ ...filters, cadastroDe: e.target.value })}
+                  />
+                </div>
+                <div className="md:col-span-4">
+                  <label className="text-sm font-medium mb-1 block">Cadastrado em (até)</label>
+                  <Input
+                    type="date"
+                    value={filters.cadastroAte}
+                    onChange={(e) => setFilters({ ...filters, cadastroAte: e.target.value })}
+                  />
                 </div>
               </div>
 

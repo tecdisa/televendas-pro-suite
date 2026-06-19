@@ -347,6 +347,8 @@ export interface ProductCadastroFilters {
   permiteVendaB2b?: boolean;
   permiteVendaB2c?: boolean;
   lancamento?: boolean;
+  cadastroDe?: string;
+  cadastroAte?: string;
 }
 
 export interface ProductCadastroInput {
@@ -471,6 +473,10 @@ async function fetchCadastroProdutos({
   if (filters?.marca?.trim()) params.set('marca', filters.marca.trim());
   if (filters?.lancamento !== undefined)
     params.set('lancamento', String(Boolean(filters.lancamento)));
+  if (filters?.cadastroDe?.trim())
+    params.set('cadastroDe', filters.cadastroDe.trim());
+  if (filters?.cadastroAte?.trim())
+    params.set('cadastroAte', filters.cadastroAte.trim());
   if (filters?.possuiFoto !== undefined)
     params.set('possuiFoto', String(Boolean(filters.possuiFoto)));
   if (filters?.permiteVendaB2b !== undefined)
