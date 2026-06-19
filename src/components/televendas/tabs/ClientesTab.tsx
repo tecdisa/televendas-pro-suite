@@ -146,8 +146,6 @@ type ClientListFilters = {
   naoPositivadoDesde: string;
   cadastroDe: string;
   cadastroAte: string;
-  ultimaCompraDe: string;
-  ultimaCompraAte: string;
 };
 
 const defaultClientFilters: ClientListFilters = {
@@ -171,8 +169,6 @@ const defaultClientFilters: ClientListFilters = {
   naoPositivadoDesde: '',
   cadastroDe: '',
   cadastroAte: '',
-  ultimaCompraDe: '',
-  ultimaCompraAte: '',
 };
 const CLIENTES_FILTERS_COLLAPSE_STORAGE_KEY = 'televendas:clientes:filtersOpen';
 const CLIENTES_PINNED_COLUMNS_STORAGE_KEY = 'televendas:clientes:pinnedColumns';
@@ -1076,8 +1072,6 @@ export const ClientesTab = () => {
       naoPositivadoDesde: active.naoPositivadoDesde || undefined,
       cadastradosDe: active.cadastroDe || undefined,
       cadastradosAte: active.cadastroAte || undefined,
-      ultimaCompraDe: active.ultimaCompraDe || undefined,
-      ultimaCompraAte: active.ultimaCompraAte || undefined,
       status: effectiveStatus,
     } as const;
   };
@@ -2052,22 +2046,6 @@ const validateFormData = (data: ClientFormData): string[] => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-            <div className="md:col-span-4">
-              <label className="text-sm font-medium mb-1 block">Última compra (de)</label>
-              <Input
-                type="date"
-                value={filters.ultimaCompraDe}
-                onChange={(e) => setFilters({ ...filters, ultimaCompraDe: e.target.value })}
-              />
-            </div>
-            <div className="md:col-span-4">
-              <label className="text-sm font-medium mb-1 block">Última compra (até)</label>
-              <Input
-                type="date"
-                value={filters.ultimaCompraAte}
-                onChange={(e) => setFilters({ ...filters, ultimaCompraAte: e.target.value })}
-              />
-            </div>
           </div>
         </CardContent>
         </CollapsibleContent>
