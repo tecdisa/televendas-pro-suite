@@ -242,27 +242,27 @@ export const ProdutoAlterarPrecoModal = ({
               >
                 <colgroup>
                   <col style={{ width: COL_WIDTHS.tabela }} />
-                  <col style={{ width: COL_WIDTHS.despesa }} />
-                  <col style={{ width: COL_WIDTHS.lucro }} />
-                  <col style={{ width: COL_WIDTHS.comissao }} />
-                  <col style={{ width: COL_WIDTHS.frete }} />
-                  <col style={{ width: COL_WIDTHS.majoracao }} />
                   <col style={{ width: COL_WIDTHS.preco }} />
                   <col style={{ width: COL_WIDTHS.desconto }} />
+                  <col style={{ width: COL_WIDTHS.comissao }} />
                   <col style={{ width: COL_WIDTHS.qtdMin }} />
+                  <col style={{ width: COL_WIDTHS.despesa }} />
+                  <col style={{ width: COL_WIDTHS.lucro }} />
+                  <col style={{ width: COL_WIDTHS.frete }} />
+                  <col style={{ width: COL_WIDTHS.majoracao }} />
                   <col style={{ width: COL_WIDTHS.debCred }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th style={thStyle(COL_WIDTHS.tabela,  'left')}>Tabela de Preço</th>
-                    <th style={thStyle(COL_WIDTHS.despesa)}>% Desp. Fixa</th>
-                    <th style={thStyle(COL_WIDTHS.lucro)}>% Lucro Líq.</th>
-                    <th style={thStyle(COL_WIDTHS.comissao)}>% Comissão</th>
-                    <th style={thStyle(COL_WIDTHS.frete)}>% Frete</th>
-                    <th style={thStyle(COL_WIDTHS.majoracao)}>% Majoração</th>
                     <th style={thStyle(COL_WIDTHS.preco)}>Preço Venda</th>
                     <th style={thStyle(COL_WIDTHS.desconto)}>% Desc. Máx.</th>
+                    <th style={thStyle(COL_WIDTHS.comissao)}>% Comissão</th>
                     <th style={thStyle(COL_WIDTHS.qtdMin)}>Qtd. Mín.</th>
+                    <th style={thStyle(COL_WIDTHS.despesa)}>% Desp. Fixa</th>
+                    <th style={thStyle(COL_WIDTHS.lucro)}>% Lucro Líq.</th>
+                    <th style={thStyle(COL_WIDTHS.frete)}>% Frete</th>
+                    <th style={thStyle(COL_WIDTHS.majoracao)}>% Majoração</th>
                     <th style={thStyle(COL_WIDTHS.debCred, 'center')}>Déb/Créd</th>
                   </tr>
                 </thead>
@@ -286,36 +286,6 @@ export const ProdutoAlterarPrecoModal = ({
                           )}
                         </div>
                       </td>
-                      <td style={tdStyle(COL_WIDTHS.despesa)}>
-                        <NumInput
-                          value={row._despesa}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_despesa', v)}
-                        />
-                      </td>
-                      <td style={tdStyle(COL_WIDTHS.lucro)}>
-                        <NumInput
-                          value={row._lucro}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_lucro', v)}
-                        />
-                      </td>
-                      <td style={tdStyle(COL_WIDTHS.comissao)}>
-                        <NumInput
-                          value={row._comissao}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_comissao', v)}
-                        />
-                      </td>
-                      <td style={tdStyle(COL_WIDTHS.frete)}>
-                        <NumInput
-                          value={row._frete}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_frete', v)}
-                        />
-                      </td>
-                      <td style={tdStyle(COL_WIDTHS.majoracao)}>
-                        <NumInput
-                          value={row._majoracao}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_majoracao', v)}
-                        />
-                      </td>
                       <td style={tdStyle(COL_WIDTHS.preco)}>
                         <NumInput
                           value={row._precoVenda}
@@ -328,11 +298,41 @@ export const ProdutoAlterarPrecoModal = ({
                           onChange={(v) => updateRow(row.tabela_preco_id, '_descontoMaximo', v)}
                         />
                       </td>
+                      <td style={tdStyle(COL_WIDTHS.comissao)}>
+                        <NumInput
+                          value={row._comissao}
+                          onChange={(v) => updateRow(row.tabela_preco_id, '_comissao', v)}
+                        />
+                      </td>
                       <td style={tdStyle(COL_WIDTHS.qtdMin)}>
                         <NumInput
                           value={row._quantidadeMinima}
                           onChange={(v) => updateRow(row.tabela_preco_id, '_quantidadeMinima', v)}
                           decimals={0}
+                        />
+                      </td>
+                      <td style={tdStyle(COL_WIDTHS.despesa)}>
+                        <NumInput
+                          value={row._despesa}
+                          onChange={(v) => updateRow(row.tabela_preco_id, '_despesa', v)}
+                        />
+                      </td>
+                      <td style={tdStyle(COL_WIDTHS.lucro)}>
+                        <NumInput
+                          value={row._lucro}
+                          onChange={(v) => updateRow(row.tabela_preco_id, '_lucro', v)}
+                        />
+                      </td>
+                      <td style={tdStyle(COL_WIDTHS.frete)}>
+                        <NumInput
+                          value={row._frete}
+                          onChange={(v) => updateRow(row.tabela_preco_id, '_frete', v)}
+                        />
+                      </td>
+                      <td style={tdStyle(COL_WIDTHS.majoracao)}>
+                        <NumInput
+                          value={row._majoracao}
+                          onChange={(v) => updateRow(row.tabela_preco_id, '_majoracao', v)}
                         />
                       </td>
                       <td style={{ ...tdStyle(COL_WIDTHS.debCred), textAlign: 'center' }}>
