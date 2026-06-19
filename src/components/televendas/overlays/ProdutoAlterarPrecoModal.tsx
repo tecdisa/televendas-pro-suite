@@ -19,27 +19,22 @@ type RowDraft = PrecoPorProduto & {
   _precoVenda: string;
   _descontoMaximo: string;
   _comissao: string;
-  _despesa: string;
-  _lucro: string;
-  _frete: string;
-  _majoracao: string;
   _quantidadeMinima: string;
   _permiteDebitoCredito: boolean;
+  _promocao: boolean;
+  _bonificacao: boolean;
+  _vendaEspecial: boolean;
   _dirty: boolean;
 };
 
 // Larguras fixas das colunas em px
 const COL_WIDTHS = {
   tabela:    220,
-  despesa:    88,
-  lucro:      88,
-  comissao:   88,
-  frete:      80,
-  majoracao:  88,
   preco:     110,
   desconto:   88,
+  comissao:   88,
   qtdMin:     80,
-  debCred:    72,
+  checkbox:   60,
 } as const;
 
 const TABLE_MIN_WIDTH = Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0);
@@ -51,12 +46,11 @@ function toRow(p: PrecoPorProduto): RowDraft {
     _precoVenda:      precoVenda.toFixed(2).replace('.', ','),
     _descontoMaximo:  (p.desconto_maximo ?? 0).toFixed(2).replace('.', ','),
     _comissao:        (p.comissao ?? 0).toFixed(2).replace('.', ','),
-    _despesa:         p.despesa.toFixed(2).replace('.', ','),
-    _lucro:           p.lucro.toFixed(2).replace('.', ','),
-    _frete:           p.frete.toFixed(2).replace('.', ','),
-    _majoracao:       p.majoracao.toFixed(2).replace('.', ','),
     _quantidadeMinima: String(p.quantidade_minima ?? 0),
     _permiteDebitoCredito: p.permite_debito_credito,
+    _promocao: p.produto_em_promocao ?? false,
+    _bonificacao: p.permite_bonificacao ?? false,
+    _vendaEspecial: p.permite_venda_especial ?? false,
     _dirty: false,
   };
 }
@@ -145,12 +139,11 @@ export const ProdutoAlterarPrecoModal = ({
           preco:                 precoVenda,
           desconto_maximo:       parseDecimal(row._descontoMaximo),
           comissao:              parseDecimal(row._comissao),
-          despesa:               parseDecimal(row._despesa),
-          lucro:                 parseDecimal(row._lucro),
-          frete:                 parseDecimal(row._frete),
-          majoracao:             parseDecimal(row._majoracao),
           quantidade_minima:     parseInt(row._quantidadeMinima, 10) || 0,
           permite_debito_credito: row._permiteDebitoCredito,
+          produto_em_promocao:   row._promocao,
+          permite_bonificacao:   row._bonificacao,
+          permite_venda_especial: row._vendaEspecial,
         });
       } catch (e: any) {
         erros++;
@@ -167,6 +160,19 @@ export const ProdutoAlterarPrecoModal = ({
   };
 
   const custoCompra = rows.length > 0 ? rows[0].custo_compra : null;
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      const temAlteracoes = rows.some((r) => r._dirty);
+      if (temAlteracoes) {
+        if (window.confirm('Há alterações não salvas. Deseja sair mesmo assim?')) {
+          onOpenChange(false);
+        }
+        return;
+      }
+    }
+    onOpenChange(newOpen);
+  };
 
   // Estilo de célula de header: altura e alinhamento fixos
   const thStyle = (w: number, align: 'left' | 'right' | 'center' = 'right'): React.CSSProperties => ({
@@ -194,7 +200,7 @@ export const ProdutoAlterarPrecoModal = ({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-[98vw] max-w-6xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0">
         {/* Header */}
         <DialogHeader className="px-5 pt-4 pb-3 border-b shrink-0">
@@ -246,11 +252,10 @@ export const ProdutoAlterarPrecoModal = ({
                   <col style={{ width: COL_WIDTHS.desconto }} />
                   <col style={{ width: COL_WIDTHS.comissao }} />
                   <col style={{ width: COL_WIDTHS.qtdMin }} />
-                  <col style={{ width: COL_WIDTHS.despesa }} />
-                  <col style={{ width: COL_WIDTHS.lucro }} />
-                  <col style={{ width: COL_WIDTHS.frete }} />
-                  <col style={{ width: COL_WIDTHS.majoracao }} />
-                  <col style={{ width: COL_WIDTHS.debCred }} />
+                  <col style={{ width: COL_WIDTHS.checkbox }} />
+                  <col style={{ width: COL_WIDTHS.checkbox }} />
+                  <col style={{ width: COL_WIDTHS.checkbox }} />
+                  <col style={{ width: COL_WIDTHS.checkbox }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -259,11 +264,10 @@ export const ProdutoAlterarPrecoModal = ({
                     <th style={thStyle(COL_WIDTHS.desconto)}>% Desc. Máx.</th>
                     <th style={thStyle(COL_WIDTHS.comissao)}>% Comissão</th>
                     <th style={thStyle(COL_WIDTHS.qtdMin)}>Qtd. Mín.</th>
-                    <th style={thStyle(COL_WIDTHS.despesa)}>% Desp. Fixa</th>
-                    <th style={thStyle(COL_WIDTHS.lucro)}>% Lucro Líq.</th>
-                    <th style={thStyle(COL_WIDTHS.frete)}>% Frete</th>
-                    <th style={thStyle(COL_WIDTHS.majoracao)}>% Majoração</th>
-                    <th style={thStyle(COL_WIDTHS.debCred, 'center')}>Déb/Créd</th>
+                    <th style={thStyle(COL_WIDTHS.checkbox, 'center')}>Promoção</th>
+                    <th style={thStyle(COL_WIDTHS.checkbox, 'center')}>Bonificação</th>
+                    <th style={thStyle(COL_WIDTHS.checkbox, 'center')}>Déb/Créd</th>
+                    <th style={thStyle(COL_WIDTHS.checkbox, 'center')}>Venda Esp.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -311,35 +315,35 @@ export const ProdutoAlterarPrecoModal = ({
                           decimals={0}
                         />
                       </td>
-                      <td style={tdStyle(COL_WIDTHS.despesa)}>
-                        <NumInput
-                          value={row._despesa}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_despesa', v)}
+                      <td style={{ ...tdStyle(COL_WIDTHS.checkbox), textAlign: 'center' }}>
+                        <Checkbox
+                          checked={row._promocao}
+                          onCheckedChange={(v) =>
+                            updateRow(row.tabela_preco_id, '_promocao', Boolean(v))
+                          }
                         />
                       </td>
-                      <td style={tdStyle(COL_WIDTHS.lucro)}>
-                        <NumInput
-                          value={row._lucro}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_lucro', v)}
+                      <td style={{ ...tdStyle(COL_WIDTHS.checkbox), textAlign: 'center' }}>
+                        <Checkbox
+                          checked={row._bonificacao}
+                          onCheckedChange={(v) =>
+                            updateRow(row.tabela_preco_id, '_bonificacao', Boolean(v))
+                          }
                         />
                       </td>
-                      <td style={tdStyle(COL_WIDTHS.frete)}>
-                        <NumInput
-                          value={row._frete}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_frete', v)}
-                        />
-                      </td>
-                      <td style={tdStyle(COL_WIDTHS.majoracao)}>
-                        <NumInput
-                          value={row._majoracao}
-                          onChange={(v) => updateRow(row.tabela_preco_id, '_majoracao', v)}
-                        />
-                      </td>
-                      <td style={{ ...tdStyle(COL_WIDTHS.debCred), textAlign: 'center' }}>
+                      <td style={{ ...tdStyle(COL_WIDTHS.checkbox), textAlign: 'center' }}>
                         <Checkbox
                           checked={row._permiteDebitoCredito}
                           onCheckedChange={(v) =>
                             updateRow(row.tabela_preco_id, '_permiteDebitoCredito', Boolean(v))
+                          }
+                        />
+                      </td>
+                      <td style={{ ...tdStyle(COL_WIDTHS.checkbox), textAlign: 'center' }}>
+                        <Checkbox
+                          checked={row._vendaEspecial}
+                          onCheckedChange={(v) =>
+                            updateRow(row.tabela_preco_id, '_vendaEspecial', Boolean(v))
                           }
                         />
                       </td>

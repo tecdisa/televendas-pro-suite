@@ -7,10 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DollarSign } from 'lucide-react';
 import { productsService } from '@/services/productsService';
 import type { Product } from '@/services/productsService';
-import { ProdutoAlterarPrecoModal } from './ProdutoAlterarPrecoModal';
 
 interface ProdutoInfoModalProps {
   open: boolean;
@@ -57,7 +55,6 @@ export const ProdutoInfoModal = ({ open, onOpenChange, produtoId }: ProdutoInfoM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Product | null>(null);
-  const [precoModalOpen, setPrecoModalOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !produtoId) return;
@@ -80,22 +77,9 @@ export const ProdutoInfoModal = ({ open, onOpenChange, produtoId }: ProdutoInfoM
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-4">
-            <DialogTitle>
-              {data ? `${data.codigoProduto ?? ''} — ${data.descricao}` : 'Produto'}
-            </DialogTitle>
-            {data && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => setPrecoModalOpen(true)}
-              >
-                <DollarSign className="h-4 w-4 mr-1" />
-                Alterar preços
-              </Button>
-            )}
-          </div>
+          <DialogTitle>
+            {data ? `${data.codigoProduto ?? ''} — ${data.descricao}` : 'Produto'}
+          </DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -322,12 +306,6 @@ export const ProdutoInfoModal = ({ open, onOpenChange, produtoId }: ProdutoInfoM
           </Tabs>
         )}
       </DialogContent>
-
-      <ProdutoAlterarPrecoModal
-        open={precoModalOpen}
-        onOpenChange={setPrecoModalOpen}
-        produto={data}
-      />
     </Dialog>
   );
 };

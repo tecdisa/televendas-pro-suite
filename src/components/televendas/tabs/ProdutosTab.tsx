@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload, Eye } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload, Eye, DollarSign } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,6 +38,7 @@ import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { tabelasPrecoService } from '@/services/tabelasPrecoService';
 import { cn } from '@/lib/utils';
 import { ProdutoInfoModal } from '@/components/televendas/overlays/ProdutoInfoModal';
+import { ProdutoAlterarPrecoModal } from '@/components/televendas/overlays/ProdutoAlterarPrecoModal';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 const UNIDADES = ['UN', 'CX', 'PC', 'KG', 'LT', 'DP', 'FR', 'TB', 'CT'];
@@ -484,6 +485,8 @@ export function ProdutosTab() {
   const importFileRef = useRef<HTMLInputElement>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewProdutoId, setViewProdutoId] = useState<number>(0);
+  const [precoModalOpen, setPrecoModalOpen] = useState(false);
+  const [precoProduto, setPrecoProduto] = useState<Product | null>(null);
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
   const empresaCadastroId =
@@ -1290,6 +1293,18 @@ export function ProdutosTab() {
               }}
             >
               <Eye className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPrecoProduto(product);
+                setPrecoModalOpen(true);
+              }}
+            >
+              <DollarSign className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
@@ -2498,6 +2513,12 @@ export function ProdutosTab() {
         open={viewModalOpen}
         onOpenChange={setViewModalOpen}
         produtoId={viewProdutoId}
+      />
+
+      <ProdutoAlterarPrecoModal
+        open={precoModalOpen}
+        onOpenChange={setPrecoModalOpen}
+        produto={precoProduto}
       />
 
       <AlertDialog open={Boolean(deleteProduct)} onOpenChange={(open) => !open && setDeleteProduct(null)}>
