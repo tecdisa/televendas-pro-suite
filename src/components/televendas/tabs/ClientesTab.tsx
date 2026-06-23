@@ -142,7 +142,6 @@ type ClientListFilters = {
   rota: string;
   rede: string;
   tabelaPreco: string;
-  situacaoCredito: 'todos' | 'com_disponivel' | 'sem_disponivel' | 'com_aberto' | 'sem_aberto';
   naoPositivadoDesde: string;
   cadastroDe: string;
   cadastroAte: string;
@@ -165,7 +164,6 @@ const defaultClientFilters: ClientListFilters = {
   rota: 'all',
   rede: 'all',
   tabelaPreco: 'all',
-  situacaoCredito: 'todos',
   naoPositivadoDesde: '',
   cadastroDe: '',
   cadastroAte: '',
@@ -1068,7 +1066,6 @@ export const ClientesTab = () => {
       tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
       rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
       redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
-      situacaoCredito: active.situacaoCredito,
       naoPositivadoDesde: active.naoPositivadoDesde || undefined,
       cadastradosDe: active.cadastroDe || undefined,
       cadastradosAte: active.cadastroAte || undefined,
@@ -1945,19 +1942,6 @@ const validateFormData = (data: ClientFormData): string[] => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-            <div className="md:col-span-3">
-              <label className="text-sm font-medium mb-1 block">Situação do Crédito</label>
-              <Select value={filters.situacaoCredito} onValueChange={(v: ClientListFilters['situacaoCredito']) => setFilters({ ...filters, situacaoCredito: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="com_disponivel">Com disponível</SelectItem>
-                  <SelectItem value="sem_disponivel">Sem disponível</SelectItem>
-                  <SelectItem value="com_aberto">Com aberto</SelectItem>
-                  <SelectItem value="sem_aberto">Sem aberto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="md:col-span-2">
               <label className="text-sm font-medium mb-1 block">Pessoa F/J</label>
               <Select value={filters.tipoPessoa} onValueChange={(v: ClientListFilters['tipoPessoa']) => setFilters({ ...filters, tipoPessoa: v })}>
