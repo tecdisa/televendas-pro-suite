@@ -48,8 +48,7 @@ interface ClientDetail {
   observacaoComercial?: string;
   
   // Financeiro
-  credito?: string;
-  boleto?: boolean;
+  dataCadastro?: string | null;
   prazo?: string;
   limite?: number;
   aberto?: number;
@@ -238,9 +237,9 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
           descontoFinanceiroBoleto: raw?.desconto_financeiro_boleto ?? raw?.descontoFinanceiroBoleto ?? 0,
           observacaoComercial: raw?.observacao_comercial ?? raw?.observacaoComercial ?? raw?.observacao ?? '',
           
+          dataCadastro: raw?.data_cadastro ? new Date(raw.data_cadastro).toLocaleDateString('pt-BR') : null,
+
           // Financeiro
-          credito: raw?.b2b_liberado ? 'Liberado' : 'Bloqueado',
-          boleto: raw?.boleto ?? raw?.usa_boleto ?? false,
           prazo: prazoLabel,
           limite: raw?.limite_credito ?? raw?.limite ?? 0,
           aberto: raw?.aberto ?? raw?.valor_aberto ?? 0,
@@ -387,6 +386,10 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                   <ReadOnlyField label="Segmentos" value={data?.segmento} className="md:col-span-2" />
                   <ReadOnlyField label="Checkouts" value={data?.checkouts} />
                 </div>
+
+                {data?.dataCadastro && (
+                  <ReadOnlyField label="Cadastrado em" value={data.dataCadastro} />
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <ReadOnlyField label="Nielsen" value={data?.nielsen} />
@@ -408,11 +411,6 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
               {/* Financeiro */}
               <TabsContent value="financeiro" className="m-0 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-                  <ReadOnlyField label="Crédito" value={data?.credito} />
-                  <div className="flex items-center gap-2 pb-1">
-                    <Checkbox checked={data?.boleto ?? false} disabled />
-                    <label className="text-sm">Boleto</label>
-                  </div>
                   <ReadOnlyField label="Prazo" value={data?.prazo} />
                   <div className="flex items-end gap-2">
                     <ReadOnlyField label="Desc. fin. boleto" value={formatCurrency(data?.descontoFinanceiroBoleto)} className="flex-1" />

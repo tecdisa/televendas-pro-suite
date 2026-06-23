@@ -1902,7 +1902,7 @@ const validateFormData = (data: ClientFormData): string[] => {
               </div>
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm font-medium mb-1 block">Classe</label>
+              <label className="text-sm font-medium mb-1 block">Segmento</label>
               <Select value={filters.classe} onValueChange={(v) => setFilters({ ...filters, classe: v })}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
@@ -2693,7 +2693,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       }))
                     }
                   />
-                  <label className="text-sm font-medium">Classe</label>
+                  <label className="text-sm font-medium">Segmento</label>
                 </div>
                 <Select
                   value={ajusteGeralForm.segmentoId || 'none'}
@@ -3137,7 +3137,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
-                    <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                     <Checkbox
@@ -3154,7 +3154,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
-                    <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                     <Checkbox
@@ -3171,11 +3171,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
-                    <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. municipal</label>
-                    <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3">
                     <Select defaultValue="contribuinte">
@@ -3230,11 +3230,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-9">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
-                    <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
-                    <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} />
                   </div>
                 </div>
 
@@ -3280,14 +3280,14 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
                   </div>
                   <div className="col-span-1 md:col-span-3">
-                    <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-6">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Complem.</label>
-                    <Input className="h-8 text-sm" value={formData.complemento} onChange={(e) => setFormData({ ...formData, complemento: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.complemento} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} />
                   </div>
                 </div>
 
@@ -3366,7 +3366,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          cobrancaEndereco: toUpperValue(e.target.value),
+                          cobrancaEndereco: e.target.value,
                         })
                       }
                     />
@@ -3382,7 +3382,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          cobrancaEnderecoNumero: toUpperValue(e.target.value),
+                          cobrancaEnderecoNumero: e.target.value,
                         })
                       }
                     />
@@ -3395,7 +3395,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          cobrancaEnderecoBairro: toUpperValue(e.target.value),
+                          cobrancaEnderecoBairro: e.target.value,
                         })
                       }
                     />
@@ -3408,7 +3408,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          cobrancaEnderecoComplemento: toUpperValue(e.target.value),
+                          cobrancaEnderecoComplemento: e.target.value,
                         })
                       }
                     />
@@ -3498,7 +3498,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
-                    <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
@@ -3512,7 +3512,7 @@ const validateFormData = (data: ClientFormData): string[] => {
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-5">
-                    <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: toUpperValue(e.target.value) })} />
+                    <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: e.target.value })} />
                   </div>
                   <div className="col-span-1 md:col-span-3">
                     <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: formatPhone(e.target.value) })} />
@@ -3880,7 +3880,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <Textarea
                       className="min-h-[80px] text-sm"
                       value={formData.observacaoComercial}
-                      onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })}
                     />
                   </div>
                   <div>
@@ -3888,7 +3888,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                     <Textarea
                       className="min-h-[80px] text-sm"
                       value={formData.observacaoFinanceiro}
-                      onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: toUpperValue(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: e.target.value })}
                     />
                   </div>
                 </div>
@@ -3976,7 +3976,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="col-span-1 md:col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Razão Social/Nome *</label>
-                      <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
                     </div>
                     <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                       <Checkbox
@@ -3992,7 +3992,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="col-span-1 md:col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome Fantasia</label>
-                      <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.fantasia} onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })} />
                     </div>
                     <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                       <Checkbox
@@ -4008,11 +4008,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. estadual</label>
-                      <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.inscEstadual} onChange={(e) => setFormData({ ...formData, inscEstadual: e.target.value })} />
                     </div>
                     <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Inscr. municipal</label>
-                      <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.inscMunicipal} onChange={(e) => setFormData({ ...formData, inscMunicipal: e.target.value })} />
                     </div>
                     <div className="col-span-1 md:col-span-3">
                       <Select defaultValue="contribuinte">
@@ -4062,11 +4062,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="col-span-1 md:col-span-9">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Endereço *</label>
-                      <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: e.target.value })} />
                     </div>
                     <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Número</label>
-                      <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} />
                     </div>
                   </div>
 
@@ -4112,11 +4112,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Bairro *</label>
                     </div>
                     <div className="col-span-1 md:col-span-3">
-                      <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
                     </div>
                   </div>
 
-                  <FormField label="Complem." value={formData.complemento} onChange={(v) => setFormData({ ...formData, complemento: toUpperValue(v) })} className="max-w-md" />
+                  <FormField label="Complem." value={formData.complemento} onChange={(v) => setFormData({ ...formData, complemento: v })} className="max-w-md" />
 
                   <div className="border-b border-primary/50 pb-1 mt-4">
                     <span className="text-sm font-medium text-primary">Telefones</span>
@@ -4183,7 +4183,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            cobrancaEndereco: toUpperValue(e.target.value),
+                            cobrancaEndereco: e.target.value,
                           })
                         }
                       />
@@ -4199,7 +4199,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            cobrancaEnderecoNumero: toUpperValue(e.target.value),
+                            cobrancaEnderecoNumero: e.target.value,
                           })
                         }
                       />
@@ -4212,7 +4212,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            cobrancaEnderecoBairro: toUpperValue(e.target.value),
+                            cobrancaEnderecoBairro: e.target.value,
                           })
                         }
                       />
@@ -4225,7 +4225,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            cobrancaEnderecoComplemento: toUpperValue(e.target.value),
+                            cobrancaEnderecoComplemento: e.target.value,
                           })
                         }
                       />
@@ -4321,7 +4321,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-5">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Contatos</label>
-                      <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.contato1Nome} onChange={(e) => setFormData({ ...formData, contato1Nome: e.target.value })} />
                   </div>
                     <div className="col-span-1 md:col-span-3">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Celular</label>
@@ -4335,7 +4335,7 @@ const validateFormData = (data: ClientFormData): string[] => {
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="col-span-1 md:col-span-5">
-                      <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: toUpperValue(e.target.value) })} />
+                      <Input className="h-8 text-sm" value={formData.contato2Nome} onChange={(e) => setFormData({ ...formData, contato2Nome: e.target.value })} />
                   </div>
                     <div className="col-span-1 md:col-span-3">
                       <Input className="h-8 text-sm" placeholder="( )" value={formData.contato2Celular} onChange={(e) => setFormData({ ...formData, contato2Celular: formatPhone(e.target.value) })} />
@@ -4673,11 +4673,11 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <div className="border-t pt-4 mt-4 space-y-3">
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs. Comercial</label>
-                      <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: toUpperValue(e.target.value) })} />
+                      <Textarea className="min-h-[80px] text-sm" value={formData.observacaoComercial} onChange={(e) => setFormData({ ...formData, observacaoComercial: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Obs. Financeiro</label>
-                      <Textarea className="min-h-[80px] text-sm" value={formData.observacaoFinanceiro} onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: toUpperValue(e.target.value) })} />
+                      <Textarea className="min-h-[80px] text-sm" value={formData.observacaoFinanceiro} onChange={(e) => setFormData({ ...formData, observacaoFinanceiro: e.target.value })} />
                     </div>
                   </div>
                 </TabsContent>
