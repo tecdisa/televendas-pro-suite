@@ -1857,6 +1857,14 @@ const validateFormData = (data: ClientFormData): string[] => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium mb-1 block">Bairro</label>
+              <Input
+                value={filters.bairro}
+                onChange={(e) => setFilters({ ...filters, bairro: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
+              />
+            </div>
             <div className="md:col-span-4">
               <label className="text-sm font-medium mb-1 block">Cidades</label>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
@@ -1956,7 +1964,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-            <div className="md:col-span-3">
+            <div className="md:col-span-4">
               <label className="text-sm font-medium mb-1 block">Rede</label>
               <Select value={filters.rede} onValueChange={(v) => setFilters({ ...filters, rede: v })}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
@@ -1968,7 +1976,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-4">
               <label className="text-sm font-medium mb-1 block">Rota</label>
               <Select value={filters.rota} onValueChange={(v) => setFilters({ ...filters, rota: v })}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
@@ -1980,7 +1988,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-4">
               <label className="text-sm font-medium mb-1 block">Tabelas de Preços</label>
               <Select value={filters.tabelaPreco} onValueChange={(v) => setFilters({ ...filters, tabelaPreco: v })}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
@@ -1991,14 +1999,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="md:col-span-3">
-              <label className="text-sm font-medium mb-1 block">Bairro</label>
-              <Input
-                value={filters.bairro}
-                onChange={(e) => setFilters({ ...filters, bairro: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && loadClients(undefined, true)}
-              />
             </div>
           </div>
 
