@@ -415,7 +415,7 @@ function validateRequiredProductFields(form: ProductFormState): RequiredProductE
 
 interface ImportRow {
   rowIndex: number;
-  action: 'criar' | 'erro';
+  action: 'criar' | 'erro' | 'aviso';
   data: Partial<ProductFormState>;
   error?: string;
 }
@@ -961,90 +961,123 @@ export function ProdutosTab() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = ev.target?.result;
-        const wb = XLSX.read(data, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
+    let fileData: string;
+    try {
+      fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target?.result as string);
+        reader.onerror = () => reject(new Error('Erro ao ler o arquivo'));
+        reader.readAsBinaryString(file);
+      });
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao ler o arquivo');
+      return;
+    }
 
-        if (!rows.length) { toast.error('Planilha vazia'); return; }
+    try {
+      const wb = XLSX.read(fileData, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
 
-        const byEan13 = new Map<string, Product>(
-          produtos
-            .filter((p) => p.ean13)
-            .map((p) => [String(p.ean13!).replace(/\D/g, '').trim(), p]),
-        );
-        const byCodFabFornecedor = new Map<string, Product>(
-          produtos
-            .filter((p) => p.codigoFabrica && p.fornecedorId != null)
-            .map((p) => [
-              `${String(p.codigoFabrica!).trim().toUpperCase()}|${p.fornecedorId}`,
-              p,
-            ]),
-        );
+      if (!rows.length) { toast.error('Planilha vazia'); return; }
 
-        const parsed: ImportRow[] = rows.map((row, idx) => {
-          const codigoProduto = String(row['produto_id'] ?? '').trim();
-          const descricao = String(row['descricao'] ?? '').trim().toUpperCase();
+      const byEan13 = new Map<string, Product>(
+        produtos
+          .filter((p) => p.ean13)
+          .map((p) => [String(p.ean13!).replace(/\D/g, '').trim(), p]),
+      );
+      const byCodFabFornecedor = new Map<string, Product>(
+        produtos
+          .filter((p) => p.codigoFabrica && p.fornecedorId != null)
+          .map((p) => [
+            `${String(p.codigoFabrica!).trim().toUpperCase()}|${p.fornecedorId}`,
+            p,
+          ]),
+      );
 
-          const num = (v: any) => (v !== '' && v != null ? Number(v) || undefined : undefined);
+      const parsed: ImportRow[] = rows.map((row, idx) => {
+        const codigoProduto = String(row['produto_id'] ?? '').trim();
+        const descricao = String(row['descricao'] ?? '').trim().toUpperCase();
 
-          const data: Partial<ProductFormState> = {
-            codigoProduto: codigoProduto || undefined,
-            descricao: descricao || undefined,
-            apresentacao: String(row['apresentacao'] ?? '').trim().toUpperCase() || undefined,
-            marca: String(row['marca'] ?? '').trim().toUpperCase() || undefined,
-            codigoFabrica: String(row['codfab'] ?? '').trim().toUpperCase() || undefined,
-            ean13: String(row['ean13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
-            ncm: String(row['ncm'] ?? '').trim() || undefined,
-            cest: String(row['cest'] ?? '').trim() || undefined,
-            // estoque: ignorado na importação
-            unidade: String(row['unidade'] ?? '').trim().toUpperCase() || undefined,
-            fatorVenda: num(row['fator_cv']),
-            multiploDeVendas: num(row['muv']),
-            divisaoId: num(row['divisao_id']),
-            // fornece: ignorado (somente leitura)
-            fornecedorId: num(row['fornec_id']),
-            custoMedio: num(row['custo']),
-            // prvenda, desconto, comissao: ignorados (campos da tabela de preços)
-          };
+        const num = (v: any) => (v !== '' && v != null ? Number(v) || undefined : undefined);
 
-          if (!codigoProduto && !descricao) {
-            return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
+        const data: Partial<ProductFormState> = {
+          codigoProduto: codigoProduto || undefined,
+          descricao: descricao || undefined,
+          apresentacao: String(row['apresentacao'] ?? '').trim().toUpperCase() || undefined,
+          marca: String(row['marca'] ?? '').trim().toUpperCase() || undefined,
+          codigoFabrica: String(row['codfab'] ?? '').trim().toUpperCase() || undefined,
+          ean13: String(row['ean13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
+          ncm: String(row['ncm'] ?? '').trim() || undefined,
+          cest: String(row['cest'] ?? '').trim() || undefined,
+          unidade: String(row['unidade'] ?? '').trim().toUpperCase() || undefined,
+          fatorVenda: num(row['fator_cv']),
+          multiploDeVendas: num(row['muv']),
+          divisaoId: num(row['divisao_id']),
+          fornecedorId: num(row['fornec_id']),
+          custoMedio: num(row['custo']),
+        };
+
+        if (!codigoProduto && !descricao) {
+          return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
+        }
+
+        const ean13Val = data.ean13;
+        const codFab = data.codigoFabrica;
+        const fornId = data.fornecedorId;
+
+        if (ean13Val) {
+          if (byEan13.has(ean13Val)) {
+            return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (EAN13: ${ean13Val})` };
           }
-
-          const ean13Val = data.ean13;
-          const codFab = data.codigoFabrica;
-          const fornId = data.fornecedorId;
-
-          if (ean13Val) {
-            if (byEan13.has(ean13Val)) {
-              return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (EAN13: ${ean13Val})` };
-            }
-          } else if (codFab && fornId != null) {
-            const key = `${codFab}|${fornId}`;
-            if (byCodFabFornecedor.has(key)) {
-              return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
-            }
+        } else if (codFab && fornId != null) {
+          const key = `${codFab}|${fornId}`;
+          if (byCodFabFornecedor.has(key)) {
+            return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
           }
+        }
 
-          return { rowIndex: idx + 1, action: 'criar' as const, data };
-        });
+        return { rowIndex: idx + 1, action: 'criar' as const, data };
+      });
 
-        const validRows = parsed.filter((r) => r.action !== 'erro');
-        const errorRows = parsed.filter((r) => r.action === 'erro');
-        if (errorRows.length) toast.warning(`${errorRows.length} linha(s) com problema foram ignoradas`);
-        if (!validRows.length) { toast.error('Nenhuma linha válida encontrada'); return; }
+      // Pré-validar fornecedor_id e divisao_id contra a empresa atual
+      const candidatos = parsed.filter((r) => r.action !== 'erro');
+      const uniqueFornIds = [...new Set(candidatos.map((r) => r.data.fornecedorId).filter((v): v is number => v != null))];
+      const uniqueDivIds  = [...new Set(candidatos.map((r) => r.data.divisaoId).filter((v): v is number => v != null))];
 
-        setImportRows(parsed);
-        setImportDialogOpen(true);
-      } catch (err: any) {
-        toast.error(err?.message || 'Erro ao ler o arquivo');
-      }
-    };
-    reader.readAsBinaryString(file);
+      const [fornChecks, divChecks] = await Promise.all([
+        Promise.all(uniqueFornIds.map((id) => suppliersService.getById(id).then((f) => [id, f !== null] as [number, boolean]))),
+        Promise.all(uniqueDivIds.map((id) => divisionsService.getById(id).then((d) => [id, d !== null] as [number, boolean]))),
+      ]);
+
+      const validFornIds = new Set(fornChecks.filter(([, ok]) => ok).map(([id]) => id));
+      const validDivIds  = new Set(divChecks.filter(([, ok]) => ok).map(([id]) => id));
+
+      const finalParsed: ImportRow[] = parsed.map((row) => {
+        if (row.action === 'erro') return row;
+        const fornId = row.data.fornecedorId;
+        if (fornId != null && !validFornIds.has(fornId)) {
+          return { ...row, action: 'aviso' as const, error: `Fornecedor ID ${fornId} não cadastrado para esta empresa` };
+        }
+        const divId = row.data.divisaoId;
+        if (divId != null && !validDivIds.has(divId)) {
+          return { ...row, action: 'aviso' as const, error: `Divisão ID ${divId} não encontrada para esta empresa` };
+        }
+        return row;
+      });
+
+      const errorRows = finalParsed.filter((r) => r.action === 'erro');
+      const avisoRows = finalParsed.filter((r) => r.action === 'aviso');
+      const criarRows = finalParsed.filter((r) => r.action === 'criar');
+      if (errorRows.length) toast.warning(`${errorRows.length} linha(s) ignorada(s) por duplicidade`);
+      if (avisoRows.length) toast.warning(`${avisoRows.length} linha(s) com aviso — verifique na prévia antes de confirmar`);
+      if (!criarRows.length && !avisoRows.length) { toast.error('Nenhuma linha válida encontrada'); return; }
+
+      setImportRows(finalParsed);
+      setImportDialogOpen(true);
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao processar planilha');
+    }
   }
 
   async function handleConfirmImport() {
@@ -1673,6 +1706,9 @@ export function ProdutosTab() {
           </DialogHeader>
           <div className="text-xs text-muted-foreground mb-2">
             {importRows.filter((r) => r.action === 'criar').length} a criar &nbsp;|&nbsp;
+            {importRows.filter((r) => r.action === 'aviso').length > 0 && (
+              <><span className="text-amber-600 font-medium">{importRows.filter((r) => r.action === 'aviso').length} com aviso</span> &nbsp;|&nbsp;</>
+            )}
             {importRows.filter((r) => r.action === 'erro').length} com erro (ignorados)
           </div>
           <div className="flex-1 overflow-auto border rounded-md">
@@ -1690,10 +1726,18 @@ export function ProdutosTab() {
               </thead>
               <tbody>
                 {importRows.map((row) => (
-                  <tr key={row.rowIndex} className={`border-b ${row.action === 'erro' ? 'bg-red-50 dark:bg-red-950/20' : 'bg-green-50/50 dark:bg-green-950/20'}`}>
+                  <tr key={row.rowIndex} className={`border-b ${
+                    row.action === 'erro'  ? 'bg-red-50 dark:bg-red-950/20' :
+                    row.action === 'aviso' ? 'bg-amber-50 dark:bg-amber-950/20' :
+                    'bg-green-50/50 dark:bg-green-950/20'
+                  }`}>
                     <td className="px-2 py-1">
-                      <span className={`font-semibold ${row.action === 'erro' ? 'text-red-600' : 'text-green-700'}`}>
-                        {row.action === 'criar' ? 'Criar' : 'Erro'}
+                      <span className={`font-semibold ${
+                        row.action === 'erro'  ? 'text-red-600' :
+                        row.action === 'aviso' ? 'text-amber-600' :
+                        'text-green-700'
+                      }`}>
+                        {row.action === 'criar' ? 'Criar' : row.action === 'aviso' ? 'Aviso' : 'Erro'}
                       </span>
                     </td>
                     <td className="px-2 py-1 font-mono">{row.data.codigoProduto || '—'}</td>
