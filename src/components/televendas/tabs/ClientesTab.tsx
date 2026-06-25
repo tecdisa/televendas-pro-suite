@@ -285,8 +285,6 @@ const createEmptyAjusteGeralForm = () => ({
   cep: '',
   creditoChecked: false,
   credito: '',
-  boletoChecked: false,
-  boleto: 'false',
   consumidorFinalChecked: false,
   consumidorFinal: 'false',
   inativoChecked: false,
@@ -1263,9 +1261,6 @@ export const ClientesTab = () => {
       if (!Number.isFinite(credito)) errors.push('Informe um crédito válido.');
       else data.credito = credito;
     }
-    if (ajusteGeralForm.boletoChecked) {
-      data.boleto = ajusteGeralForm.boleto === 'true';
-    }
     if (ajusteGeralForm.consumidorFinalChecked) {
       data.consumidorFinal = ajusteGeralForm.consumidorFinal === 'true';
     }
@@ -1288,7 +1283,6 @@ export const ClientesTab = () => {
       ajusteGeralForm.redeChecked ||
       ajusteGeralForm.cepChecked ||
       ajusteGeralForm.creditoChecked ||
-      ajusteGeralForm.boletoChecked ||
       ajusteGeralForm.consumidorFinalChecked ||
       ajusteGeralForm.inativoChecked ||
       ajusteGeralForm.b2bLiberadoChecked ||
@@ -2847,39 +2841,6 @@ const validateFormData = (data: ClientFormData): string[] => {
                   disabled={!ajusteGeralForm.creditoChecked}
                   placeholder="0,00"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={ajusteGeralForm.boletoChecked}
-                    onCheckedChange={(checked) =>
-                      setAjusteGeralForm((prev) => ({
-                        ...prev,
-                        boletoChecked: checked === true,
-                      }))
-                    }
-                  />
-                  <label className="text-sm font-medium">Boleto bancário</label>
-                </div>
-                <Select
-                  value={ajusteGeralForm.boleto}
-                  onValueChange={(value) =>
-                    setAjusteGeralForm((prev) => ({
-                      ...prev,
-                      boleto: value,
-                    }))
-                  }
-                  disabled={!ajusteGeralForm.boletoChecked}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Sim</SelectItem>
-                    <SelectItem value="false">Não</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
