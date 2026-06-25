@@ -79,6 +79,7 @@ export interface Product {
   ibsCbsClassifTrib?: string;
   lancamento?: boolean;
   inativo?: boolean;
+  dataCadastro?: string | null;
   kitItens?: ProductKitItem[];
 }
 
@@ -305,6 +306,7 @@ function normalizeProduct(raw: any): Product {
     ),
     lancamento: boolOrUndefined(raw?.lancamento),
     inativo: boolOrUndefined(raw?.inativo),
+    dataCadastro: raw?.data_cadastro ?? null,
     kitItens: Array.isArray(raw?.kit_itens ?? raw?.kitItens)
       ? (raw?.kit_itens ?? raw?.kitItens).map((item: any) => ({
           produtoId: numberOrUndefined(item?.produto_id) ?? 0,

@@ -132,7 +132,7 @@ export const ProdutoInfoModal = ({ open, onOpenChange, produtoId }: ProdutoInfoM
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <ReadOnlyField label="DUN14" value={data?.dun14} />
                   <ReadOnlyField label="Princípio ativo" value={data?.principioAtivo} className="md:col-span-2" />
-                  <ReadOnlyField label="Cadastrado em" value={formatDate((data as any)?.data_cadastro)} />
+                  <ReadOnlyField label="Cadastrado em" value={formatDate(data?.dataCadastro)} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
