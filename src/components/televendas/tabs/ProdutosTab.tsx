@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload, Eye, DollarSign } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Loader2, ChevronUp, ChevronDown, Package, Columns3, FileSpreadsheet, Upload, Eye, DollarSign, SlidersHorizontal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -487,6 +487,21 @@ export function ProdutosTab() {
   const [viewProdutoId, setViewProdutoId] = useState<number>(0);
   const [precoModalOpen, setPrecoModalOpen] = useState(false);
   const [precoProduto, setPrecoProduto] = useState<Product | null>(null);
+  const [ajusteGeralOpen, setAjusteGeralOpen] = useState(false);
+  const [ajusteGeralLoading, setAjusteGeralLoading] = useState(false);
+  const [ajusteGeralAlvo, setAjusteGeralAlvo] = useState<'selecionados' | 'view' | 'todos'>('selecionados');
+  const [ajusteGeralForm, setAjusteGeralForm] = useState({
+    fornecedorChecked: false, fornecedorId: '',
+    divisaoChecked: false, divisaoId: '',
+    marcaChecked: false, marca: '',
+    multiploChecked: false, multiplo: '',
+    fatorCompraChecked: false, fatorCompra: '',
+    fatorVendaChecked: false, fatorVenda: '',
+    inativoChecked: false, inativo: 'false',
+    ncmChecked: false, ncm: '',
+    cestChecked: false, cest: '',
+    b2bChecked: false, b2b: 'false',
+  });
   const empresaAtual = authService.getEmpresa();
   const empresaIdAtual = Number(empresaAtual?.empresa_id) || 0;
   const empresaCadastroId =
@@ -873,6 +888,86 @@ export function ProdutosTab() {
       toast.error(error?.message || 'Erro ao salvar produto');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleProcessAjusteGeral = async () => {
+    const errors: string[] = [];
+    const data: Record<string, any> = {};
+
+    if (ajusteGeralForm.fornecedorChecked) {
+      const id = Number(ajusteGeralForm.fornecedorId);
+      if (!id || id <= 0) errors.push('Selecione um fornecedor.');
+      else data.fornecedorId = id;
+    }
+    if (ajusteGeralForm.divisaoChecked) {
+      const id = Number(ajusteGeralForm.divisaoId);
+      if (!id || id <= 0) errors.push('Selecione uma divisão.');
+      else data.divisaoId = id;
+    }
+    if (ajusteGeralForm.marcaChecked) {
+      if (!ajusteGeralForm.marca.trim()) errors.push('Informe a marca.');
+      else data.marca = ajusteGeralForm.marca.trim();
+    }
+    if (ajusteGeralForm.multiploChecked) {
+      const v = parseInt(ajusteGeralForm.multiplo);
+      if (!Number.isFinite(v) || v <= 0) errors.push('Informe um múltiplo válido (inteiro positivo).');
+      else data.multiploDeVendas = v;
+    }
+    if (ajusteGeralForm.fatorCompraChecked) {
+      const v = parseInt(ajusteGeralForm.fatorCompra);
+      if (!Number.isFinite(v) || v <= 0) errors.push('Informe um fator de compra válido (inteiro positivo).');
+      else data.fatorCompra = v;
+    }
+    if (ajusteGeralForm.fatorVendaChecked) {
+      const v = parseInt(ajusteGeralForm.fatorVenda);
+      if (!Number.isFinite(v) || v <= 0) errors.push('Informe um fator de venda válido (inteiro positivo).');
+      else data.fatorVenda = v;
+    }
+    if (ajusteGeralForm.inativoChecked) {
+      data.inativo = ajusteGeralForm.inativo === 'true';
+    }
+    if (ajusteGeralForm.ncmChecked) {
+      if (!ajusteGeralForm.ncm.trim()) errors.push('Informe o NCM.');
+      else data.ncm = ajusteGeralForm.ncm.trim();
+    }
+    if (ajusteGeralForm.cestChecked) {
+      if (!ajusteGeralForm.cest.trim()) errors.push('Informe o CEST.');
+      else data.cest = ajusteGeralForm.cest.trim();
+    }
+    if (ajusteGeralForm.b2bChecked) {
+      data.permiteVendaB2b = ajusteGeralForm.b2b === 'true';
+    }
+
+    const hasCheckedField =
+      ajusteGeralForm.fornecedorChecked || ajusteGeralForm.divisaoChecked ||
+      ajusteGeralForm.marcaChecked || ajusteGeralForm.multiploChecked ||
+      ajusteGeralForm.fatorCompraChecked || ajusteGeralForm.fatorVendaChecked ||
+      ajusteGeralForm.inativoChecked || ajusteGeralForm.ncmChecked ||
+      ajusteGeralForm.cestChecked || ajusteGeralForm.b2bChecked;
+
+    if (!hasCheckedField) { toast.error('Selecione ao menos um campo para atualizar.'); return; }
+    if (errors.length) { toast.error(errors[0]); return; }
+
+    setAjusteGeralLoading(true);
+    try {
+      let produtoIds: number[];
+      if (ajusteGeralAlvo === 'selecionados') {
+        produtoIds = Array.from(selectedRows);
+      } else {
+        produtoIds = produtos.map((p) => p.id);
+      }
+      if (!produtoIds.length) { toast.error('Nenhum produto para aplicar o ajuste.'); return; }
+
+      const result = await productsService.bulkAdjust({ produtoIds, data });
+      toast.success(`Ajuste aplicado em ${result.totalAtualizados} produto(s).`);
+      setAjusteGeralOpen(false);
+      setSelectedRows(new Set());
+      await loadProdutos();
+    } catch (e: any) {
+      toast.error(String(e?.message || e || 'Erro ao aplicar ajuste geral'));
+    } finally {
+      setAjusteGeralLoading(false);
     }
   };
 
@@ -1592,6 +1687,33 @@ export function ProdutosTab() {
                   </div>
                 </PopoverContent>
               </Popover>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={() => {
+                  setAjusteGeralAlvo(selectedRows.size > 0 ? 'selecionados' : 'view');
+                  setAjusteGeralForm({
+                    fornecedorChecked: false, fornecedorId: '',
+                    divisaoChecked: false, divisaoId: '',
+                    marcaChecked: false, marca: '',
+                    multiploChecked: false, multiplo: '',
+                    fatorCompraChecked: false, fatorCompra: '',
+                    fatorVendaChecked: false, fatorVenda: '',
+                    inativoChecked: false, inativo: 'false',
+                    ncmChecked: false, ncm: '',
+                    cestChecked: false, cest: '',
+                    b2bChecked: false, b2b: 'false',
+                  });
+                  setAjusteGeralOpen(true);
+                }}
+                disabled={produtos.length === 0}
+              >
+                <SlidersHorizontal className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">
+                  {selectedRows.size > 0 ? `Ajuste Geral (${selectedRows.size})` : 'Ajuste Geral'}
+                </span>
+              </Button>
               <Button variant="default" size="sm" onClick={openCreate} className="flex-1 sm:flex-none" disabled={!canInsert}>
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Produto</span>
@@ -2583,6 +2705,163 @@ export function ProdutosTab() {
         onOpenChange={setPrecoModalOpen}
         produto={precoProduto}
       />
+
+      {/* Ajuste Geral Dialog */}
+      <Dialog open={ajusteGeralOpen} onOpenChange={(open) => { if (!ajusteGeralLoading) setAjusteGeralOpen(open); }}>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ajuste Geral de Produtos</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Alvo */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Aplicar para</label>
+              <Select value={ajusteGeralAlvo} onValueChange={(v) => setAjusteGeralAlvo(v as typeof ajusteGeralAlvo)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="selecionados" disabled={selectedRows.size === 0}>
+                    {selectedRows.size > 0 ? `Selecionados (${selectedRows.size})` : 'Selecionados (nenhum)'}
+                  </SelectItem>
+                  <SelectItem value="view">Visíveis ({produtos.length})</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Fornecedor */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.fornecedorChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, fornecedorChecked: c === true }))} />
+                  <label className="text-sm font-medium">Fornecedor</label>
+                </div>
+                <Select value={ajusteGeralForm.fornecedorId || 'none'} onValueChange={(v) => setAjusteGeralForm((p) => ({ ...p, fornecedorId: v === 'none' ? '' : v }))} disabled={!ajusteGeralForm.fornecedorChecked}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecione</SelectItem>
+                    {fornecedores.map((f) => (
+                      <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
+                        {f.nome_fornecedor}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Divisão */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.divisaoChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, divisaoChecked: c === true }))} />
+                  <label className="text-sm font-medium">Divisão</label>
+                </div>
+                <Select value={ajusteGeralForm.divisaoId || 'none'} onValueChange={(v) => setAjusteGeralForm((p) => ({ ...p, divisaoId: v === 'none' ? '' : v }))} disabled={!ajusteGeralForm.divisaoChecked}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecione</SelectItem>
+                    {divisoes.map((d) => (
+                      <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
+                        {d.descricao_divisao}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Marca */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.marcaChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, marcaChecked: c === true }))} />
+                  <label className="text-sm font-medium">Marca</label>
+                </div>
+                <Input value={ajusteGeralForm.marca} onChange={(e) => setAjusteGeralForm((p) => ({ ...p, marca: e.target.value }))} disabled={!ajusteGeralForm.marcaChecked} placeholder="Ex: GENÉRICO" maxLength={20} />
+              </div>
+
+              {/* Múltiplo de Vendas */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.multiploChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, multiploChecked: c === true }))} />
+                  <label className="text-sm font-medium">Múltiplo de vendas</label>
+                </div>
+                <Input type="number" min={1} step={1} value={ajusteGeralForm.multiplo} onChange={(e) => setAjusteGeralForm((p) => ({ ...p, multiplo: e.target.value }))} disabled={!ajusteGeralForm.multiploChecked} placeholder="1" />
+              </div>
+
+              {/* Fator Compra */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.fatorCompraChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, fatorCompraChecked: c === true }))} />
+                  <label className="text-sm font-medium">Fator compra</label>
+                </div>
+                <Input type="number" min={1} step={1} value={ajusteGeralForm.fatorCompra} onChange={(e) => setAjusteGeralForm((p) => ({ ...p, fatorCompra: e.target.value }))} disabled={!ajusteGeralForm.fatorCompraChecked} placeholder="1" />
+              </div>
+
+              {/* Fator Venda */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.fatorVendaChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, fatorVendaChecked: c === true }))} />
+                  <label className="text-sm font-medium">Fator venda</label>
+                </div>
+                <Input type="number" min={1} step={1} value={ajusteGeralForm.fatorVenda} onChange={(e) => setAjusteGeralForm((p) => ({ ...p, fatorVenda: e.target.value }))} disabled={!ajusteGeralForm.fatorVendaChecked} placeholder="1" />
+              </div>
+
+              {/* Ativo/Inativo */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.inativoChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, inativoChecked: c === true }))} />
+                  <label className="text-sm font-medium">Ativo / Inativo</label>
+                </div>
+                <Select value={ajusteGeralForm.inativo} onValueChange={(v) => setAjusteGeralForm((p) => ({ ...p, inativo: v }))} disabled={!ajusteGeralForm.inativoChecked}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="false">Ativo</SelectItem>
+                    <SelectItem value="true">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* NCM */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.ncmChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, ncmChecked: c === true }))} />
+                  <label className="text-sm font-medium">NCM</label>
+                </div>
+                <Input value={ajusteGeralForm.ncm} onChange={(e) => setAjusteGeralForm((p) => ({ ...p, ncm: e.target.value.replace(/\D/g, '').slice(0, 8) }))} disabled={!ajusteGeralForm.ncmChecked} placeholder="00000000" maxLength={8} />
+              </div>
+
+              {/* CEST */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.cestChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, cestChecked: c === true }))} />
+                  <label className="text-sm font-medium">CEST</label>
+                </div>
+                <Input value={ajusteGeralForm.cest} onChange={(e) => setAjusteGeralForm((p) => ({ ...p, cest: e.target.value.replace(/\D/g, '').slice(0, 7) }))} disabled={!ajusteGeralForm.cestChecked} placeholder="0000000" maxLength={7} />
+              </div>
+
+              {/* B2B */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={ajusteGeralForm.b2bChecked} onCheckedChange={(c) => setAjusteGeralForm((p) => ({ ...p, b2bChecked: c === true }))} />
+                  <label className="text-sm font-medium">Permite B2B</label>
+                </div>
+                <Select value={ajusteGeralForm.b2b} onValueChange={(v) => setAjusteGeralForm((p) => ({ ...p, b2b: v }))} disabled={!ajusteGeralForm.b2bChecked}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Sim</SelectItem>
+                    <SelectItem value="false">Não</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setAjusteGeralOpen(false)} disabled={ajusteGeralLoading}>Cancelar</Button>
+            <Button onClick={() => void handleProcessAjusteGeral()} disabled={ajusteGeralLoading}>
+              {ajusteGeralLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Processar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={Boolean(deleteProduct)} onOpenChange={(open) => !open && setDeleteProduct(null)}>
         <AlertDialogContent>

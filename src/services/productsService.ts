@@ -886,6 +886,31 @@ export const productsService = {
     return normalizeProduct(await response.json());
   },
 
+  bulkAdjust: async (payload: {
+    produtoIds: number[];
+    data: Record<string, any>;
+  }): Promise<{ totalSolicitados: number; totalEncontrados: number; totalAtualizados: number }> => {
+    const { empresa } = await getEmpresaAndToken();
+    const response = await apiClient.fetch(`${API_BASE}/api/produtos/ajuste-geral`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        empresaId: empresa.empresa_id,
+        produtoIds: payload.produtoIds,
+        data: payload.data,
+      }),
+    });
+    if (!response.ok) {
+      let message = 'Erro ao aplicar ajuste geral';
+      try {
+        const err = await response.json();
+        message = err?.message || err?.error?.message || err?.error || message;
+      } catch {}
+      return Promise.reject(message);
+    }
+    return response.json();
+  },
+
   deleteCadastro: async (id: number): Promise<void> => {
     const { empresa } = await getEmpresaAndToken();
     const response = await apiClient.fetch(
