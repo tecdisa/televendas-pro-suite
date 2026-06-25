@@ -1579,8 +1579,6 @@ export function TabelasPrecoTab() {
                   <th className="w-24 px-1 py-1.5 text-left" style={{ paddingLeft: '60px' }}>Cód.Fábrica</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
-                  <th className="w-16 pl-12 pr-1 py-1.5 text-right">Custo</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
                   <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
@@ -1601,6 +1599,8 @@ export function TabelasPrecoTab() {
                   <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
+                  <th className="w-16 pl-12 pr-1 py-1.5 text-right">Custo</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Markup</th>
                   <th className="sticky right-0 z-30 w-8 px-1 py-1.5 text-center bg-muted/90 shadow-[-1px_0_0_hsl(var(--border))]"></th>
                 </tr>
               </thead>
@@ -1649,10 +1649,6 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 font-mono text-[11px]" style={{ paddingLeft: '60px' }}>{item.codigo_fabrica || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
-                        <td className="pl-12 pr-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.markup} field="markup" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
                         <td className="px-1 py-0.5 text-right font-medium">
                           <EditableCell value={item.preco} field="preco" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
@@ -1705,6 +1701,10 @@ export function TabelasPrecoTab() {
                         </td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.majoracao} field="majoracao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="pl-12 pr-1 py-0.5 text-right text-muted-foreground">{fmt(item.custo)}</td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.markup} field="markup" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className={`sticky right-0 z-10 px-1 py-0.5 text-center shadow-[-1px_0_0_hsl(var(--border))] ${stickyBgAcoes}`}>
                           <div className="flex items-center gap-0.5">
