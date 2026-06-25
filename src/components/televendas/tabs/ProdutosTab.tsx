@@ -991,6 +991,12 @@ export function ProdutosTab() {
     if (!produtos.length) { toast.error('Realize a pesquisa antes de exportar'); return; }
     const exportList = selectedRows.size > 0 ? produtos.filter((p) => selectedRows.has(p.id)) : produtos;
 
+    const fornIdToCodigo = new Map<number, string>(
+      fornecedores
+        .filter((f) => f.codigo_fornecedor)
+        .map((f) => [f.fornecedor_id, f.codigo_fornecedor!.trim()]),
+    );
+
     const wb = XLSX.utils.book_new();
     const hoje = new Date().toLocaleDateString('pt-BR');
     const infoRows = [
@@ -1020,7 +1026,7 @@ export function ProdutosTab() {
       p.multiploDeVendas ?? '',
       p.divisaoId ?? '',
       p.fornecedor ?? '',
-      p.fornecedorId ?? '',
+      (p.fornecedorId != null ? fornIdToCodigo.get(p.fornecedorId) ?? '' : ''),
       p.custoMedio ?? '',
       p.preco ?? '',
       p.descontoMaximo ?? '',
@@ -1090,11 +1096,20 @@ export function ProdutosTab() {
           ]),
       );
 
+      const codigoToFornId = new Map<string, number>(
+        fornecedores
+          .filter((f) => f.codigo_fornecedor)
+          .map((f) => [f.codigo_fornecedor!.trim().toUpperCase(), f.fornecedor_id]),
+      );
+
       const parsed: ImportRow[] = rows.map((row, idx) => {
         const codigoProduto = String(row['produto_id'] ?? '').trim();
         const descricao = String(row['descricao'] ?? '').trim().toUpperCase();
 
         const num = (v: any) => (v !== '' && v != null ? Number(v) || undefined : undefined);
+
+        const fornecCodigoRaw = String(row['fornec_id'] ?? '').trim().toUpperCase();
+        const resolvedFornId = fornecCodigoRaw ? codigoToFornId.get(fornecCodigoRaw) : undefined;
 
         const data: Partial<ProductFormState> = {
           codigoProduto: codigoProduto || undefined,
@@ -1109,12 +1124,16 @@ export function ProdutosTab() {
           fatorVenda: num(row['fator_cv']),
           multiploDeVendas: num(row['muv']),
           divisaoId: num(row['divisao_id']),
-          fornecedorId: num(row['fornec_id']),
+          fornecedorId: resolvedFornId,
           custoMedio: num(row['custo']),
         };
 
         if (!codigoProduto && !descricao) {
           return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
+        }
+
+        if (fornecCodigoRaw && resolvedFornId == null) {
+          return { rowIndex: idx + 1, action: 'aviso' as const, data, error: `Fornecedor código "${fornecCodigoRaw}" não encontrado` };
         }
 
         const ean13Val = data.ean13;
