@@ -1952,7 +1952,11 @@ const validateFormData = (data: ClientFormData): string[] => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
             <div className="md:col-span-2">
               <label className="text-sm font-medium mb-1 block">Pessoa F/J</label>
-              <Select value={filters.tipoPessoa} onValueChange={(v: ClientListFilters['tipoPessoa']) => setFilters({ ...filters, tipoPessoa: v })}>
+              <Select value={filters.tipoPessoa} onValueChange={(v: ClientListFilters['tipoPessoa']) => {
+                const next = { ...filters, tipoPessoa: v };
+                setFilters(next);
+                loadClients(next, true);
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
