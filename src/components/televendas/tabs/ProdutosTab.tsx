@@ -1113,7 +1113,6 @@ export function ProdutosTab() {
       );
 
       const parsed: ImportRow[] = rows.map((row, idx) => {
-        const codigoProduto = String(row['produto_id'] ?? '').trim();
         const descricao = String(row['descricao'] ?? '').trim().toUpperCase();
 
         const num = (v: any) => (v !== '' && v != null ? Number(v) || undefined : undefined);
@@ -1125,7 +1124,6 @@ export function ProdutosTab() {
         const resolvedDivId = divisaoCodigoRaw ? codigoToDivId.get(divisaoCodigoRaw) : undefined;
 
         const data: Partial<ProductFormState> = {
-          codigoProduto: codigoProduto || undefined,
           descricao: descricao || undefined,
           apresentacao: String(row['apresentacao'] ?? '').trim().toUpperCase() || undefined,
           marca: String(row['marca'] ?? '').trim().toUpperCase() || undefined,
@@ -1141,8 +1139,8 @@ export function ProdutosTab() {
           custoMedio: num(row['custo']),
         };
 
-        if (!codigoProduto && !descricao) {
-          return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem código e sem descrição — ignorada' };
+        if (!descricao) {
+          return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem descrição — ignorada' };
         }
 
         if (fornecCodigoRaw && resolvedFornId == null) {
