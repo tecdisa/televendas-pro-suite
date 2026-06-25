@@ -257,6 +257,7 @@ const createEmptyFormData = (defaultUf = '') => ({
   checkouts: 0,
   redeId: 0,
   tabelaIds: [] as number[],
+  tabelaPrincipalId: 0,
   representantes: [] as Array<{ id: string; nome: string }>,
   descontoFinanceiroBoleto: 0,
   observacaoComercial: '',
@@ -1369,7 +1370,10 @@ export const ClientesTab = () => {
       const nextIds = checked && !exists
         ? [...prev.tabelaIds, id]
         : (!checked && exists ? prev.tabelaIds.filter((item) => item !== id) : prev.tabelaIds);
-      return { ...prev, tabelaIds: nextIds };
+      const nextPrincipal = nextIds.includes(prev.tabelaPrincipalId)
+        ? prev.tabelaPrincipalId
+        : (nextIds[0] ?? 0);
+      return { ...prev, tabelaIds: nextIds, tabelaPrincipalId: nextPrincipal };
     });
   };
 
@@ -1471,13 +1475,13 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
     const emailValue = formData.email.trim();
     const emailDanfeValue = formData.emailDanfe.trim();
-    const tabelaId = formData.tabelaIds[0];
+    const tabelaId = formData.tabelaPrincipalId || formData.tabelaIds[0];
     const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
     const representanteId = representanteIds[0];
     const redeId = ensurePositiveId(formData.redeId, 0);
     try {
       setFormLoading(true);
-      const { representantes, tabelaIds, ...payloadBase } = formData;
+      const { representantes, tabelaIds, tabelaPrincipalId: _tp1, ...payloadBase } = formData;
       const payloadNormalized = {
         ...payloadBase,
         cnpjCpf: normalizeCnpjCpf(payloadBase.cnpjCpf),
@@ -1546,10 +1550,12 @@ const validateFormData = (data: ClientFormData): string[] => {
       const detail = await clientsService.getDetail(id);
       // Try to map common fields; fallback to empty strings
       const d = detail || {};
-      const tabelaIds = normalizeTabelaIds(
-        d.tabelas ?? d.tabelas_preco ?? d.tabelasPreco ?? d.tabelas_precos ?? d.tabelasPrecos,
-        d.tabela_id ?? d.tabelaId
-      );
+      const tabelasArr = d.tabelas ?? d.tabelas_preco ?? d.tabelasPreco ?? d.tabelas_precos ?? d.tabelasPrecos;
+      const tabelaIds = normalizeTabelaIds(tabelasArr, d.tabela_id ?? d.tabelaId);
+      const principalEntry = Array.isArray(tabelasArr) && tabelasArr.find((t: any) => t.principal === true);
+      const tabelaPrincipalId = principalEntry
+        ? Number(principalEntry.tabela_preco_id ?? principalEntry.id ?? 0)
+        : (tabelaIds[0] ?? 0);
       const representantes = normalizeRepresentantes(
         d.representantes ?? d.representante,
         d.representante_codigo ?? d.representanteCod ?? d.representante_cod ?? d.representante_id ?? d.representanteId ?? d.representante?.id,
@@ -1632,6 +1638,7 @@ const validateFormData = (data: ClientFormData): string[] => {
           checkouts: Number(d.checkouts ?? 0),
         redeId: ensurePositiveId(d.rede_id ?? d.redeId ?? d.rede, 0),
         tabelaIds,
+        tabelaPrincipalId,
         representantes,
         descontoFinanceiroBoleto: Number(d.desconto_financeiro_boleto ?? d.descontoFinanceiroBoleto ?? 0),
         observacaoComercial: toUpperValue(d.observacao_comercial ?? d.observacaoComercial ?? ''),
@@ -1663,13 +1670,13 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
     const emailValue = formData.email.trim();
     const emailDanfeValue = formData.emailDanfe.trim();
-    const tabelaId = formData.tabelaIds[0];
+    const tabelaId = formData.tabelaPrincipalId || formData.tabelaIds[0];
     const representanteIds = formData.representantes.map((rep) => rep.id).filter(Boolean);
     const representanteId = representanteIds[0];
     const redeId = ensurePositiveId(formData.redeId, 0);
     try {
       setFormLoading(true);
-      const { representantes, tabelaIds, ...payloadBase } = formData;
+      const { representantes, tabelaIds, tabelaPrincipalId: _tp2, ...payloadBase } = formData;
       const payloadNormalized = {
         ...payloadBase,
         cnpjCpf: normalizeCnpjCpf(payloadBase.cnpjCpf),
@@ -3541,9 +3548,9 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
                 </div>
 
-                {/* Tabelas de preços / Permite venda */}
+                {/* Tabelas de preços / Tabela Principal / Permite venda */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mt-4">
-                  <div className="col-span-1 md:col-span-5">
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
                     <Dialog open={tabelaSearchOpen && createOpen} onOpenChange={onTabelaDialogChange}>
                       <DialogTrigger asChild>
@@ -3596,7 +3603,24 @@ const validateFormData = (data: ClientFormData): string[] => {
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <div className="col-span-1 md:col-span-7">
+                  <div className="col-span-1 md:col-span-4">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela principal *</label>
+                    <Select
+                      value={formData.tabelaPrincipalId ? String(formData.tabelaPrincipalId) : ''}
+                      onValueChange={(v) => setFormData((prev) => ({ ...prev, tabelaPrincipalId: Number(v) }))}
+                      disabled={formData.tabelaIds.length === 0}
+                    >
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {tabelas
+                          .filter((t) => formData.tabelaIds.includes(Number(t.id)))
+                          .map((t) => (
+                            <SelectItem key={t.id} value={String(t.id)}>{getTabelaLabel(t)}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-1 md:col-span-4">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Permite venda nas empresas (ex: 01,02..)</label>
                     <Input className="h-8 text-sm" onChange={handleUpperChange} />
                   </div>
@@ -4364,7 +4388,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="col-span-1 md:col-span-6">
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela de preços *</label>
                       <Dialog open={tabelaSearchOpen && editOpen} onOpenChange={onTabelaDialogChange}>
                         <DialogTrigger asChild>
@@ -4417,7 +4441,24 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </DialogContent>
                       </Dialog>
                     </div>
-                    <div className="col-span-1 md:col-span-6">
+                    <div className="col-span-1 md:col-span-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Tabela principal *</label>
+                      <Select
+                        value={formData.tabelaPrincipalId ? String(formData.tabelaPrincipalId) : ''}
+                        onValueChange={(v) => setFormData((prev) => ({ ...prev, tabelaPrincipalId: Number(v) }))}
+                        disabled={formData.tabelaIds.length === 0}
+                      >
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          {tabelas
+                            .filter((t) => formData.tabelaIds.includes(Number(t.id)))
+                            .map((t) => (
+                              <SelectItem key={t.id} value={String(t.id)}>{getTabelaLabel(t)}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-1 md:col-span-4">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Representante *</label>
                       <Dialog open={repSearchOpen && editOpen} onOpenChange={setRepSearchOpen}>
                         <DialogTrigger asChild>
