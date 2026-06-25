@@ -387,25 +387,25 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                   <ReadOnlyField label="Checkouts" value={data?.checkouts} />
                 </div>
 
-                {data?.dataCadastro && (
-                  <ReadOnlyField label="Cadastrado em" value={data.dataCadastro} />
-                )}
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <ReadOnlyField label="Nielsen" value={data?.nielsen} />
                   <ReadOnlyField label="Rede" value={data?.rede} />
                 </div>
-                
+
                 <ReadOnlyField label="Tabelas" value={data?.tabelas} />
-                
+
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações</label>
-                  <Textarea 
-                    readOnly 
-                    value={data?.observacaoComercial ?? ''} 
+                  <Textarea
+                    readOnly
+                    value={data?.observacaoComercial ?? ''}
                     className="min-h-[120px] text-sm bg-muted/30 cursor-default resize-none"
                   />
                 </div>
+
+                {data?.dataCadastro && (
+                  <ReadOnlyField label="Cadastrado em" value={data.dataCadastro} />
+                )}
               </TabsContent>
 
               {/* Financeiro */}
