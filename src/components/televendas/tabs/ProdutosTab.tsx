@@ -996,6 +996,11 @@ export function ProdutosTab() {
         .filter((f) => f.codigo_fornecedor)
         .map((f) => [f.fornecedor_id, f.codigo_fornecedor!.trim()]),
     );
+    const divIdToCodigo = new Map<number, string>(
+      divisoes
+        .filter((d) => d.codigo_divisao)
+        .map((d) => [d.divisao_id, d.codigo_divisao!.trim()]),
+    );
 
     const wb = XLSX.utils.book_new();
     const hoje = new Date().toLocaleDateString('pt-BR');
@@ -1024,7 +1029,7 @@ export function ProdutosTab() {
       p.un ?? '',
       p.fatorVenda ?? '',
       p.multiploDeVendas ?? '',
-      p.divisaoId ?? '',
+      (p.divisaoId != null ? divIdToCodigo.get(p.divisaoId) ?? '' : ''),
       p.fornecedor ?? '',
       (p.fornecedorId != null ? fornIdToCodigo.get(p.fornecedorId) ?? '' : ''),
       p.custoMedio ?? '',
@@ -1101,6 +1106,11 @@ export function ProdutosTab() {
           .filter((f) => f.codigo_fornecedor)
           .map((f) => [f.codigo_fornecedor!.trim().toUpperCase(), f.fornecedor_id]),
       );
+      const codigoToDivId = new Map<string, number>(
+        divisoes
+          .filter((d) => d.codigo_divisao)
+          .map((d) => [d.codigo_divisao!.trim().toUpperCase(), d.divisao_id]),
+      );
 
       const parsed: ImportRow[] = rows.map((row, idx) => {
         const codigoProduto = String(row['produto_id'] ?? '').trim();
@@ -1110,6 +1120,9 @@ export function ProdutosTab() {
 
         const fornecCodigoRaw = String(row['fornec_id'] ?? '').trim().toUpperCase();
         const resolvedFornId = fornecCodigoRaw ? codigoToFornId.get(fornecCodigoRaw) : undefined;
+
+        const divisaoCodigoRaw = String(row['divisao_id'] ?? '').trim().toUpperCase();
+        const resolvedDivId = divisaoCodigoRaw ? codigoToDivId.get(divisaoCodigoRaw) : undefined;
 
         const data: Partial<ProductFormState> = {
           codigoProduto: codigoProduto || undefined,
@@ -1123,7 +1136,7 @@ export function ProdutosTab() {
           unidade: String(row['unidade'] ?? '').trim().toUpperCase() || undefined,
           fatorVenda: num(row['fator_cv']),
           multiploDeVendas: num(row['muv']),
-          divisaoId: num(row['divisao_id']),
+          divisaoId: resolvedDivId,
           fornecedorId: resolvedFornId,
           custoMedio: num(row['custo']),
         };
@@ -1134,6 +1147,9 @@ export function ProdutosTab() {
 
         if (fornecCodigoRaw && resolvedFornId == null) {
           return { rowIndex: idx + 1, action: 'aviso' as const, data, error: `Fornecedor código "${fornecCodigoRaw}" não encontrado` };
+        }
+        if (divisaoCodigoRaw && resolvedDivId == null) {
+          return { rowIndex: idx + 1, action: 'aviso' as const, data, error: `Divisão código "${divisaoCodigoRaw}" não encontrada` };
         }
 
         const ean13Val = data.ean13;
