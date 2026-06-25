@@ -1634,7 +1634,7 @@ export function ProdutosTab() {
                       <SelectItem value="all">Todos</SelectItem>
                       {fornecedoresDisponiveis.map((f) => (
                         <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
-                          {f.nome_fornecedor} - {f.fornecedor_id}
+                          {f.codigo_fornecedor ? `${f.codigo_fornecedor} - ` : ''}{f.nome_fornecedor}
                         </SelectItem>
                       ))}
                     </SelectContent>
