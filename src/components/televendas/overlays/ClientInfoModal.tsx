@@ -403,9 +403,7 @@ export const ClientInfoModal = ({ open, onOpenChange, clienteId }: ClientInfoMod
                   />
                 </div>
 
-                {data?.dataCadastro && (
-                  <ReadOnlyField label="Cadastrado em" value={data.dataCadastro} />
-                )}
+                <ReadOnlyField label="Cadastrado em" value={data?.dataCadastro ?? '—'} />
               </TabsContent>
 
               {/* Financeiro */}
