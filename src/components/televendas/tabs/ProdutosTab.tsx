@@ -418,6 +418,7 @@ interface ImportRow {
   action: 'criar' | 'erro' | 'aviso';
   data: Partial<ProductFormState>;
   error?: string;
+  preview?: { prvenda?: number; desconto?: number; comissao?: number };
 }
 
 function parseXlsxBool(val: any): boolean {
@@ -1137,17 +1138,23 @@ export function ProdutosTab() {
           divisaoId: resolvedDivId,
           fornecedorId: resolvedFornId,
           custoMedio: num(row['custo']),
+          estoque: num(row['estoque']),
+        };
+        const preview = {
+          prvenda: num(row['prvenda']),
+          desconto: num(row['desconto']),
+          comissao: num(row['comissao']),
         };
 
         if (!descricao) {
-          return { rowIndex: idx + 1, action: 'erro' as const, data, error: 'Linha sem descrição — ignorada' };
+          return { rowIndex: idx + 1, action: 'erro' as const, data, preview, error: 'Linha sem descrição — ignorada' };
         }
 
         if (fornecCodigoRaw && resolvedFornId == null) {
-          return { rowIndex: idx + 1, action: 'aviso' as const, data, error: `Fornecedor código "${fornecCodigoRaw}" não encontrado` };
+          return { rowIndex: idx + 1, action: 'aviso' as const, data, preview, error: `Fornecedor código "${fornecCodigoRaw}" não encontrado` };
         }
         if (divisaoCodigoRaw && resolvedDivId == null) {
-          return { rowIndex: idx + 1, action: 'aviso' as const, data, error: `Divisão código "${divisaoCodigoRaw}" não encontrada` };
+          return { rowIndex: idx + 1, action: 'aviso' as const, data, preview, error: `Divisão código "${divisaoCodigoRaw}" não encontrada` };
         }
 
         const ean13Val = data.ean13;
@@ -1156,16 +1163,16 @@ export function ProdutosTab() {
 
         if (ean13Val) {
           if (byEan13.has(ean13Val)) {
-            return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (EAN13: ${ean13Val})` };
+            return { rowIndex: idx + 1, action: 'erro' as const, data, preview, error: `Produto já existente (EAN13: ${ean13Val})` };
           }
         } else if (codFab && fornId != null) {
           const key = `${codFab}|${fornId}`;
           if (byCodFabFornecedor.has(key)) {
-            return { rowIndex: idx + 1, action: 'erro' as const, data, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
+            return { rowIndex: idx + 1, action: 'erro' as const, data, preview, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
           }
         }
 
-        return { rowIndex: idx + 1, action: 'criar' as const, data };
+        return { rowIndex: idx + 1, action: 'criar' as const, data, preview };
       });
 
       // Pré-validar fornecedor_id e divisao_id contra a empresa atual
@@ -1881,7 +1888,11 @@ export function ProdutosTab() {
                   <th className="px-2 py-1.5 text-left w-10">UN</th>
                   <th className="px-2 py-1.5 text-right w-16">Ft.Venda</th>
                   <th className="px-2 py-1.5 text-right w-14">Múlt.</th>
+                  <th className="px-2 py-1.5 text-right w-20">Estoque</th>
                   <th className="px-2 py-1.5 text-right w-20">Custo</th>
+                  <th className="px-2 py-1.5 text-right w-20">Pr.Venda</th>
+                  <th className="px-2 py-1.5 text-right w-16">%Desc.</th>
+                  <th className="px-2 py-1.5 text-right w-16">%Com.</th>
                   <th className="px-2 py-1.5 text-left w-36">Fornecedor</th>
                   <th className="px-2 py-1.5 text-left w-36">Divisão</th>
                   <th className="px-2 py-1.5 text-left">Obs.</th>
@@ -1920,7 +1931,11 @@ export function ProdutosTab() {
                       <td className="px-2 py-1">{row.data.unidade || '—'}</td>
                       <td className="px-2 py-1 text-right">{row.data.fatorVenda ?? '—'}</td>
                       <td className="px-2 py-1 text-right">{row.data.multiploDeVendas ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.data.estoque ?? '—'}</td>
                       <td className="px-2 py-1 text-right">{row.data.custoMedio ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.preview?.prvenda ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.preview?.desconto ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.preview?.comissao ?? '—'}</td>
                       <td className="px-2 py-1">{row.data.fornecedorId != null ? (fornIdToNome.get(row.data.fornecedorId) ?? row.data.fornecedorId) : '—'}</td>
                       <td className="px-2 py-1">{row.data.divisaoId != null ? (divIdToNome.get(row.data.divisaoId) ?? row.data.divisaoId) : '—'}</td>
                       <td className="px-2 py-1 text-muted-foreground">{row.error || ''}</td>
