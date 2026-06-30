@@ -1634,7 +1634,7 @@ export function ProdutosTab() {
                       <SelectItem value="all">Todos</SelectItem>
                       {fornecedoresDisponiveis.map((f) => (
                         <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
-                          {f.codigo_fornecedor ? `${f.codigo_fornecedor} - ` : ''}{f.nome_fornecedor}
+                          {f.nome_fornecedor}{f.codigo_fornecedor ? ` - ${f.codigo_fornecedor}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1890,7 +1890,7 @@ export function ProdutosTab() {
               <tbody>
                 {(() => {
                   const fornIdToNome = new Map<number, string>(
-                    fornecedores.map((f) => [f.fornecedor_id, f.codigo_fornecedor ? `${f.codigo_fornecedor} - ${f.nome_fornecedor}` : f.nome_fornecedor]),
+                    fornecedores.map((f) => [f.fornecedor_id, f.codigo_fornecedor ? `${f.nome_fornecedor} - ${f.codigo_fornecedor}` : f.nome_fornecedor]),
                   );
                   const divIdToNome = new Map<number, string>(
                     divisoes.map((d) => [d.divisao_id, d.descricao_divisao]),
@@ -2090,7 +2090,7 @@ export function ProdutosTab() {
                         <SelectItem value="none">Selecione</SelectItem>
                         {fornecedoresDisponiveis.map((f) => (
                           <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
-                            {f.codigo_fornecedor ? `${f.codigo_fornecedor} - ` : ''}{f.nome_fornecedor}
+                            {f.nome_fornecedor}{f.codigo_fornecedor ? ` - ${f.codigo_fornecedor}` : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
