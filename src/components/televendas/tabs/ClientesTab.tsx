@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2, ChevronDown, ChevronUp, Columns3 } from 'lucide-react';
+import { ShoppingCart, Plus, Pencil, Trash2, Info, Search, Loader2, ChevronDown, ChevronUp, Columns3, FileSpreadsheet, Upload, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -461,6 +462,14 @@ export const ClientesTab = () => {
   const [ajusteGeralForm, setAjusteGeralForm] = useState<AjusteGeralFormData>(
     createEmptyAjusteGeralForm(),
   );
+
+  // Import / Export state
+  const xlsxImportRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, any>[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<{ criados: number; atualizados: number; erros: Array<{ linha: number; cnpj_cpf: string; mensagem: string }> } | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // CRUD dialogs & state
   const [createOpen, setCreateOpen] = useState(false);
@@ -1744,6 +1753,90 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
   };
 
+  const handleExportExcel = async () => {
+    setExportLoading(true);
+    try {
+      const EXPORT_HEADERS = [
+        'Cnpj_Cpf', 'Inscr_estadual', 'Nome_RazaoSocial', 'Fantasia',
+        'Fone_fixo', 'Celular', 'Whatsapp', 'Endereco', 'Numero', 'Bairro',
+        'Complemento', 'cidade', 'uf', 'cep', 'CodigoIbge', 'email', 'email_danfe',
+        'CodigoSegmento', 'CodigoRepresentante', 'CodigoRota', 'consumidor_final', 'observacao',
+      ];
+      const rows = clients.map((c) => [
+        c.cnpjCpf ?? '',
+        c.inscricaoEstadual ?? '',
+        c.nome ?? '',
+        c.fantasia ?? '',
+        c.fone ?? '',
+        c.celular ?? '',
+        c.whatsapp ?? '',
+        c.endereco ?? '',
+        c.numero ?? '',
+        c.bairro ?? '',
+        c.complemento ?? '',
+        c.cidade ?? '',
+        c.uf ?? '',
+        c.cep ?? '',
+        '',
+        c.email ?? '',
+        c.emailDanfe ?? '',
+        '',
+        c.representanteCodigo ?? (c.representantes?.[0] as any)?.codigoRepresentante ?? '',
+        c.rota?.codigo_rota ?? '',
+        c.consumidorFinal ? 'SIM' : 'NÃO',
+        c.observacaoComercial ?? '',
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([EXPORT_HEADERS, ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+      XLSX.writeFile(wb, 'clientes.xlsx');
+    } catch {
+      toast.error('Erro ao exportar clientes');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target?.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
+        if (!data.length) { toast.error('Planilha vazia'); return; }
+        setImportRows(data);
+        setImportResult(null);
+        setImportOpen(true);
+      } catch {
+        toast.error('Erro ao ler a planilha');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleImport = async () => {
+    if (!importRows.length) return;
+    setImportLoading(true);
+    try {
+      const result = await clientsService.importar(importRows);
+      setImportResult(result);
+      if (!result.erros.length) {
+        toast.success(`Importação concluída: ${result.criados} criado(s), ${result.atualizados} atualizado(s)`);
+        setImportOpen(false);
+        loadClients(undefined, true);
+      }
+    } catch (e: any) {
+      toast.error(String(e));
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -2096,6 +2189,15 @@ const validateFormData = (data: ClientFormData): string[] => {
                 <Pencil className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Ajuste Geral ({selectedClients.length})</span>
               </Button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={exportLoading || clients.length === 0} className="flex-1 sm:flex-none">
+                {exportLoading ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Download className="h-4 w-4 sm:mr-2" />}
+                <span className="hidden sm:inline">Exportar</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => xlsxImportRef.current?.click()} className="flex-1 sm:flex-none">
+                <Upload className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Importar</span>
+              </Button>
+              <input ref={xlsxImportRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
               <Button variant="default" size="sm" onClick={openCreateDialog} className="flex-1 sm:flex-none" disabled={!canInsert}>
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo</span>
@@ -4724,6 +4826,95 @@ const validateFormData = (data: ClientFormData): string[] => {
         onOpenChange={setClientInfoOpen}
         clienteId={clientInfoId}
       />
+
+      {/* Import dialog */}
+      <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) { setImportRows([]); setImportResult(null); } }}>
+        <DialogContent className="w-[95vw] max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4" />
+              Importar Clientes
+            </DialogTitle>
+          </DialogHeader>
+
+          {!importResult ? (
+            <>
+              <div className="text-sm text-muted-foreground">
+                {importRows.length} linha(s) encontrada(s) na planilha. A chave de identificação é o <strong>CNPJ/CPF</strong>: clientes existentes serão atualizados, novos serão criados.
+              </div>
+              <div className="max-h-[50vh] overflow-auto border rounded-md">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1 text-left font-medium">#</th>
+                      {importRows[0] && Object.keys(importRows[0]).map((h) => (
+                        <th key={h} className="px-2 py-1 text-left font-medium whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importRows.map((row, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1 text-muted-foreground">{i + 2}</td>
+                        {Object.values(row).map((v: any, j) => (
+                          <td key={j} className="px-2 py-1 whitespace-nowrap">{String(v ?? '')}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
+                <Button onClick={handleImport} disabled={importLoading}>
+                  {importLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar {importRows.length} linha(s)
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <div className="flex gap-4 text-sm">
+                  <span className="text-green-600 font-medium">Criados: {importResult.criados}</span>
+                  <span className="text-blue-600 font-medium">Atualizados: {importResult.atualizados}</span>
+                  {importResult.erros.length > 0 && (
+                    <span className="text-red-600 font-medium">Erros: {importResult.erros.length}</span>
+                  )}
+                </div>
+                {importResult.erros.length > 0 && (
+                  <div className="max-h-[40vh] overflow-auto border rounded-md">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted/50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-1 text-left font-medium">Linha</th>
+                          <th className="px-2 py-1 text-left font-medium">CNPJ/CPF</th>
+                          <th className="px-2 py-1 text-left font-medium">Erro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importResult.erros.map((e, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="px-2 py-1">{e.linha}</td>
+                            <td className="px-2 py-1 font-mono">{e.cnpj_cpf}</td>
+                            <td className="px-2 py-1 text-red-600">{e.mensagem}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={() => { setImportOpen(false); loadClients(undefined, true); }}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

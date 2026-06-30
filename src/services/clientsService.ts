@@ -1038,4 +1038,23 @@ export const clientsService = {
       return Promise.reject('Erro de conexão com o servidor');
     }
   },
+
+  importar: async (
+    rows: Record<string, any>[],
+  ): Promise<{ criados: number; atualizados: number; erros: Array<{ linha: number; cnpj_cpf: string; mensagem: string }> }> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+
+    const res = await apiClient.fetch(`${API_BASE}/api/clientes/importar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresaId: empresa.empresa_id, data: rows }),
+    });
+    if (!res.ok) {
+      let message = 'Falha ao importar clientes';
+      try { const err = await res.json(); message = extractErrorMessage(err, message); } catch {}
+      return Promise.reject(message);
+    }
+    return res.json();
+  },
 };
