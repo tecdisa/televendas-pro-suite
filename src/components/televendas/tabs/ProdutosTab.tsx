@@ -1870,39 +1870,63 @@ export function ProdutosTab() {
             <table className="w-full text-xs border-collapse">
               <thead className="sticky top-0 bg-muted/90">
                 <tr className="border-b">
-                  <th className="px-2 py-1.5 text-left w-20">Ação</th>
-                  <th className="px-2 py-1.5 text-left w-24">Produto</th>
-                  <th className="px-2 py-1.5 text-left">Descrição</th>
-                  <th className="px-2 py-1.5 text-left w-16">UN</th>
-                  <th className="px-2 py-1.5 text-left w-32">Fornecedor ID</th>
-                  <th className="px-2 py-1.5 text-left w-32">Divisão ID</th>
+                  <th className="px-2 py-1.5 text-left w-16">Ação</th>
+                  <th className="px-2 py-1.5 text-left min-w-[180px]">Descrição</th>
+                  <th className="px-2 py-1.5 text-left w-28">Apres.</th>
+                  <th className="px-2 py-1.5 text-left w-24">Marca</th>
+                  <th className="px-2 py-1.5 text-left w-28">Cód.Fábrica</th>
+                  <th className="px-2 py-1.5 text-left w-28">EAN13</th>
+                  <th className="px-2 py-1.5 text-left w-20">NCM</th>
+                  <th className="px-2 py-1.5 text-left w-16">CEST</th>
+                  <th className="px-2 py-1.5 text-left w-10">UN</th>
+                  <th className="px-2 py-1.5 text-right w-16">Ft.Venda</th>
+                  <th className="px-2 py-1.5 text-right w-14">Múlt.</th>
+                  <th className="px-2 py-1.5 text-right w-20">Custo</th>
+                  <th className="px-2 py-1.5 text-left w-36">Fornecedor</th>
+                  <th className="px-2 py-1.5 text-left w-36">Divisão</th>
                   <th className="px-2 py-1.5 text-left">Obs.</th>
                 </tr>
               </thead>
               <tbody>
-                {importRows.map((row) => (
-                  <tr key={row.rowIndex} className={`border-b ${
-                    row.action === 'erro'  ? 'bg-red-50 dark:bg-red-950/20' :
-                    row.action === 'aviso' ? 'bg-amber-50 dark:bg-amber-950/20' :
-                    'bg-green-50/50 dark:bg-green-950/20'
-                  }`}>
-                    <td className="px-2 py-1">
-                      <span className={`font-semibold ${
-                        row.action === 'erro'  ? 'text-red-600' :
-                        row.action === 'aviso' ? 'text-amber-600' :
-                        'text-green-700'
-                      }`}>
-                        {row.action === 'criar' ? 'Criar' : row.action === 'aviso' ? 'Aviso' : 'Erro'}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1 font-mono">{row.data.codigoProduto || '—'}</td>
-                    <td className="px-2 py-1">{row.data.descricao || '—'}</td>
-                    <td className="px-2 py-1">{row.data.unidade || '—'}</td>
-                    <td className="px-2 py-1">{row.data.fornecedorId ?? '—'}</td>
-                    <td className="px-2 py-1">{row.data.divisaoId ?? '—'}</td>
-                    <td className="px-2 py-1 text-muted-foreground">{row.error || ''}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const fornIdToNome = new Map<number, string>(
+                    fornecedores.map((f) => [f.fornecedor_id, f.codigo_fornecedor ? `${f.codigo_fornecedor} - ${f.nome_fornecedor}` : f.nome_fornecedor]),
+                  );
+                  const divIdToNome = new Map<number, string>(
+                    divisoes.map((d) => [d.divisao_id, d.descricao_divisao]),
+                  );
+                  return importRows.map((row) => (
+                    <tr key={row.rowIndex} className={`border-b ${
+                      row.action === 'erro'  ? 'bg-red-50 dark:bg-red-950/20' :
+                      row.action === 'aviso' ? 'bg-amber-50 dark:bg-amber-950/20' :
+                      'bg-green-50/50 dark:bg-green-950/20'
+                    }`}>
+                      <td className="px-2 py-1">
+                        <span className={`font-semibold ${
+                          row.action === 'erro'  ? 'text-red-600' :
+                          row.action === 'aviso' ? 'text-amber-600' :
+                          'text-green-700'
+                        }`}>
+                          {row.action === 'criar' ? 'Criar' : row.action === 'aviso' ? 'Aviso' : 'Erro'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1">{row.data.descricao || '—'}</td>
+                      <td className="px-2 py-1">{row.data.apresentacao || '—'}</td>
+                      <td className="px-2 py-1">{row.data.marca || '—'}</td>
+                      <td className="px-2 py-1 font-mono">{row.data.codigoFabrica || '—'}</td>
+                      <td className="px-2 py-1 font-mono">{row.data.ean13 || '—'}</td>
+                      <td className="px-2 py-1">{row.data.ncm || '—'}</td>
+                      <td className="px-2 py-1">{row.data.cest || '—'}</td>
+                      <td className="px-2 py-1">{row.data.unidade || '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.data.fatorVenda ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.data.multiploDeVendas ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.data.custoMedio ?? '—'}</td>
+                      <td className="px-2 py-1">{row.data.fornecedorId != null ? (fornIdToNome.get(row.data.fornecedorId) ?? row.data.fornecedorId) : '—'}</td>
+                      <td className="px-2 py-1">{row.data.divisaoId != null ? (divIdToNome.get(row.data.divisaoId) ?? row.data.divisaoId) : '—'}</td>
+                      <td className="px-2 py-1 text-muted-foreground">{row.error || ''}</td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
