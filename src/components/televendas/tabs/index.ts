@@ -24,3 +24,4 @@ export { AtualizacaoLinearPrecoTab } from './AtualizacaoLinearPrecoTab';
 export { ComparacaoTabelasTab } from './ComparacaoTabelasTab';
 export { ListaTabelaPrecoTab } from './ListaTabelaPrecoTab';
 export { ListaConfiguravelTab } from './ListaConfiguravelTab';
+export { AdminTab } from './AdminTab';

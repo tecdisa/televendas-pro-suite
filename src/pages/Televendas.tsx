@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { usersService, type UsuarioPermissao } from '@/services/usersService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog, User } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog, User, ShieldCheck } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
@@ -32,6 +32,7 @@ import {
   ComparacaoTabelasTab,
   ListaTabelaPrecoTab,
   ListaConfiguravelTab,
+  AdminTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -68,6 +69,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'lista-tabela-preco': { title: 'Lista de Preços', icon: CreditCard },
   'lista-configuravel': { title: 'Lista Configurável', icon: CreditCard },
   'comparacao-tabelas': { title: 'Comparação de Tabelas', icon: CreditCard },
+  'admin': { title: 'Painel Administrativo', icon: ShieldCheck },
 };
 
 const TAB_TO_FUNCAO: Record<string, string | null> = {
@@ -97,6 +99,7 @@ const TAB_TO_FUNCAO: Record<string, string | null> = {
   'lista-tabela-preco': null,
   'lista-configuravel': null,
   'comparacao-tabelas': null,
+  'admin': null,
 };
 
 function normalizeFuncaoKey(value: string | null | undefined): string {
@@ -117,6 +120,8 @@ function buildAllowedTabs(
   const allTabs = Object.keys(pageTitles);
   if (isMasterAdmin) return new Set(allTabs);
 
+  // Non-master admins never get the admin panel
+
   const canSelectByFuncao = new Map(
     permissoes.map((item) => [
       normalizeFuncaoKey(item.funcao),
@@ -126,6 +131,7 @@ function buildAllowedTabs(
 
   const allowed = new Set<string>();
   allTabs.forEach((tab) => {
+    if (tab === 'admin') return; // master admin only
     if (tab === 'usuarios' && !canManageUsers) {
       return;
     }
@@ -167,8 +173,8 @@ const Televendas = () => {
     [isMasterAdmin, canManageUsers, permissoesUsuario],
   );
   const availableNavGroups = useMemo(
-    () => getNavGroups({ canManageUsers, allowedTabs }),
-    [canManageUsers, allowedTabs],
+    () => getNavGroups({ canManageUsers, isMasterAdmin, allowedTabs }),
+    [canManageUsers, isMasterAdmin, allowedTabs],
   );
   const effectiveTab = allowedTabs.has(activeTab) ? activeTab : 'dashboard';
 
@@ -286,6 +292,8 @@ const Televendas = () => {
         return <ErrorBoundary><ListaConfiguravelTab /></ErrorBoundary>;
       case 'comparacao-tabelas':
         return <ErrorBoundary><ComparacaoTabelasTab /></ErrorBoundary>;
+      case 'admin':
+        return <ErrorBoundary><AdminTab /></ErrorBoundary>;
       default:
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }

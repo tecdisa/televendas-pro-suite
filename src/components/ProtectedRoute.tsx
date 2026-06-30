@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { authService } from '@/services/authService';
 
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireEmpresa?: boolean;
@@ -47,7 +48,7 @@ export const ProtectedRoute = ({ children, requireEmpresa = false }: ProtectedRo
     return <Navigate to="/login" replace />;
   }
 
-  if (requireEmpresa && !hasEmpresa) {
+  if (requireEmpresa && !hasEmpresa && !authService.isMasterAdmin()) {
     return <Navigate to="/empresa" replace />;
   }
 

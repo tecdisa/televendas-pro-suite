@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ShieldCheck } from 'lucide-react';
 import {
   authService,
   Empresa,
@@ -35,6 +36,7 @@ const EmpresaSelect = () => {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const forceSwitch = searchParams.get('trocar') === '1';
+  const isMasterAdmin = authService.isMasterAdmin();
 
   const masterGroups = useMemo(() => groupEmpresasByMaster(empresas), [empresas]);
   const selectedMaster = useMemo(
@@ -240,6 +242,20 @@ const EmpresaSelect = () => {
           >
             {selectingMaster ? 'Continuar' : 'Acessar sistema'}
           </Button>
+          {isMasterAdmin && (
+            <Button
+              variant="outline"
+              className="w-full border-amber-500/40 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+              onClick={() => {
+                authService.setEmpresa(null);
+                navigate('/televendas?tab=admin');
+              }}
+              disabled={loading}
+            >
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Acessar Painel Master
+            </Button>
+          )}
           <Button
             variant="outline"
             className="w-full"

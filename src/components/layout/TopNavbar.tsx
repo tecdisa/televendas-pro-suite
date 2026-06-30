@@ -19,6 +19,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   UserRoundCog,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -95,13 +96,21 @@ const baseNavGroups: NavGroup[] = [
       { title: 'Pedidos', tab: 'pesquisa', icon: Package },
     ],
   },
+  {
+    title: 'Administração',
+    icon: ShieldCheck,
+    children: [
+      { title: 'Painel Master', tab: 'admin', icon: ShieldCheck },
+    ],
+  },
 ];
 
 function filterNavNode(
   child: NavChild,
-  options: { canManageUsers: boolean; allowedTabs?: Set<string> },
+  options: { canManageUsers: boolean; isMasterAdmin?: boolean; allowedTabs?: Set<string> },
 ): NavChild | null {
   if (child.tab === 'usuarios' && !options.canManageUsers) return null;
+  if (child.tab === 'admin' && !options.isMasterAdmin) return null;
 
   if (child.tab && options.allowedTabs && !options.allowedTabs.has(child.tab)) {
     return null;
@@ -118,15 +127,16 @@ function filterNavNode(
 }
 
 export function getNavGroups(
-  options: { canManageUsers?: boolean; allowedTabs?: Set<string> } = {},
+  options: { canManageUsers?: boolean; isMasterAdmin?: boolean; allowedTabs?: Set<string> } = {},
 ): NavGroup[] {
   const canManageUsers = options.canManageUsers ?? true;
+  const isMasterAdmin = options.isMasterAdmin ?? false;
 
   return baseNavGroups
     .map((group) => ({
       ...group,
       children: group.children
-        .map((child) => filterNavNode(child, { canManageUsers, allowedTabs: options.allowedTabs }))
+        .map((child) => filterNavNode(child, { canManageUsers, isMasterAdmin, allowedTabs: options.allowedTabs }))
         .filter((child): child is NavChild => child !== null),
     }))
     .filter((group) => group.children.length > 0);
