@@ -310,6 +310,10 @@ export function TabelasPrecoTab() {
   const [copiarDestino, setCopiarDestino] = useState('');
   const [copiarLoading, setCopiarLoading] = useState(false);
 
+  // Aplicar referência dialog
+  const [aplicarRefOpen, setAplicarRefOpen] = useState(false);
+  const [aplicarRefLoading, setAplicarRefLoading] = useState(false);
+
   // Divisões dialog
   const [divisoesOpen, setDivisoesOpen] = useState(false);
   const [divisoesTabela, setDivisoesTabela] = useState<TabelaPreco | null>(null);
@@ -793,6 +797,22 @@ export function TabelasPrecoTab() {
       toast.error(e?.message || 'Erro ao copiar itens');
     } finally {
       setCopiarLoading(false);
+    }
+  };
+
+  const handleAplicarReferencia = async () => {
+    if (!itensTabela) return;
+    setAplicarRefLoading(true);
+    try {
+      const result = await tabelasPrecoService.aplicarReferencia(itensTabela.tabela_preco_id);
+      const msg = result.message ?? `${result.totalAtualizados} preço(s) atualizado(s)`;
+      toast.success(msg);
+      setAplicarRefOpen(false);
+      loadItens(true);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao aplicar referência');
+    } finally {
+      setAplicarRefLoading(false);
     }
   };
 
@@ -1438,6 +1458,12 @@ export function TabelasPrecoTab() {
               <Copy className="h-3.5 w-3.5" />
               Copiar itens
             </Button>
+            {itensTabela?.tabela_referencia_id && (
+              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setAplicarRefOpen(true)}>
+                <Percent className="h-3.5 w-3.5" />
+                Aplicar referência
+              </Button>
+            )}
             <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleExportExcel} disabled={xlsxExporting || itens.length === 0}>
               {xlsxExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
               {selectedRows.size > 0 ? `Excel (${selectedRows.size} sel.)` : 'Excel (todos)'}
@@ -1876,6 +1902,35 @@ export function TabelasPrecoTab() {
                 {copiarLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 <Copy className="h-4 w-4 mr-2" />
                 Copiar para destino
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Aplicar referência dialog */}
+        <Dialog open={aplicarRefOpen} onOpenChange={setAplicarRefOpen}>
+          <DialogContent className="w-[95vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Percent className="h-4 w-4" />
+                Aplicar Referência
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <p>Esta ação atualizará os preços da tabela</p>
+              <p className="font-medium">{itensTabela?.codigo_tabela_preco} — {itensTabela?.descricao_tabela_preco}</p>
+              <p className="text-muted-foreground">
+                com base nos preços da tabela de referência aplicando o percentual configurado.
+                Divisões com percentual próprio usarão seu percentual específico.
+              </p>
+              <p className="text-amber-600 font-medium">Os preços existentes serão sobrescritos. Deseja continuar?</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAplicarRefOpen(false)} disabled={aplicarRefLoading}>Cancelar</Button>
+              <Button onClick={handleAplicarReferencia} disabled={aplicarRefLoading}>
+                {aplicarRefLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                <Percent className="h-4 w-4 mr-2" />
+                Aplicar
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -527,6 +527,26 @@ export const tabelasPrecoService = {
     return response.json();
   },
 
+  async aplicarReferencia(tabelaId: number): Promise<{ totalAtualizados: number; message?: string }> {
+    const empresa = authService.getEmpresa();
+    const empresaId = empresa?.empresa_id;
+    if (!empresaId) throw new Error('Empresa não selecionada');
+
+    const response = await apiClient.fetch(
+      `${API_BASE}/api/tabelas-precos/${tabelaId}/aplicar-referencia`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId }),
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || err?.error?.message || err?.error || 'Erro ao aplicar referência');
+    }
+    return response.json();
+  },
+
   async deleteItem(tabelaId: number, produtoId: number): Promise<void> {
     const empresa = authService.getEmpresa();
     const empresaId = empresa?.empresa_id;
