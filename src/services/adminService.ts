@@ -119,4 +119,33 @@ export const adminService = {
     });
     await handleResponse<void>(res, 'Erro ao remover vínculo');
   },
+
+  async createEmpresa(data: {
+    cnpj: string;
+    razao_social: string;
+    fantasia: string;
+    inscricao_estadual?: string;
+    endereco: string;
+    numero?: string;
+    complemento?: string;
+    bairro: string;
+    cidade?: string;
+    uf: string;
+    cep: string;
+    fone: string;
+    celular: string;
+    whatsapp?: string;
+    email?: string;
+    tecdisa_id: string;
+    empresa_master_id?: number | null;
+    master?: boolean;
+  }): Promise<{ empresa_id: number; razao_social: string; fantasia: string; cnpj_cpf: string; empresa_master_id: number | null; uf: string; inativo: boolean }> {
+    const headers = await authHeaders();
+    const res = await apiClient.fetch(`${API_BASE}/api/empresas`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res, 'Erro ao criar empresa');
+  },
 };
