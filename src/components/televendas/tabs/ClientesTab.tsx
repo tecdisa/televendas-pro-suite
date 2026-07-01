@@ -467,6 +467,7 @@ export const ClientesTab = () => {
   const xlsxImportRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importRows, setImportRows] = useState<Record<string, any>[]>([]);
+  const [parsedImportRows, setParsedImportRows] = useState<ImportClientRow[]>([]);
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<{ criados: number; atualizados: number; erros: Array<{ linha: number; cnpj_cpf: string; mensagem: string }> } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
@@ -1402,6 +1403,25 @@ const ensurePositiveId = (value: number | string | undefined | null, fallback = 
 type ClientFormData = ReturnType<typeof createEmptyFormData>;
 type ExistingClientDuplicate = Pick<Client, 'id' | 'codigoCliente' | 'nome' | 'inativo'>;
 
+interface ImportClientRow {
+  rowIndex: number;
+  data: Record<string, any>;
+  action: 'importar' | 'erro';
+  cnpj: string;
+  nome: string;
+  obs: string;
+}
+
+function parseClientImportRows(data: Record<string, any>[]): ImportClientRow[] {
+  return data.map((row, i) => {
+    const cnpj = String(row['Cnpj_Cpf'] ?? row['cnpj_cpf'] ?? '').replace(/\D/g, '');
+    const nome = String(row['Nome_RazaoSocial'] ?? row['nome'] ?? '').trim();
+    if (!cnpj) return { rowIndex: i + 2, data: row, action: 'erro', cnpj: '', nome, obs: 'CNPJ/CPF obrigatório' };
+    if (!nome) return { rowIndex: i + 2, data: row, action: 'erro', cnpj, nome: '', obs: 'Nome/Razão Social obrigatório' };
+    return { rowIndex: i + 2, data: row, action: 'importar', cnpj, nome, obs: '' };
+  });
+}
+
 const normalizeErrorMessages = (error: unknown): string[] => {
   if (!error) return ['Erro desconhecido'];
   if (Array.isArray(error)) return error.map((item) => String(item)).filter(Boolean);
@@ -1809,7 +1829,9 @@ const validateFormData = (data: ClientFormData): string[] => {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
         if (!data.length) { toast.error('Planilha vazia'); return; }
+        const parsed = parseClientImportRows(data);
         setImportRows(data);
+        setParsedImportRows(parsed);
         setImportResult(null);
         setImportOpen(true);
       } catch {
@@ -1820,10 +1842,11 @@ const validateFormData = (data: ClientFormData): string[] => {
   };
 
   const handleImport = async () => {
-    if (!importRows.length) return;
+    const validRows = parsedImportRows.filter((r) => r.action === 'importar').map((r) => r.data);
+    if (!validRows.length) return;
     setImportLoading(true);
     try {
-      const result = await clientsService.importar(importRows);
+      const result = await clientsService.importar(validRows);
       setImportResult(result);
       if (!result.erros.length) {
         toast.success(`Importação concluída: ${result.criados} criado(s), ${result.atualizados} atualizado(s)`);
@@ -4828,8 +4851,8 @@ const validateFormData = (data: ClientFormData): string[] => {
       />
 
       {/* Import dialog */}
-      <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) { setImportRows([]); setImportResult(null); } }}>
-        <DialogContent className="w-[95vw] max-w-4xl">
+      <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) { setImportRows([]); setParsedImportRows([]); setImportResult(null); } }}>
+        <DialogContent className="w-[95vw] max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-4 w-4" />
@@ -4839,73 +4862,134 @@ const validateFormData = (data: ClientFormData): string[] => {
 
           {!importResult ? (
             <>
-              <div className="text-sm text-muted-foreground">
-                {importRows.length} linha(s) encontrada(s) na planilha. A chave de identificação é o <strong>CNPJ/CPF</strong>: clientes existentes serão atualizados, novos serão criados.
-              </div>
+              {/* Summary */}
+              {(() => {
+                const toImport = parsedImportRows.filter((r) => r.action === 'importar').length;
+                const toError = parsedImportRows.filter((r) => r.action === 'erro').length;
+                return (
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <span className="text-green-600 font-medium">{toImport} a importar</span>
+                    {toError > 0 && <span className="text-red-600 font-medium">{toError} com erro (ignorados)</span>}
+                    <span className="text-muted-foreground text-xs self-center">
+                      Chave: CNPJ/CPF — existentes serão atualizados, novos serão criados
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Preview table */}
               <div className="max-h-[50vh] overflow-auto border rounded-md">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr>
+                      <th className="px-2 py-1 text-left font-medium whitespace-nowrap">Ação</th>
                       <th className="px-2 py-1 text-left font-medium">#</th>
-                      {importRows[0] && Object.keys(importRows[0]).map((h) => (
-                        <th key={h} className="px-2 py-1 text-left font-medium whitespace-nowrap">{h}</th>
-                      ))}
+                      <th className="px-2 py-1 text-left font-medium whitespace-nowrap">CNPJ/CPF</th>
+                      <th className="px-2 py-1 text-left font-medium whitespace-nowrap">Nome / Razão Social</th>
+                      {importRows[0] && Object.keys(importRows[0])
+                        .filter((h) => !['Cnpj_Cpf','cnpj_cpf','Nome_RazaoSocial','nome'].includes(h))
+                        .map((h) => (
+                          <th key={h} className="px-2 py-1 text-left font-medium whitespace-nowrap">{h}</th>
+                        ))}
+                      <th className="px-2 py-1 text-left font-medium">Obs.</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {importRows.map((row, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-2 py-1 text-muted-foreground">{i + 2}</td>
-                        {Object.values(row).map((v: any, j) => (
-                          <td key={j} className="px-2 py-1 whitespace-nowrap">{String(v ?? '')}</td>
-                        ))}
-                      </tr>
-                    ))}
+                    {parsedImportRows.map((r) => {
+                      const isErr = r.action === 'erro';
+                      return (
+                        <tr key={r.rowIndex} className={isErr ? 'border-t bg-red-50 dark:bg-red-950/20' : 'border-t bg-green-50/30 dark:bg-green-950/10'}>
+                          <td className="px-2 py-1 whitespace-nowrap">
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${isErr ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}`}>
+                              {isErr ? 'Erro' : 'Importar'}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1 text-muted-foreground">{r.rowIndex}</td>
+                          <td className="px-2 py-1 font-mono whitespace-nowrap">{r.cnpj || <span className="text-red-500 italic">—</span>}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{r.nome || <span className="text-red-500 italic">—</span>}</td>
+                          {Object.entries(r.data)
+                            .filter(([k]) => !['Cnpj_Cpf','cnpj_cpf','Nome_RazaoSocial','nome'].includes(k))
+                            .map(([k, v]) => (
+                              <td key={k} className="px-2 py-1 whitespace-nowrap">{String(v ?? '')}</td>
+                            ))}
+                          <td className={`px-2 py-1 whitespace-nowrap ${isErr ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                            {r.obs || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
-                <Button onClick={handleImport} disabled={importLoading}>
+                <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importLoading}>Cancelar</Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={importLoading || parsedImportRows.filter((r) => r.action === 'importar').length === 0}
+                >
                   {importLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   <Upload className="h-4 w-4 mr-2" />
-                  Importar {importRows.length} linha(s)
+                  Importar {parsedImportRows.filter((r) => r.action === 'importar').length} linha(s)
                 </Button>
               </DialogFooter>
             </>
           ) : (
             <>
-              <div className="space-y-3">
-                <div className="flex gap-4 text-sm">
-                  <span className="text-green-600 font-medium">Criados: {importResult.criados}</span>
-                  <span className="text-blue-600 font-medium">Atualizados: {importResult.atualizados}</span>
-                  {importResult.erros.length > 0 && (
-                    <span className="text-red-600 font-medium">Erros: {importResult.erros.length}</span>
-                  )}
-                </div>
+              {/* Result summary */}
+              <div className="flex flex-wrap gap-4 text-sm">
+                <span className="text-green-600 font-medium">Criados: {importResult.criados}</span>
+                <span className="text-blue-600 font-medium">Atualizados: {importResult.atualizados}</span>
                 {importResult.erros.length > 0 && (
-                  <div className="max-h-[40vh] overflow-auto border rounded-md">
+                  <span className="text-red-600 font-medium">Erros: {importResult.erros.length}</span>
+                )}
+              </div>
+
+              {/* Full result table per row */}
+              {(() => {
+                const backendErrMap = new Map(importResult.erros.map((e) => [e.linha, e.mensagem]));
+                const rows = parsedImportRows.map((r) => {
+                  if (r.action === 'erro') return { ...r, resultAction: 'erro' as const, resultObs: r.obs };
+                  const beErr = backendErrMap.get(r.rowIndex);
+                  if (beErr) return { ...r, resultAction: 'erro' as const, resultObs: beErr };
+                  return { ...r, resultAction: 'ok' as const, resultObs: '' };
+                });
+                return (
+                  <div className="max-h-[45vh] overflow-auto border rounded-md">
                     <table className="w-full text-xs">
                       <thead className="bg-muted/50 sticky top-0">
                         <tr>
-                          <th className="px-2 py-1 text-left font-medium">Linha</th>
-                          <th className="px-2 py-1 text-left font-medium">CNPJ/CPF</th>
-                          <th className="px-2 py-1 text-left font-medium">Erro</th>
+                          <th className="px-2 py-1 text-left font-medium">Status</th>
+                          <th className="px-2 py-1 text-left font-medium">#</th>
+                          <th className="px-2 py-1 text-left font-medium whitespace-nowrap">CNPJ/CPF</th>
+                          <th className="px-2 py-1 text-left font-medium whitespace-nowrap">Nome / Razão Social</th>
+                          <th className="px-2 py-1 text-left font-medium">Obs.</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {importResult.erros.map((e, i) => (
-                          <tr key={i} className="border-t">
-                            <td className="px-2 py-1">{e.linha}</td>
-                            <td className="px-2 py-1 font-mono">{e.cnpj_cpf}</td>
-                            <td className="px-2 py-1 text-red-600">{e.mensagem}</td>
-                          </tr>
-                        ))}
+                        {rows.map((r) => {
+                          const isErr = r.resultAction === 'erro';
+                          return (
+                            <tr key={r.rowIndex} className={isErr ? 'border-t bg-red-50 dark:bg-red-950/20' : 'border-t'}>
+                              <td className="px-2 py-1">
+                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${isErr ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}`}>
+                                  {isErr ? 'Erro' : 'OK'}
+                                </span>
+                              </td>
+                              <td className="px-2 py-1 text-muted-foreground">{r.rowIndex}</td>
+                              <td className="px-2 py-1 font-mono">{r.cnpj}</td>
+                              <td className="px-2 py-1">{r.nome}</td>
+                              <td className={`px-2 py-1 ${isErr ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                                {r.resultObs || '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
+                );
+              })()}
+
               <DialogFooter>
                 <Button onClick={() => { setImportOpen(false); loadClients(undefined, true); }}>
                   Fechar
