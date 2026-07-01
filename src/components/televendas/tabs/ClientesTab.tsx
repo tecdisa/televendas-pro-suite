@@ -295,6 +295,9 @@ const createEmptyAjusteGeralForm = () => ({
   b2bLiberado: 'false',
   b2bTabelaChecked: false,
   b2bTabelaId: '',
+  tabelaPrecoChecked: false,
+  tabelaPrecoId: '',
+  tabelaPrecoAcao: 'vincular' as 'vincular' | 'desvincular',
 });
 
 type AjusteGeralFormData = ReturnType<typeof createEmptyAjusteGeralForm>;
@@ -1285,6 +1288,13 @@ export const ClientesTab = () => {
       const id = parseId(ajusteGeralForm.b2bTabelaId, 'uma tabela B2B');
       if (id) data.b2bTabelaId = id;
     }
+    if (ajusteGeralForm.tabelaPrecoChecked) {
+      const id = parseId(ajusteGeralForm.tabelaPrecoId, 'uma tabela de preços');
+      if (id) {
+        data.tabelaPrecoId = id;
+        data.tabelaPrecoAcao = ajusteGeralForm.tabelaPrecoAcao;
+      }
+    }
 
     const hasCheckedField =
       ajusteGeralForm.formaPagtoChecked ||
@@ -1297,7 +1307,8 @@ export const ClientesTab = () => {
       ajusteGeralForm.consumidorFinalChecked ||
       ajusteGeralForm.inativoChecked ||
       ajusteGeralForm.b2bLiberadoChecked ||
-      ajusteGeralForm.b2bTabelaChecked;
+      ajusteGeralForm.b2bTabelaChecked ||
+      ajusteGeralForm.tabelaPrecoChecked;
 
     if (!hasCheckedField) errors.push('Selecione ao menos um campo para atualizar.');
     if (!Object.keys(data).length && hasCheckedField)
@@ -3100,6 +3111,61 @@ const validateFormData = (data: ClientFormData): string[] => {
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecione</SelectItem>
+                    {tabelas.map((tabela) => (
+                      <SelectItem key={String(tabela.id)} value={String(tabela.id)}>
+                        {getTabelaLabel(tabela)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={ajusteGeralForm.tabelaPrecoChecked}
+                    onCheckedChange={(checked) =>
+                      setAjusteGeralForm((prev) => ({
+                        ...prev,
+                        tabelaPrecoChecked: checked === true,
+                      }))
+                    }
+                  />
+                  <label className="text-sm font-medium">Tabela de Preços</label>
+                </div>
+                <Select
+                  value={ajusteGeralForm.tabelaPrecoAcao}
+                  onValueChange={(value) =>
+                    setAjusteGeralForm((prev) => ({
+                      ...prev,
+                      tabelaPrecoAcao: value as 'vincular' | 'desvincular',
+                    }))
+                  }
+                  disabled={!ajusteGeralForm.tabelaPrecoChecked}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vincular">Vincular</SelectItem>
+                    <SelectItem value="desvincular">Desvincular</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={ajusteGeralForm.tabelaPrecoId || 'none'}
+                  onValueChange={(value) =>
+                    setAjusteGeralForm((prev) => ({
+                      ...prev,
+                      tabelaPrecoId: value === 'none' ? '' : value,
+                    }))
+                  }
+                  disabled={!ajusteGeralForm.tabelaPrecoChecked}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a tabela" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Selecione</SelectItem>
