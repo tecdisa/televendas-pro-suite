@@ -418,7 +418,7 @@ interface ImportRow {
   action: 'criar' | 'erro' | 'aviso';
   data: Partial<ProductFormState>;
   error?: string;
-  preview?: { prvenda?: number; desconto?: number; comissao?: number };
+  preview?: { prvenda?: number; comissao?: number };
 }
 
 function parseXlsxBool(val: any): boolean {
@@ -1005,16 +1005,16 @@ export function ProdutosTab() {
 
     const wb = XLSX.utils.book_new();
     const hoje = new Date().toLocaleDateString('pt-BR');
-    const infoRows = [
-      ['Produtos — Exportação'],
-      [`Data: ${hoje}`],
-      [],
-    ];
 
     const header = [
       'produto_id', 'descricao', 'apresentacao', 'marca', 'codfab', 'ean13', 'ncm', 'cest',
-      'estoque', 'unidade', 'fator_cv', 'muv', 'divisao_id', 'fornece', 'fornec_id',
-      'custo', 'prvenda', 'desconto', 'comissao',
+      'estoque', 'unidade', 'fator_cv', 'muv', 'localizacao', 'descricao2',
+      'divisao_id', 'fornece', 'fornec_id',
+      'trib_icms', 'cst', 'csosn', 'aliq_icms', 'pFCP', 'pauta', 'cicms', 'cIpi',
+      'cst_pis', 'cst_cofins', 'aliq_pis', 'aliq_cofins',
+      'origem', 'pesobr', 'u_nota', 'ccompra', 'cmedio',
+      'prvenda', 'comissao', 'unidade2', 'dun14', 'pno',
+      'CST_ibs_cbs', 'cClassTrib_ibs_cbs',
     ];
 
     const dataRows = exportList.map((p) => [
@@ -1030,23 +1030,49 @@ export function ProdutosTab() {
       p.un ?? '',
       p.fatorVenda ?? '',
       p.multiploDeVendas ?? '',
+      '', // localizacao — não disponível no sistema
+      '', // descricao2 — não disponível no sistema
       (p.divisaoId != null ? divIdToCodigo.get(p.divisaoId) ?? '' : ''),
       p.fornecedor ?? '',
       (p.fornecedorId != null ? fornIdToCodigo.get(p.fornecedorId) ?? '' : ''),
+      p.codigoSituacaoIcms ?? '',
+      p.cst ?? '',
+      p.csosn ?? '',
+      p.aliquotaIcms ?? '',
+      p.pfcp ?? '',
+      p.pautaIcms ?? '',
+      p.aliquotaIcmsCredito ?? '',
+      '', // cIpi — não disponível no sistema
+      p.cstPis ?? '',
+      p.cstCofins ?? '',
+      p.aliquotaPis ?? '',
+      p.aliquotaCofins ?? '',
+      p.origemProduto ?? '',
+      p.pesoBruto ?? '',
+      p.custoNota ?? '',
+      p.custoCompra ?? '',
       p.custoMedio ?? '',
       p.preco ?? '',
-      p.descontoMaximo ?? '',
       p.comissao ?? '',
+      p.unidade2 ?? '',
+      p.dun14 ?? '',
+      p.pno ?? '',
+      p.ibsCbs ?? '',
+      p.ibsCbsClassifTrib ?? '',
     ]);
 
-    const wsData = [...infoRows, header, ...dataRows];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
     ws['!cols'] = [
-      { wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
-      { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 25 }, { wch: 12 },
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 12 }, { wch: 40 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 8  }, { wch: 10 }, { wch: 6  }, { wch: 12 }, { wch: 20 },
+      { wch: 12 }, { wch: 36 }, { wch: 12 },
+      { wch: 28 }, { wch: 6  }, { wch: 6  }, { wch: 10 }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  },
+      { wch: 8  }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 6  }, { wch: 8  }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 10 }, { wch: 8  }, { wch: 14 }, { wch: 6  },
+      { wch: 12 }, { wch: 18 },
     ];
-    XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+    XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
     XLSX.writeFile(wb, `produtos_${hoje.replace(/\//g, '-')}.xlsx`);
     toast.success('Arquivo exportado com sucesso');
   }
@@ -1124,25 +1150,46 @@ export function ProdutosTab() {
         const divisaoCodigoRaw = String(row['divisao_id'] ?? '').trim().toUpperCase();
         const resolvedDivId = divisaoCodigoRaw ? codigoToDivId.get(divisaoCodigoRaw) : undefined;
 
+        const str = (v: any) => String(v ?? '').trim() || undefined;
         const data: Partial<ProductFormState> = {
           descricao: descricao || undefined,
-          apresentacao: String(row['apresentacao'] ?? '').trim().toUpperCase() || undefined,
-          marca: String(row['marca'] ?? '').trim().toUpperCase() || undefined,
-          codigoFabrica: String(row['codfab'] ?? '').trim().toUpperCase() || undefined,
+          apresentacao: str(row['apresentacao'])?.toUpperCase(),
+          marca: str(row['marca'])?.toUpperCase(),
+          codigoFabrica: str(row['codfab'])?.toUpperCase(),
           ean13: String(row['ean13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
-          ncm: String(row['ncm'] ?? '').trim() || undefined,
-          cest: String(row['cest'] ?? '').trim() || undefined,
-          unidade: String(row['unidade'] ?? '').trim().toUpperCase() || undefined,
+          ncm: str(row['ncm']),
+          cest: str(row['cest']),
+          unidade: str(row['unidade'])?.toUpperCase(),
           fatorVenda: num(row['fator_cv']),
           multiploDeVendas: num(row['muv']),
           divisaoId: resolvedDivId,
           fornecedorId: resolvedFornId,
-          custoMedio: num(row['custo']),
           estoque: num(row['estoque']),
+          // Custos — cmedio é o nome novo, custo é o legado
+          custoMedio: num(row['cmedio'] ?? row['custo']),
+          custoNota: num(row['u_nota']),
+          custoCompra: num(row['ccompra']),
+          // Fiscal
+          codigoSituacaoIcms: str(row['trib_icms']),
+          cst: str(row['cst']),
+          csosn: str(row['csosn']),
+          aliquotaIcms: num(row['aliq_icms']),
+          pfcp: num(row['pFCP']),
+          pautaIcms: num(row['pauta']),
+          aliquotaIcmsCredito: num(row['cicms']),
+          cstPis: str(row['cst_pis']),
+          cstCofins: str(row['cst_cofins']),
+          aliquotaPis: num(row['aliq_pis']),
+          aliquotaCofins: num(row['aliq_cofins']),
+          // Outros
+          origemProduto: str(row['origem']),
+          pesoBruto: num(row['pesobr']),
+          dun14: String(row['dun14'] ?? '').replace(/\D/g, '').slice(0, 14) || undefined,
+          ibsCbs: str(row['CST_ibs_cbs']),
+          ibsCbsClassifTrib: str(row['cClassTrib_ibs_cbs']),
         };
         const preview = {
           prvenda: num(row['prvenda']),
-          desconto: num(row['desconto']),
           comissao: num(row['comissao']),
         };
 
@@ -1891,7 +1938,6 @@ export function ProdutosTab() {
                   <th className="px-2 py-1.5 text-right w-20">Estoque</th>
                   <th className="px-2 py-1.5 text-right w-20">Custo</th>
                   <th className="px-2 py-1.5 text-right w-20">Pr.Venda</th>
-                  <th className="px-2 py-1.5 text-right w-16">%Desc.</th>
                   <th className="px-2 py-1.5 text-right w-16">%Com.</th>
                   <th className="px-2 py-1.5 text-left w-36">Fornecedor</th>
                   <th className="px-2 py-1.5 text-left w-36">Divisão</th>
@@ -1934,7 +1980,6 @@ export function ProdutosTab() {
                       <td className="px-2 py-1 text-right">{row.data.estoque ?? '—'}</td>
                       <td className="px-2 py-1 text-right">{row.data.custoMedio ?? '—'}</td>
                       <td className="px-2 py-1 text-right">{row.preview?.prvenda ?? '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.preview?.desconto ?? '—'}</td>
                       <td className="px-2 py-1 text-right">{row.preview?.comissao ?? '—'}</td>
                       <td className="px-2 py-1">{row.data.fornecedorId != null ? (fornIdToNome.get(row.data.fornecedorId) ?? row.data.fornecedorId) : '—'}</td>
                       <td className="px-2 py-1">{row.data.divisaoId != null ? (divIdToNome.get(row.data.divisaoId) ?? row.data.divisaoId) : '—'}</td>
