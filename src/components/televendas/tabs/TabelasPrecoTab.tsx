@@ -1594,7 +1594,7 @@ export function TabelasPrecoTab() {
         {/* Grid */}
         <div className="flex-1 overflow-hidden border-x">
           <div className="h-full overflow-auto" onScroll={handleItensScroll}>
-            <table className="w-full text-xs border-collapse" style={{ minWidth: 1830 }}>
+            <table className="w-full text-xs border-collapse" style={{ minWidth: 1878 }}>
               <thead className="sticky top-0 z-20 bg-muted/90">
                 <tr className="border-b">
                   <th className="sticky left-0 z-30 w-7 px-1 py-1.5 text-center bg-muted/90">
@@ -1605,7 +1605,7 @@ export function TabelasPrecoTab() {
                   <th className="w-24 px-1 py-1.5 text-left" style={{ paddingLeft: '60px' }}>Cód.Fábrica</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
-                  <th className="w-32 px-1 py-1.5 text-right">Preço Venda</th>
+                  <th className="w-44 px-1 py-1.5 text-right">Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
                   <th className="w-14 px-1 py-1.5 text-right">Qtd.Mín.</th>
