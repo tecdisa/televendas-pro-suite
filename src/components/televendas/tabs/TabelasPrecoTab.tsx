@@ -1605,7 +1605,7 @@ export function TabelasPrecoTab() {
                   <th className="w-24 px-1 py-1.5 text-left" style={{ paddingLeft: '60px' }}>Cód.Fábrica</th>
                   <th className="w-16 px-1 py-1.5 text-left">Apres.</th>
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
-                  <th className="w-44 px-1 py-1.5 text-right">Preço Venda</th>
+                  <th className="px-1 py-1.5 text-right" style={{ minWidth: 176, width: 176 }}>Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
                   <th className="w-14 px-1 py-1.5 text-right">Qtd.Mín.</th>
@@ -1675,7 +1675,7 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 font-mono text-[11px]" style={{ paddingLeft: '60px' }}>{item.codigo_fabrica || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.apresentacao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground">{item.un || '-'}</td>
-                        <td className="px-1 py-0.5 text-right font-medium">
+                        <td className="px-1 py-0.5 text-right font-medium" style={{ minWidth: 176, width: 176 }}>
                           <EditableCell value={item.preco} field="preco" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className="px-1 py-0.5 text-right">
