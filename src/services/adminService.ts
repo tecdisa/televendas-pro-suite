@@ -43,6 +43,7 @@ export interface EmpresaUsuario {
   ativo: boolean;
   admin: boolean;
   admin_master: boolean;
+  global_master: boolean;
   forca_de_vendas: boolean;
   usuario_empresa_id: number;
 }
@@ -118,6 +119,16 @@ export const adminService = {
       headers,
     });
     await handleResponse<void>(res, 'Erro ao remover vínculo');
+  },
+
+  async setUserMaster(usuarioId: number, master: boolean): Promise<{ usuario_id: number; usuario: string; master: boolean }> {
+    const headers = await authHeaders();
+    const res = await apiClient.fetch(`${API_BASE}/api/admin/usuarios/${usuarioId}/master`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ master }),
+    });
+    return handleResponse(res, 'Erro ao atualizar flag master');
   },
 
   async createEmpresa(data: {

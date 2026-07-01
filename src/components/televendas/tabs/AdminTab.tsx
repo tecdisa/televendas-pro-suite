@@ -48,6 +48,7 @@ export function AdminTab() {
   const [usuarios, setUsuarios] = useState<EmpresaUsuario[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [togglingMasterId, setTogglingMasterId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const [associarOpen, setAssociarOpen] = useState(false);
@@ -249,6 +250,21 @@ export function AdminTab() {
     }
   };
 
+  const handleToggleMaster = async (usuario: EmpresaUsuario, value: boolean) => {
+    setTogglingMasterId(usuario.usuario_id);
+    try {
+      await adminService.setUserMaster(usuario.usuario_id, value);
+      setUsuarios((prev) =>
+        prev.map((u) => u.usuario_id === usuario.usuario_id ? { ...u, global_master: value } : u),
+      );
+      toast.success(value ? 'Usuário definido como Global Master' : 'Flag Global Master removida');
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao atualizar flag master');
+    } finally {
+      setTogglingMasterId(null);
+    }
+  };
+
   const handleAssocSearch = (q: string) => {
     setAssocSearch(q);
     if (assocDebounce.current) clearTimeout(assocDebounce.current);
@@ -415,14 +431,16 @@ export function AdminTab() {
                   <TableHead className="text-xs text-center w-20">Admin</TableHead>
                   <TableHead className="text-xs text-center w-28">Força Vendas</TableHead>
                   <TableHead className="text-xs text-center w-16">Ativo</TableHead>
+                  <TableHead className="text-xs text-center w-28">Global Master</TableHead>
                   <TableHead className="text-xs text-right w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {usuarios.map((u) => {
                   const busy = togglingId === u.usuario_empresa_id || deletingId === u.usuario_empresa_id;
+                  const masterBusy = togglingMasterId === u.usuario_id;
                   return (
-                    <TableRow key={u.usuario_empresa_id} className={cn(busy && 'opacity-60')}>
+                    <TableRow key={u.usuario_empresa_id} className={cn((busy || masterBusy) && 'opacity-60')}>
                       <TableCell className="text-xs font-medium max-w-[200px]">
                         <div className="flex items-center gap-1.5 min-w-0">
                           {u.admin_master && (
@@ -455,6 +473,14 @@ export function AdminTab() {
                           checked={u.ativo}
                           disabled={busy || u.admin_master}
                           onCheckedChange={(v) => handleToggle(u, 'inativo', !v)}
+                          className="scale-75"
+                        />
+                      </TableCell>
+                      <TableCell className="text-center w-28">
+                        <Switch
+                          checked={u.global_master ?? false}
+                          disabled={masterBusy}
+                          onCheckedChange={(v) => handleToggleMaster(u, v)}
                           className="scale-75"
                         />
                       </TableCell>
