@@ -1607,8 +1607,9 @@ export function TabelasPrecoTab() {
                   <th className="w-10 px-1 py-1.5 text-left">UN</th>
                   <th className="w-20 px-1 py-1.5 text-right">Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
-                  <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
+                  <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
                   <th className="w-14 px-1 py-1.5 text-right">Qtd.Mín.</th>
+                  <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Bonificação">Bon.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Débito/Crédito">Déb/Cr.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Venda Especial">Vd.Esp.</th>
@@ -1622,7 +1623,6 @@ export function TabelasPrecoTab() {
                   <th className="w-32 px-1 py-1.5 text-left">Princ.Ativo</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Despesa</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Lucro</th>
-                  <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Frete</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Major.</th>
                   <th className="w-16 pl-12 pr-1 py-1.5 text-right">Custo</th>
@@ -1681,11 +1681,14 @@ export function TabelasPrecoTab() {
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.desconto_maximo} field="desconto_maximo" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
-                        <td className="px-1 py-0.5 text-center">
-                          <Checkbox checked={promValue} onCheckedChange={(c) => commitBool(item.produto_id, 'produto_em_promocao', c === true)} />
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.comissao} field="comissao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.quantidade_minima} field="quantidade_minima" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
+                        <td className="px-1 py-0.5 text-center">
+                          <Checkbox checked={promValue} onCheckedChange={(c) => commitBool(item.produto_id, 'produto_em_promocao', c === true)} />
                         </td>
                         <td className="px-1 py-0.5 text-center">
                           <Checkbox
@@ -1718,9 +1721,6 @@ export function TabelasPrecoTab() {
                         </td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.lucro} field="lucro" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
-                        </td>
-                        <td className="px-1 py-0.5 text-right">
-                          <EditableCell value={item.comissao} field="comissao" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
                         </td>
                         <td className="px-1 py-0.5 text-right">
                           <EditableCell value={item.frete} field="frete" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
