@@ -48,6 +48,8 @@ export function ClientesPorRepresentanteTab() {
     bairro: '',
     redeId: 'all',
     rotaId: 'all',
+    dataCadastroDe: '',
+    dataCadastroAte: '',
   });
   const [importUfs, setImportUfs] = useState<Uf[]>([]);
   const [importCidades, setImportCidades] = useState<Cidade[]>([]);
@@ -263,6 +265,8 @@ export function ClientesPorRepresentanteTab() {
       if (f.bairro) searchFilters.bairro = f.bairro;
       if (f.redeId && f.redeId !== 'all') searchFilters.redeId = Number(f.redeId);
       if (f.rotaId && f.rotaId !== 'all') searchFilters.rotaId = Number(f.rotaId);
+      if (f.dataCadastroDe) searchFilters.cadastradosDe = f.dataCadastroDe;
+      if (f.dataCadastroAte) searchFilters.cadastradosAte = f.dataCadastroAte;
       // Backend caps at 100/page — paginate until all records are fetched
       const PAGE_SIZE = 100;
       let currentPage = 1;
@@ -610,6 +614,14 @@ export function ClientesPorRepresentanteTab() {
                     {importRotas.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Cadastrado de</label>
+                <Input type="date" className="h-8 text-sm" value={importFilters.dataCadastroDe} onChange={e => setImportFilters({ ...importFilters, dataCadastroDe: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Cadastrado até</label>
+                <Input type="date" className="h-8 text-sm" value={importFilters.dataCadastroAte} onChange={e => setImportFilters({ ...importFilters, dataCadastroAte: e.target.value })} />
               </div>
             </div>
             <Button variant="default" size="sm" onClick={handleImportSearch} disabled={importPreviewLoading}>

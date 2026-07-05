@@ -253,6 +253,7 @@ export function TabelasPrecoTab() {
   const [itensPossuiFoto, setItensPossuiFoto] = useState(false);
   const [itensB2b, setItensB2b] = useState(false);
   const [itensB2c, setItensB2c] = useState(false);
+  const [itensEscala, setItensEscala] = useState<'all' | 'com' | 'sem'>('all');
 
   // Refs que sempre apontam para os valores mais recentes dos filtros
   // (atualizados sincronamente no render — evita closure stale em loadItens)
@@ -264,6 +265,7 @@ export function TabelasPrecoTab() {
   const itensPossuiFotoRef = useRef(itensPossuiFoto);
   const itensB2bRef = useRef(itensB2b);
   const itensB2cRef = useRef(itensB2c);
+  const itensEscalaRef = useRef(itensEscala);
   const itensSearchRef = useRef(itensSearch);
   const itensTabelaRef = useRef(itensTabela);
   const itensPageRef = useRef(itensPage);
@@ -278,6 +280,7 @@ export function TabelasPrecoTab() {
   itensPossuiFotoRef.current = itensPossuiFoto;
   itensB2bRef.current = itensB2b;
   itensB2cRef.current = itensB2c;
+  itensEscalaRef.current = itensEscala;
   itensSearchRef.current = itensSearch;
   itensTabelaRef.current = itensTabela;
   itensPageRef.current = itensPage;
@@ -542,6 +545,7 @@ export function TabelasPrecoTab() {
         possuiFoto: itensPossuiFotoRef.current || undefined,
         permiteVendaB2b: itensB2bRef.current || undefined,
         permiteVendaB2c: itensB2cRef.current || undefined,
+        escala: itensEscalaRef.current !== 'all' ? itensEscalaRef.current : undefined,
       };
       console.debug('[loadItens] tabelaId=%d page=%d filters=%o', itensTabelaRef.current.tabela_preco_id, nextPage, filters);
       const result = await tabelasPrecoService.getItens(
@@ -572,6 +576,7 @@ export function TabelasPrecoTab() {
     itensPossuiFotoRef.current = false;
     itensB2bRef.current = false;
     itensB2cRef.current = false;
+    itensEscalaRef.current = 'all';
     itensSearchRef.current = '';
     setItensStatus('todos');
     setItensFornecedor('all');
@@ -581,6 +586,7 @@ export function TabelasPrecoTab() {
     setItensPossuiFoto(false);
     setItensB2b(false);
     setItensB2c(false);
+    setItensEscala('all');
     setFilterPromocao(false);
     setFilterComissaoZerada(false);
     setFilterSemPreco(false);
@@ -1227,6 +1233,7 @@ export function TabelasPrecoTab() {
         possuiFoto: itensPossuiFotoRef.current || undefined,
         permiteVendaB2b: itensB2bRef.current || undefined,
         permiteVendaB2c: itensB2cRef.current || undefined,
+        escala: itensEscalaRef.current !== 'all' ? itensEscalaRef.current : undefined,
       };
       const result = await tabelasPrecoService.getItens(
         itensTabela.tabela_preco_id,
@@ -1558,6 +1565,15 @@ export function TabelasPrecoTab() {
               onKeyDown={handleItensKeyDown}
             />
 
+            <Select value={itensEscala} onValueChange={(v) => setItensEscala(v as 'all' | 'com' | 'sem')}>
+              <SelectTrigger className="h-7 text-xs w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Escalonado: todos</SelectItem>
+                <SelectItem value="com">Com escalonado</SelectItem>
+                <SelectItem value="sem">Sem escalonado</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Button size="sm" className="h-7 px-3 text-xs" onClick={handleItensSearch} disabled={itensLoading}>
               Buscar
             </Button>
@@ -1737,12 +1753,13 @@ export function TabelasPrecoTab() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6"
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 relative"
                                     onClick={() => openEscala(item)}>
-                                    <Layers className="h-3 w-3" />
+                                    <Layers className={`h-3 w-3 ${item.has_escala ? 'text-blue-500' : ''}`} />
+                                    {item.has_escala && <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />}
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Escalonado</TooltipContent>
+                                <TooltipContent>Escalonado{item.has_escala ? ' (tem escala)' : ''}</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                             <TooltipProvider>

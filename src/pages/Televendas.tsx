@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService, getEmpresaDisplayName } from '@/services/authService';
 import { usersService, type UsuarioPermissao } from '@/services/usersService';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog, User, ShieldCheck } from 'lucide-react';
+import { LogOut, Search, FileText, Route, ClipboardList, Users, Truck, Layers, Grid3X3, UserCheck, Network, Clock, Target, CreditCard, Menu, LayoutDashboard, Package, MapPinned, Building2, UserRoundCog, User, ShieldCheck, FileBarChart2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DashboardTab,
@@ -33,6 +33,7 @@ import {
   ListaTabelaPrecoTab,
   ListaConfiguravelTab,
   AdminTab,
+  RelatorioEscalaTab,
 } from '@/components/televendas/tabs';
 import { DigitacaoModal } from '@/components/televendas/overlays';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -70,6 +71,7 @@ const pageTitles: Record<string, { title: string; icon: React.ComponentType<{ cl
   'lista-configuravel': { title: 'Lista Configurável', icon: CreditCard },
   'comparacao-tabelas': { title: 'Comparação de Tabelas', icon: CreditCard },
   'admin': { title: 'Painel Administrativo', icon: ShieldCheck },
+  'relatorio-escala': { title: 'Produtos com/sem Escalonado', icon: FileBarChart2 },
 };
 
 const TAB_TO_FUNCAO: Record<string, string | null> = {
@@ -100,6 +102,7 @@ const TAB_TO_FUNCAO: Record<string, string | null> = {
   'lista-configuravel': null,
   'comparacao-tabelas': null,
   'admin': null,
+  'relatorio-escala': null,
 };
 
 function normalizeFuncaoKey(value: string | null | undefined): string {
@@ -294,6 +297,8 @@ const Televendas = () => {
         return <ErrorBoundary><ComparacaoTabelasTab /></ErrorBoundary>;
       case 'admin':
         return <ErrorBoundary><AdminTab /></ErrorBoundary>;
+      case 'relatorio-escala':
+        return <ErrorBoundary><RelatorioEscalaTab /></ErrorBoundary>;
       default:
         return <ErrorBoundary><DashboardTab /></ErrorBoundary>;
     }

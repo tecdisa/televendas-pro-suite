@@ -76,6 +76,7 @@ export interface TabelaPrecoItem {
   preco_nacional_consumidor: number | null;
   divisao: string;
   fornecedor: string;
+  has_escala: boolean;
 }
 
 function normalizeTabelaPreco(raw: any): TabelaPreco {
@@ -131,6 +132,7 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     preco_nacional_consumidor: raw?.preco_nacional_consumidor != null ? Number(raw.preco_nacional_consumidor) : null,
     divisao: String(raw?.divisao ?? '').trim(),
     fornecedor: String(raw?.fornecedor ?? '').trim(),
+    has_escala: Boolean(raw?.has_escala ?? false),
   };
 }
 
@@ -381,6 +383,7 @@ export const tabelasPrecoService = {
       possuiFoto?: boolean;
       permiteVendaB2b?: boolean;
       permiteVendaB2c?: boolean;
+      escala?: 'com' | 'sem';
     },
   ): Promise<{ data: TabelaPrecoItem[]; total: number }> {
     const empresa = authService.getEmpresa();
@@ -400,6 +403,7 @@ export const tabelasPrecoService = {
     if (filters?.possuiFoto) params.set('possuiFoto', 'true');
     if (filters?.permiteVendaB2b) params.set('permiteVendaB2b', 'true');
     if (filters?.permiteVendaB2c) params.set('permiteVendaB2c', 'true');
+    if (filters?.escala) params.set('escala', filters.escala);
 
     try {
       const response = await apiClient.fetch(

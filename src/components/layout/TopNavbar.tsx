@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   UserRoundCog,
   ShieldCheck,
+  FileBarChart2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +95,13 @@ const baseNavGroups: NavGroup[] = [
     icon: ShoppingCart,
     children: [
       { title: 'Pedidos', tab: 'pesquisa', icon: Package },
+    ],
+  },
+  {
+    title: 'Relatórios',
+    icon: FileBarChart2,
+    children: [
+      { title: 'Produtos Escalonado', tab: 'relatorio-escala', icon: Layers },
     ],
   },
   {
