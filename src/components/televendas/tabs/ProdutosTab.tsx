@@ -1007,72 +1007,31 @@ export function ProdutosTab() {
     const hoje = new Date().toLocaleDateString('pt-BR');
 
     const header = [
-      'produto_id', 'descricao', 'apresentacao', 'marca', 'codfab', 'ean13', 'ncm', 'cest',
-      'estoque', 'unidade', 'fator_cv', 'muv', 'localizacao', 'descricao2',
-      'divisao_id', 'fornece', 'fornec_id',
-      'trib_icms', 'cst', 'csosn', 'aliq_icms', 'pFCP', 'pauta', 'cicms', 'cIpi',
-      'cst_pis', 'cst_cofins', 'aliq_pis', 'aliq_cofins',
-      'origem', 'pesobr', 'u_nota', 'ccompra', 'cmedio',
-      'prvenda', 'comissao', 'unidade2', 'dun14', 'pno',
-      'CST_ibs_cbs', 'cClassTrib_ibs_cbs',
+      'Descricao', 'Unidade', 'Apresentacao', 'Marca', 'CodigoFabrica',
+      'Ean', 'Ncm', 'Cest', 'CodigoDivisao', 'CodigoFornecedor', 'PesoBr', 'PesoLiq',
     ];
 
     const dataRows = exportList.map((p) => [
-      p.codigoProduto ?? '',
       p.descricao ?? '',
+      p.un ?? '',
       p.apresentacao ?? '',
       p.marca ?? '',
       p.codigoFabrica ?? '',
       p.ean13 ?? '',
       p.ncm ?? '',
       p.cest ?? '',
-      p.estoque ?? 0,
-      p.un ?? '',
-      p.fatorVenda ?? '',
-      p.multiploDeVendas ?? '',
-      '', // localizacao — não disponível no sistema
-      '', // descricao2 — não disponível no sistema
       (p.divisaoId != null ? divIdToCodigo.get(p.divisaoId) ?? '' : ''),
-      p.fornecedor ?? '',
       (p.fornecedorId != null ? fornIdToCodigo.get(p.fornecedorId) ?? '' : ''),
-      p.codigoSituacaoIcms ?? '',
-      p.cst ?? '',
-      p.csosn ?? '',
-      p.aliquotaIcms ?? '',
-      p.pfcp ?? '',
-      p.pautaIcms ?? '',
-      p.aliquotaIcmsCredito ?? '',
-      '', // cIpi — não disponível no sistema
-      p.cstPis ?? '',
-      p.cstCofins ?? '',
-      p.aliquotaPis ?? '',
-      p.aliquotaCofins ?? '',
-      p.origemProduto ?? '',
       p.pesoBruto ?? '',
-      p.custoNota ?? '',
-      p.custoCompra ?? '',
-      p.custoMedio ?? '',
-      p.preco ?? '',
-      p.comissao ?? '',
-      p.unidade2 ?? '',
-      p.dun14 ?? '',
-      p.pno ?? '',
-      p.ibsCbs ?? '',
-      p.ibsCbsClassifTrib ?? '',
+      p.pesoLiquido ?? '',
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
     ws['!cols'] = [
-      { wch: 12 }, { wch: 40 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
-      { wch: 10 }, { wch: 8  }, { wch: 10 }, { wch: 6  }, { wch: 12 }, { wch: 20 },
-      { wch: 12 }, { wch: 36 }, { wch: 12 },
-      { wch: 28 }, { wch: 6  }, { wch: 6  }, { wch: 10 }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  },
-      { wch: 8  }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 6  }, { wch: 8  }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 10 }, { wch: 10 }, { wch: 8  }, { wch: 14 }, { wch: 6  },
-      { wch: 12 }, { wch: 18 },
+      { wch: 60 }, { wch: 8 }, { wch: 18 }, { wch: 20 }, { wch: 16 },
+      { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 10 },
     ];
-    XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
+    XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
     XLSX.writeFile(wb, `produtos_${hoje.replace(/\//g, '-')}.xlsx`);
     toast.success('Arquivo exportado com sucesso');
   }
@@ -1140,58 +1099,32 @@ export function ProdutosTab() {
       );
 
       const parsed: ImportRow[] = rows.map((row, idx) => {
-        const descricao = String(row['descricao'] ?? '').trim().toUpperCase();
+        const descricao = String(row['Descricao'] ?? '').trim().toUpperCase();
 
         const num = (v: any) => (v !== '' && v != null ? Number(v) || undefined : undefined);
 
-        const fornecCodigoRaw = String(row['fornec_id'] ?? '').trim().toUpperCase();
+        const fornecCodigoRaw = String(row['CodigoFornecedor'] ?? '').trim().toUpperCase();
         const resolvedFornId = fornecCodigoRaw ? codigoToFornId.get(fornecCodigoRaw) : undefined;
 
-        const divisaoCodigoRaw = String(row['divisao_id'] ?? '').trim().toUpperCase();
+        const divisaoCodigoRaw = String(row['CodigoDivisao'] ?? '').trim().toUpperCase();
         const resolvedDivId = divisaoCodigoRaw ? codigoToDivId.get(divisaoCodigoRaw) : undefined;
 
         const str = (v: any) => String(v ?? '').trim() || undefined;
         const data: Partial<ProductFormState> = {
           descricao: descricao || undefined,
-          apresentacao: str(row['apresentacao'])?.toUpperCase(),
-          marca: str(row['marca'])?.toUpperCase(),
-          codigoFabrica: str(row['codfab'])?.toUpperCase(),
-          ean13: String(row['ean13'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
-          ncm: str(row['ncm']),
-          cest: str(row['cest']),
-          unidade: str(row['unidade'])?.toUpperCase(),
-          fatorVenda: num(row['fator_cv']),
-          multiploDeVendas: num(row['muv']),
+          unidade: str(row['Unidade'])?.toUpperCase(),
+          apresentacao: str(row['Apresentacao'])?.toUpperCase(),
+          marca: str(row['Marca'])?.toUpperCase(),
+          codigoFabrica: str(row['CodigoFabrica'])?.toUpperCase(),
+          ean13: String(row['Ean'] ?? '').replace(/\D/g, '').slice(0, 13) || undefined,
+          ncm: str(row['Ncm']),
+          cest: str(row['Cest']),
           divisaoId: resolvedDivId,
           fornecedorId: resolvedFornId,
-          estoque: num(row['estoque']),
-          // Custos — cmedio é o nome novo, custo é o legado
-          custoMedio: num(row['cmedio'] ?? row['custo']),
-          custoNota: num(row['u_nota']),
-          custoCompra: num(row['ccompra']),
-          // Fiscal
-          codigoSituacaoIcms: str(row['trib_icms']),
-          cst: str(row['cst']),
-          csosn: str(row['csosn']),
-          aliquotaIcms: num(row['aliq_icms']),
-          pfcp: num(row['pFCP']),
-          pautaIcms: num(row['pauta']),
-          aliquotaIcmsCredito: num(row['cicms']),
-          cstPis: str(row['cst_pis']),
-          cstCofins: str(row['cst_cofins']),
-          aliquotaPis: num(row['aliq_pis']),
-          aliquotaCofins: num(row['aliq_cofins']),
-          // Outros
-          origemProduto: str(row['origem']),
-          pesoBruto: num(row['pesobr']),
-          dun14: String(row['dun14'] ?? '').replace(/\D/g, '').slice(0, 14) || undefined,
-          ibsCbs: str(row['CST_ibs_cbs']),
-          ibsCbsClassifTrib: str(row['cClassTrib_ibs_cbs']),
+          pesoBruto: num(row['PesoBr']),
+          pesoLiquido: num(row['PesoLiq']),
         };
-        const preview = {
-          prvenda: num(row['prvenda']),
-          comissao: num(row['comissao']),
-        };
+        const preview = {};
 
         if (!descricao) {
           return { rowIndex: idx + 1, action: 'erro' as const, data, preview, error: 'Linha sem descrição — ignorada' };
@@ -1926,28 +1859,24 @@ export function ProdutosTab() {
                 <tr className="border-b">
                   <th className="px-2 py-1.5 text-left w-16">Ação</th>
                   <th className="px-2 py-1.5 text-left min-w-[180px]">Descrição</th>
+                  <th className="px-2 py-1.5 text-left w-10">UN</th>
                   <th className="px-2 py-1.5 text-left w-28">Apres.</th>
                   <th className="px-2 py-1.5 text-left w-24">Marca</th>
                   <th className="px-2 py-1.5 text-left w-28">Cód.Fábrica</th>
-                  <th className="px-2 py-1.5 text-left w-28">EAN13</th>
+                  <th className="px-2 py-1.5 text-left w-28">EAN</th>
                   <th className="px-2 py-1.5 text-left w-20">NCM</th>
                   <th className="px-2 py-1.5 text-left w-16">CEST</th>
-                  <th className="px-2 py-1.5 text-left w-10">UN</th>
-                  <th className="px-2 py-1.5 text-right w-16">Ft.Venda</th>
-                  <th className="px-2 py-1.5 text-right w-14">Múlt.</th>
-                  <th className="px-2 py-1.5 text-right w-20">Estoque</th>
-                  <th className="px-2 py-1.5 text-right w-20">Custo</th>
-                  <th className="px-2 py-1.5 text-right w-20">Pr.Venda</th>
-                  <th className="px-2 py-1.5 text-right w-16">%Com.</th>
                   <th className="px-2 py-1.5 text-left w-36">Fornecedor</th>
                   <th className="px-2 py-1.5 text-left w-36">Divisão</th>
+                  <th className="px-2 py-1.5 text-right w-18">Peso Br.</th>
+                  <th className="px-2 py-1.5 text-right w-18">Peso Liq.</th>
                   <th className="px-2 py-1.5 text-left">Obs.</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
                   const fornIdToNome = new Map<number, string>(
-                    fornecedores.map((f) => [f.fornecedor_id, f.codigo_fornecedor ? `${f.nome_fornecedor} - ${f.codigo_fornecedor}` : f.nome_fornecedor]),
+                    fornecedores.map((f) => [f.fornecedor_id, f.codigo_fornecedor ? `${f.codigo_fornecedor} — ${f.nome_fornecedor}` : f.nome_fornecedor]),
                   );
                   const divIdToNome = new Map<number, string>(
                     divisoes.map((d) => [d.divisao_id, d.descricao_divisao]),
@@ -1968,21 +1897,17 @@ export function ProdutosTab() {
                         </span>
                       </td>
                       <td className="px-2 py-1">{row.data.descricao || '—'}</td>
+                      <td className="px-2 py-1">{row.data.unidade || '—'}</td>
                       <td className="px-2 py-1">{row.data.apresentacao || '—'}</td>
                       <td className="px-2 py-1">{row.data.marca || '—'}</td>
                       <td className="px-2 py-1 font-mono">{row.data.codigoFabrica || '—'}</td>
                       <td className="px-2 py-1 font-mono">{row.data.ean13 || '—'}</td>
                       <td className="px-2 py-1">{row.data.ncm || '—'}</td>
                       <td className="px-2 py-1">{row.data.cest || '—'}</td>
-                      <td className="px-2 py-1">{row.data.unidade || '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.data.fatorVenda ?? '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.data.multiploDeVendas ?? '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.data.estoque ?? '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.data.custoMedio ?? '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.preview?.prvenda ?? '—'}</td>
-                      <td className="px-2 py-1 text-right">{row.preview?.comissao ?? '—'}</td>
                       <td className="px-2 py-1">{row.data.fornecedorId != null ? (fornIdToNome.get(row.data.fornecedorId) ?? row.data.fornecedorId) : '—'}</td>
                       <td className="px-2 py-1">{row.data.divisaoId != null ? (divIdToNome.get(row.data.divisaoId) ?? row.data.divisaoId) : '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.data.pesoBruto ?? '—'}</td>
+                      <td className="px-2 py-1 text-right">{row.data.pesoLiquido ?? '—'}</td>
                       <td className="px-2 py-1 text-muted-foreground">{row.error || ''}</td>
                     </tr>
                   ));
