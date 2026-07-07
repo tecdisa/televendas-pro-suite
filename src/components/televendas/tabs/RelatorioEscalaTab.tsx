@@ -78,18 +78,43 @@ export function RelatorioEscalaTab() {
       toast.error('Nenhum dado para exportar');
       return;
     }
-    const rows = itens.map((i) => ({
-      Produto: i.codigo_produto,
-      Descrição: i.descricao_produto,
-      Apresentação: i.apresentacao,
-      UN: i.un,
-      Marca: i.marca,
-      Divisão: i.divisao,
-      Fornecedor: i.fornecedor,
-      'Preço Venda': i.preco,
-      Estoque: i.estoque,
-      'Tem Escala': i.has_escala ? 'SIM' : 'NÃO',
-    }));
+    const rows: Record<string, any>[] = [];
+    for (const i of itens) {
+      rows.push({
+        Produto: i.codigo_produto,
+        Descrição: i.descricao_produto,
+        Apresentação: i.apresentacao,
+        UN: i.un,
+        Marca: i.marca,
+        Divisão: i.divisao,
+        Fornecedor: i.fornecedor,
+        'Preço Venda': i.preco,
+        Estoque: i.estoque,
+        'Tem Escala': i.has_escala ? 'SIM' : 'NÃO',
+        'Qtd Mín. Escala': '',
+        'Desconto Escala (%)': '',
+        'Comissão Escala (%)': '',
+      });
+      if (i.escala_tiers?.length) {
+        for (const t of i.escala_tiers) {
+          rows.push({
+            Produto: '',
+            Descrição: '',
+            Apresentação: '',
+            UN: '',
+            Marca: '',
+            Divisão: '',
+            Fornecedor: '',
+            'Preço Venda': '',
+            Estoque: '',
+            'Tem Escala': '',
+            'Qtd Mín. Escala': t.quantidade,
+            'Desconto Escala (%)': t.desconto,
+            'Comissão Escala (%)': t.comissao,
+          });
+        }
+      }
+    }
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -99,10 +124,10 @@ export function RelatorioEscalaTab() {
     XLSX.writeFile(wb, `relatorio_escalonado${filtroLabel}.xlsx`);
   };
 
-  const labelEscala = (v: boolean) =>
-    v ? (
+  const labelEscala = (item: (typeof itens)[0]) =>
+    item.has_escala ? (
       <span className="inline-flex items-center gap-1 text-blue-600 font-medium">
-        <Layers className="h-3.5 w-3.5" /> SIM
+        <Layers className="h-3.5 w-3.5" /> SIM ({item.escala_tiers?.length ?? 0})
       </span>
     ) : (
       <span className="text-muted-foreground">NÃO</span>
@@ -257,21 +282,37 @@ export function RelatorioEscalaTab() {
             </TableHeader>
             <TableBody>
               {itens.map((item) => (
-                <TableRow key={item.produto_id} className={item.has_escala ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}>
-                  <TableCell className="text-xs font-mono">{item.codigo_produto}</TableCell>
-                  <TableCell className="text-xs">
-                    <div>{item.descricao_produto}</div>
-                    {item.produto_inativo && <span className="text-[10px] text-red-500">(inativo)</span>}
-                  </TableCell>
-                  <TableCell className="text-xs">{item.apresentacao}</TableCell>
-                  <TableCell className="text-xs">{item.un}</TableCell>
-                  <TableCell className="text-xs">{item.marca}</TableCell>
-                  <TableCell className="text-xs">{item.divisao}</TableCell>
-                  <TableCell className="text-xs">{item.fornecedor}</TableCell>
-                  <TableCell className="text-xs text-right font-mono">{fmt2(item.preco)}</TableCell>
-                  <TableCell className="text-xs text-right">{item.estoque}</TableCell>
-                  <TableCell className="text-xs text-center">{labelEscala(item.has_escala)}</TableCell>
-                </TableRow>
+                <>
+                  <TableRow key={item.produto_id} className={item.has_escala ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}>
+                    <TableCell className="text-xs font-mono">{item.codigo_produto}</TableCell>
+                    <TableCell className="text-xs">
+                      <div>{item.descricao_produto}</div>
+                      {item.produto_inativo && <span className="text-[10px] text-red-500">(inativo)</span>}
+                    </TableCell>
+                    <TableCell className="text-xs">{item.apresentacao}</TableCell>
+                    <TableCell className="text-xs">{item.un}</TableCell>
+                    <TableCell className="text-xs">{item.marca}</TableCell>
+                    <TableCell className="text-xs">{item.divisao}</TableCell>
+                    <TableCell className="text-xs">{item.fornecedor}</TableCell>
+                    <TableCell className="text-xs text-right font-mono">{fmt2(item.preco)}</TableCell>
+                    <TableCell className="text-xs text-right">{item.estoque}</TableCell>
+                    <TableCell className="text-xs text-center">{labelEscala(item)}</TableCell>
+                  </TableRow>
+                  {item.escala_tiers?.map((tier, idx) => (
+                    <TableRow key={`${item.produto_id}-tier-${idx}`} className="bg-blue-50/70 dark:bg-blue-950/30 border-t-0">
+                      <TableCell colSpan={7} className="text-xs text-blue-700 dark:text-blue-300 pl-8 py-1 font-mono">
+                        ↳ Qtd ≥ {tier.quantidade}
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono text-blue-700 dark:text-blue-300 py-1">
+                        {fmt2(tier.desconto)}% desc.
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono text-blue-700 dark:text-blue-300 py-1">
+                        {fmt2(tier.comissao)}% com.
+                      </TableCell>
+                      <TableCell className="py-1" />
+                    </TableRow>
+                  ))}
+                </>
               ))}
             </TableBody>
           </Table>

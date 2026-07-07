@@ -77,6 +77,7 @@ export interface TabelaPrecoItem {
   divisao: string;
   fornecedor: string;
   has_escala: boolean;
+  escala_tiers: Array<{ quantidade: number; desconto: number; comissao: number }> | null;
 }
 
 function normalizeTabelaPreco(raw: any): TabelaPreco {
@@ -133,6 +134,13 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     divisao: String(raw?.divisao ?? '').trim(),
     fornecedor: String(raw?.fornecedor ?? '').trim(),
     has_escala: Boolean(raw?.has_escala ?? false),
+    escala_tiers: Array.isArray(raw?.escala_tiers)
+      ? raw.escala_tiers.map((t: any) => ({
+          quantidade: Number(t.quantidade ?? 0),
+          desconto: Number(t.desconto ?? 0),
+          comissao: Number(t.comissao ?? 0),
+        }))
+      : null,
   };
 }
 
