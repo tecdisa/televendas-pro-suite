@@ -631,11 +631,11 @@ export function ClientesPorRepresentanteTab() {
                   <Table>
                     <TableHeader className="sticky top-0 z-10 bg-muted/90">
                       <TableRow className="text-xs">
-                        <TableHead style={{ position: 'sticky', left: 0 }} className={cn('w-10 px-2 bg-muted/90 z-20 shadow-[1px_0_0_hsl(var(--border))]')}>
+                        <TableHead style={{ position: 'sticky', left: 0, width: 40, minWidth: 40, maxWidth: 40 }} className="px-2 bg-muted/90 z-20 shadow-[1px_0_0_hsl(var(--border))]">
                           <Checkbox checked={selectedClientIds.size === clients.length && clients.length > 0} onCheckedChange={toggleAllClients} />
                         </TableHead>
-                        <TableHead style={{ position: 'sticky', left: 40 }} className="w-28 bg-muted/90 z-20">Código</TableHead>
-                        <TableHead style={{ position: 'sticky', left: 152 }} className="min-w-[240px] bg-muted/90 z-20 shadow-[1px_0_0_hsl(var(--border))]">Nome</TableHead>
+                        <TableHead style={{ position: 'sticky', left: 40, width: 112, minWidth: 112, maxWidth: 112 }} className="bg-muted/90 z-20">Código</TableHead>
+                        <TableHead style={{ position: 'sticky', left: 152, width: 240, minWidth: 240, maxWidth: 240 }} className="bg-muted/90 z-20 shadow-[1px_0_0_hsl(var(--border))]">Nome</TableHead>
                         <TableHead className="w-44">Fantasia</TableHead>
                         <TableHead className="w-36">CNPJ/CPF</TableHead>
                         <TableHead className="w-16">Pessoa</TableHead>
@@ -675,12 +675,12 @@ export function ClientesPorRepresentanteTab() {
                         const rotaLabel = c.rotaId != null ? rotasMap.get(Number(c.rotaId)) || String(c.rotaId) : '-';
                         return (
                           <TableRow key={c.id} className="group text-xs">
-                            <TableCell style={{ position: 'sticky', left: 0 }} className="px-2 bg-background z-10 shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50">
+                            <TableCell style={{ position: 'sticky', left: 0, width: 40, minWidth: 40, maxWidth: 40 }} className="px-2 bg-background z-10 shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50">
                               <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
                             </TableCell>
-                            <TableCell style={{ position: 'sticky', left: 40 }} className="font-mono bg-background z-10 group-hover:bg-muted/50">{c.codigoCliente ?? ''}</TableCell>
-                            <TableCell style={{ position: 'sticky', left: 152 }} className="font-medium bg-background z-10 shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50">
-                              <div className="truncate whitespace-nowrap max-w-[240px]" title={c.nome}>{c.nome}</div>
+                            <TableCell style={{ position: 'sticky', left: 40, width: 112, minWidth: 112, maxWidth: 112 }} className="font-mono bg-background z-10 group-hover:bg-muted/50">{c.codigoCliente ?? ''}</TableCell>
+                            <TableCell style={{ position: 'sticky', left: 152, width: 240, minWidth: 240, maxWidth: 240 }} className="font-medium bg-background z-10 shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50">
+                              <div className="truncate whitespace-nowrap" title={c.nome}>{c.nome}</div>
                             </TableCell>
                             <TableCell>{c.fantasia || '-'}</TableCell>
                             <TableCell>{c.cnpjCpf || '-'}</TableCell>
