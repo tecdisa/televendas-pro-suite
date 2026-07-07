@@ -79,6 +79,7 @@ export interface Client {
     codigoRepresentante?: string;
     nome?: string;
   }>;
+  tabelasCodigos?: string[];
 }
 
 function extractErrorMessage(err: any, fallback: string): string {
@@ -398,6 +399,9 @@ function normalizeClient(raw: any): Client {
     representanteCodigo: representanteCodigo ? String(representanteCodigo).trim() : undefined,
     representanteNome: representanteNome ? String(representanteNome).trim() : undefined,
     representantes,
+    tabelasCodigos: Array.isArray(raw?.tabelas_codigos)
+      ? raw.tabelas_codigos.map((c: any) => String(c))
+      : undefined,
   };
 }
 

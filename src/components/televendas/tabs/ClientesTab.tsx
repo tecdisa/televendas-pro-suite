@@ -203,6 +203,7 @@ const CLIENTS_GRID_COLUMNS = [
   { key: 'simples', label: 'Simples', width: 80, pinnable: true },
   { key: 'consumidorFinal', label: 'Consum. Final', width: 96, pinnable: true },
   { key: 'inativo', label: 'Inativo', width: 80, pinnable: true },
+  { key: 'tabelasPreco', label: 'Tab. Preço', width: 140, pinnable: true },
   { key: 'acoes', label: 'Ações', width: 112, pinnable: false },
 ] as const;
 
@@ -2423,6 +2424,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                     Inativo
                   </TableHead>
                   <TableHead
+                    style={getStickyStyle('tabelasPreco')}
+                    className={cn('w-36', getStickyHeadClass('tabelasPreco'))}
+                  >
+                    Tab. Preço
+                  </TableHead>
+                  <TableHead
                     style={getStickyStyle('acoes')}
                     className={cn('text-center w-28 min-w-[112px]', getStickyHeadClass('acoes'))}
                   >
@@ -2646,6 +2653,14 @@ const validateFormData = (data: ClientFormData): string[] => {
                           className={cn('text-center', getStickyCellClass('inativo'))}
                         >
                           {client.inativo ? 'Sim' : 'Não'}
+                        </TableCell>
+                        <TableCell
+                          style={getStickyStyle('tabelasPreco')}
+                          className={cn('font-mono text-xs', getStickyCellClass('tabelasPreco'))}
+                        >
+                          {client.tabelasCodigos?.length
+                            ? client.tabelasCodigos.join(', ')
+                            : '-'}
                         </TableCell>
                         <TableCell
                           style={getStickyStyle('acoes')}
