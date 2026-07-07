@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Loader2, Download, Copy, Trash2, UserCheck } from 'lucide-react';
+import { Search, Loader2, Download, Copy, Trash2, UserCheck, Info, Pencil, UserMinus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { representativesService, Representante } from '@/services/representativesService';
 import { clientsService, Client } from '@/services/clientsService';
 import { metadataService, Uf, Cidade, Rota, Rede, SegmentoVenda, FormaPagamento, PrazoPagto } from '@/services/metadataService';
+import { ClientInfoModal } from '../overlays/ClientInfoModal';
 
 const formatGridNumber = (value: number | string | null | undefined) => {
   if (value === null || value === undefined || value === '') return '-';
@@ -89,6 +92,86 @@ export function ClientesPorRepresentanteTab() {
   const segmentosMap = useMemo(() => new Map(segmentos.map((s) => [Number(s.id), s.descricao || String(s.id)])), [segmentos]);
   const redesMap = useMemo(() => new Map(redes.map((r) => [Number(r.id), r.descricao || String(r.id)])), [redes]);
   const rotasMap = useMemo(() => new Map(rotas.map((r) => [Number(r.id), r.descricao_rota || r.codigo_rota || String(r.id)])), [rotas]);
+
+  // Client info modal
+  const [clientInfoOpen, setClientInfoOpen] = useState(false);
+  const [clientInfoId, setClientInfoId] = useState<number | null>(null);
+
+  // Client edit dialog
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    nome: '', inativo: false, fone: '', whatsapp: '', email: '',
+    segmentoId: '', redeId: '', rotaId: '', formaPagtoId: '', prazoPagtoId: '',
+    observacaoComercial: '',
+  });
+
+  const openEditClient = async (id: number) => {
+    setEditId(id);
+    setEditOpen(true);
+    setEditLoading(true);
+    try {
+      const d: any = await clientsService.getDetail(id) ?? {};
+      setEditForm({
+        nome: String(d.nome ?? d.razao_social ?? '').trim(),
+        inativo: Boolean(d.inativo),
+        fone: String(d.fone ?? '').trim(),
+        whatsapp: String(d.whatsapp ?? '').trim(),
+        email: String(d.email ?? '').trim(),
+        segmentoId: d.segmento_id != null ? String(d.segmento_id) : '',
+        redeId: d.rede_id != null ? String(d.rede_id) : '',
+        rotaId: d.rota_id != null ? String(d.rota_id) : '',
+        formaPagtoId: d.forma_pagto_id != null ? String(d.forma_pagto_id) : '',
+        prazoPagtoId: d.prazo_pagto_id != null ? String(d.prazo_pagto_id) : '',
+        observacaoComercial: String(d.observacao_comercial ?? '').trim(),
+      });
+    } catch {
+      toast.error('Erro ao carregar dados do cliente');
+      setEditOpen(false);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editId || !editForm.nome.trim()) { toast.error('Nome é obrigatório'); return; }
+    setEditSaving(true);
+    try {
+      await clientsService.update(editId, {
+        nome: editForm.nome.trim().toUpperCase(),
+        inativo: editForm.inativo,
+        fone: editForm.fone.trim() || undefined,
+        whatsapp: editForm.whatsapp.trim() || undefined,
+        email: editForm.email.trim() || undefined,
+        segmentoId: editForm.segmentoId ? Number(editForm.segmentoId) : undefined,
+        redeId: editForm.redeId ? Number(editForm.redeId) : undefined,
+        rotaId: editForm.rotaId ? Number(editForm.rotaId) : undefined,
+        formaPagtoId: editForm.formaPagtoId ? Number(editForm.formaPagtoId) : undefined,
+        prazoPagtoId: editForm.prazoPagtoId ? Number(editForm.prazoPagtoId) : undefined,
+      } as any);
+      toast.success('Cliente atualizado');
+      setEditOpen(false);
+      loadClients();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao salvar');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleDesvinculaUm = async (clientId: number, clientNome: string) => {
+    if (!selectedRep) return;
+    if (!confirm(`Desvincular "${clientNome}" deste representante?`)) return;
+    try {
+      await representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id);
+      toast.success('Cliente desvinculado');
+      loadClients();
+    } catch {
+      toast.error('Erro ao desvincular cliente');
+    }
+  };
 
   // Load representatives
   const loadRepresentantes = async (query?: string) => {
@@ -546,13 +629,13 @@ export function ClientesPorRepresentanteTab() {
               ) : (
                 <>
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-muted/90">
                       <TableRow className="text-xs">
-                        <TableHead className="w-10 px-2">
+                        <TableHead style={{ position: 'sticky', left: 0 }} className={cn('w-10 px-2 bg-muted/90 z-20 shadow-[1px_0_0_hsl(var(--border))]')}>
                           <Checkbox checked={selectedClientIds.size === clients.length && clients.length > 0} onCheckedChange={toggleAllClients} />
                         </TableHead>
-                        <TableHead className="w-28">Código</TableHead>
-                        <TableHead className="min-w-[240px]">Nome</TableHead>
+                        <TableHead style={{ position: 'sticky', left: 40 }} className="w-28 bg-muted/90 z-20">Código</TableHead>
+                        <TableHead style={{ position: 'sticky', left: 152 }} className="min-w-[240px] bg-muted/90 z-20 shadow-[1px_0_0_hsl(var(--border))]">Nome</TableHead>
                         <TableHead className="w-44">Fantasia</TableHead>
                         <TableHead className="w-36">CNPJ/CPF</TableHead>
                         <TableHead className="w-16">Pessoa</TableHead>
@@ -580,6 +663,7 @@ export function ClientesPorRepresentanteTab() {
                         <TableHead className="w-24 text-center">Cons. Final</TableHead>
                         <TableHead className="w-16 text-center">Inativo</TableHead>
                         <TableHead className="w-36">Tab. Preço</TableHead>
+                        <TableHead style={{ position: 'sticky', right: 0 }} className="w-28 text-center bg-muted/90 z-20 shadow-[-1px_0_0_hsl(var(--border))]">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -590,12 +674,12 @@ export function ClientesPorRepresentanteTab() {
                         const redeLabel = c.redeId != null ? redesMap.get(Number(c.redeId)) || String(c.redeId) : '-';
                         const rotaLabel = c.rotaId != null ? rotasMap.get(Number(c.rotaId)) || String(c.rotaId) : '-';
                         return (
-                          <TableRow key={c.id} className="text-xs">
-                            <TableCell className="px-2">
+                          <TableRow key={c.id} className="group text-xs">
+                            <TableCell style={{ position: 'sticky', left: 0 }} className="px-2 bg-background z-10 shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50">
                               <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
                             </TableCell>
-                            <TableCell className="font-mono">{c.codigoCliente ?? ''}</TableCell>
-                            <TableCell className="font-medium">
+                            <TableCell style={{ position: 'sticky', left: 40 }} className="font-mono bg-background z-10 group-hover:bg-muted/50">{c.codigoCliente ?? ''}</TableCell>
+                            <TableCell style={{ position: 'sticky', left: 152 }} className="font-medium bg-background z-10 shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted/50">
                               <div className="truncate whitespace-nowrap max-w-[240px]" title={c.nome}>{c.nome}</div>
                             </TableCell>
                             <TableCell>{c.fantasia || '-'}</TableCell>
@@ -626,6 +710,36 @@ export function ClientesPorRepresentanteTab() {
                             <TableCell className="text-center">{c.inativo ? 'Sim' : 'Não'}</TableCell>
                             <TableCell className="font-mono">
                               {c.tabelasCodigos?.length ? c.tabelasCodigos.join(', ') : '-'}
+                            </TableCell>
+                            <TableCell style={{ position: 'sticky', right: 0 }} className="bg-background z-10 shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted/50 text-center">
+                              <TooltipProvider>
+                                <div className="flex items-center justify-center gap-0.5">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setClientInfoId(c.id); setClientInfoOpen(true); }}>
+                                        <Info className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Visualizar</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="secondary" size="icon" className="h-7 w-7" onClick={() => openEditClient(c.id)}>
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Editar</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDesvinculaUm(c.id, c.nome)}>
+                                        <UserMinus className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Desvincular</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </TooltipProvider>
                             </TableCell>
                           </TableRow>
                         );
@@ -823,6 +937,104 @@ export function ClientesPorRepresentanteTab() {
             <Button variant="default" onClick={handleCopyConfirm} disabled={copyLoading || !copyFromRep}>
               {copyLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Copiar todos os clientes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ClientInfoModal open={clientInfoOpen} onOpenChange={setClientInfoOpen} clienteId={clientInfoId ?? 0} />
+
+      <Dialog open={editOpen} onOpenChange={(open) => { if (!editSaving) setEditOpen(open); }}>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          {editLoading ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Carregando...</div>
+          ) : (
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome / Razão Social</label>
+                <Input className="h-8 text-sm" value={editForm.nome} onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox checked={!editForm.inativo} onCheckedChange={(v) => setEditForm({ ...editForm, inativo: v !== true })} />
+                <label className="text-sm">Ativo</label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefone</label>
+                  <Input className="h-8 text-sm" value={editForm.fone} onChange={(e) => setEditForm({ ...editForm, fone: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
+                  <Input className="h-8 text-sm" value={editForm.whatsapp} onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+                <Input className="h-8 text-sm" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Segmento</label>
+                  <Select value={editForm.segmentoId || 'none'} onValueChange={(v) => setEditForm({ ...editForm, segmentoId: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-</SelectItem>
+                      {segmentos.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.descricao}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Rede</label>
+                  <Select value={editForm.redeId || 'none'} onValueChange={(v) => setEditForm({ ...editForm, redeId: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-</SelectItem>
+                      {redes.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.descricao}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Rota</label>
+                  <Select value={editForm.rotaId || 'none'} onValueChange={(v) => setEditForm({ ...editForm, rotaId: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-</SelectItem>
+                      {rotas.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.descricao}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Forma Pagto</label>
+                  <Select value={editForm.formaPagtoId || 'none'} onValueChange={(v) => setEditForm({ ...editForm, formaPagtoId: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-</SelectItem>
+                      {formas.map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.descricao}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Prazo Pagto</label>
+                <Select value={editForm.prazoPagtoId || 'none'} onValueChange={(v) => setEditForm({ ...editForm, prazoPagtoId: v === 'none' ? '' : v })}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">-</SelectItem>
+                    {prazos.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.descricao}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={editSaving || editLoading}>
+              {editSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</> : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
