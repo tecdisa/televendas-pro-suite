@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Loader2, FileSpreadsheet, Search, Layers } from 'lucide-react';
+import { Loader2, FileSpreadsheet, Search, Layers, Printer } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -124,6 +124,107 @@ export function RelatorioEscalaTab() {
     XLSX.writeFile(wb, `relatorio_escalonado${filtroLabel}.xlsx`);
   };
 
+  const handleImprimir = () => {
+    if (!itens.length) {
+      toast.error('Nenhum dado para imprimir');
+      return;
+    }
+
+    const rows = itens.map((item) => {
+      const tiers = item.escala_tiers ?? [];
+      return `
+        <tr class="produto-row${item.has_escala ? ' com-escala' : ''}">
+          <td class="mono">${item.codigo_produto}</td>
+          <td>${item.descricao_produto}${item.produto_inativo ? ' <span class="inativo">(inativo)</span>' : ''}</td>
+          <td>${item.apresentacao}</td>
+          <td>${item.un}</td>
+          <td>${item.marca}</td>
+          <td>${item.divisao}</td>
+          <td>${item.fornecedor}</td>
+          <td class="num">${fmt2(item.preco)}</td>
+          <td class="num">${item.estoque}</td>
+          <td class="center escala-badge">${item.has_escala ? `SIM (${tiers.length})` : 'NÃO'}</td>
+        </tr>
+        ${tiers.map((t) => `
+        <tr class="tier-row">
+          <td colspan="7" class="tier-desc">↳ Qtd ≥ ${t.quantidade}</td>
+          <td class="num tier-val">${fmt2(t.desconto)}% desc.</td>
+          <td class="num tier-val">${fmt2(t.comissao)}% com.</td>
+          <td></td>
+        </tr>`).join('')}
+      `;
+    }).join('');
+
+    const filtroLabel = escalaFiltro === 'com' ? 'Com escalonado' : escalaFiltro === 'sem' ? 'Sem escalonado' : 'Todos';
+    const dataHora = new Date().toLocaleString('pt-BR');
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Produtos Escalonados — ${tabelaNome}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #111; padding: 16px; }
+    h1 { font-size: 14px; margin-bottom: 4px; }
+    .meta { font-size: 9px; color: #555; margin-bottom: 10px; display: flex; gap: 20px; flex-wrap: wrap; }
+    .stats { font-size: 9px; margin-bottom: 8px; display: flex; gap: 16px; }
+    .stats span { padding: 2px 6px; border-radius: 3px; }
+    .stats .total { background: #f3f4f6; }
+    .stats .com { background: #dbeafe; color: #1d4ed8; }
+    .stats .sem { background: #f9fafb; color: #555; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f3f4f6; text-align: left; padding: 4px 6px; border: 1px solid #d1d5db; font-size: 9px; font-weight: 600; }
+    td { padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: middle; }
+    .mono { font-family: monospace; }
+    .num { text-align: right; font-family: monospace; }
+    .center { text-align: center; }
+    .inativo { color: #ef4444; font-size: 8px; }
+    .com-escala { background: #eff6ff; }
+    .escala-badge { font-weight: 600; color: #1d4ed8; }
+    .tier-row td { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; font-size: 9px; }
+    .tier-desc { padding-left: 20px; font-style: italic; }
+    .tier-val { text-align: right; font-family: monospace; }
+    @media print {
+      body { padding: 8px; }
+      @page { margin: 1cm; size: A4 landscape; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Produtos Escalonados</h1>
+  <div class="meta">
+    <span>Tabela: <strong>${tabelaNome}</strong></span>
+    <span>Filtro: <strong>${filtroLabel}</strong></span>
+    <span>Gerado em: <strong>${dataHora}</strong></span>
+  </div>
+  <div class="stats">
+    <span class="total">Total: <strong>${itens.length}</strong></span>
+    <span class="com">Com escala: <strong>${itens.filter((i) => i.has_escala).length}</strong></span>
+    <span class="sem">Sem escala: <strong>${itens.filter((i) => !i.has_escala).length}</strong></span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th><th>Descrição</th><th>Apres.</th><th>UN</th>
+        <th>Marca</th><th>Divisão</th><th>Fornecedor</th>
+        <th style="text-align:right">Preço Venda</th>
+        <th style="text-align:right">Estoque</th>
+        <th style="text-align:center">Escalonado</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=1100,height=750');
+    if (!win) { toast.error('Permita popups para imprimir'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  };
+
   const labelEscala = (item: (typeof itens)[0]) =>
     item.has_escala ? (
       <span className="inline-flex items-center gap-1 text-blue-600 font-medium">
@@ -241,6 +342,11 @@ export function RelatorioEscalaTab() {
             <Button variant="outline" className="h-8" onClick={handleExportar} disabled={!itens.length}>
               <FileSpreadsheet className="h-4 w-4 mr-1" />
               Exportar Excel
+            </Button>
+
+            <Button variant="outline" className="h-8" onClick={handleImprimir} disabled={!itens.length}>
+              <Printer className="h-4 w-4 mr-1" />
+              Imprimir
             </Button>
           </div>
 
