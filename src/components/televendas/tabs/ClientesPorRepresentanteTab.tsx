@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,14 @@ import { Search, Loader2, Download, Copy, Trash2, UserCheck } from 'lucide-react
 import { toast } from 'sonner';
 import { representativesService, Representante } from '@/services/representativesService';
 import { clientsService, Client } from '@/services/clientsService';
-import { metadataService, Uf, Cidade, Rota, Rede, SegmentoVenda } from '@/services/metadataService';
+import { metadataService, Uf, Cidade, Rota, Rede, SegmentoVenda, FormaPagamento, PrazoPagto } from '@/services/metadataService';
+
+const formatGridNumber = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined || value === '') return '-';
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '-';
+  return parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 export function ClientesPorRepresentanteTab() {
   const PAGE_LIMIT = 100;
@@ -70,6 +77,19 @@ export function ClientesPorRepresentanteTab() {
   const [copyRepLoading, setCopyRepLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
 
+  // Lookup tables for grid columns
+  const [formas, setFormas] = useState<FormaPagamento[]>([]);
+  const [prazos, setPrazos] = useState<PrazoPagto[]>([]);
+  const [segmentos, setSegmentos] = useState<SegmentoVenda[]>([]);
+  const [redes, setRedes] = useState<Rede[]>([]);
+  const [rotas, setRotas] = useState<Rota[]>([]);
+
+  const formasMap = useMemo(() => new Map(formas.map((f) => [Number(f.id), f.descricao || String(f.id)])), [formas]);
+  const prazosMap = useMemo(() => new Map(prazos.map((p) => [Number(p.id), p.descricao || String(p.id)])), [prazos]);
+  const segmentosMap = useMemo(() => new Map(segmentos.map((s) => [Number(s.id), s.descricao || String(s.id)])), [segmentos]);
+  const redesMap = useMemo(() => new Map(redes.map((r) => [Number(r.id), r.descricao || String(r.id)])), [redes]);
+  const rotasMap = useMemo(() => new Map(rotas.map((r) => [Number(r.id), r.descricao_rota || r.codigo_rota || String(r.id)])), [rotas]);
+
   // Load representatives
   const loadRepresentantes = async (query?: string) => {
     setRepLoading(true);
@@ -86,6 +106,19 @@ export function ClientesPorRepresentanteTab() {
   useEffect(() => {
     loadRepresentantes();
     loadFilterUfs();
+    Promise.all([
+      metadataService.getSegmentosVendas(),
+      metadataService.getRedes(),
+      metadataService.getRotas(),
+      metadataService.getFormasPagamento(),
+      metadataService.getPrazos(),
+    ]).then(([segs, rds, rts, frms, przs]) => {
+      setSegmentos(segs);
+      setRedes(rds);
+      setRotas(rts);
+      setFormas(frms);
+      setPrazos(przs);
+    }).catch(() => {});
   }, []);
 
   // Load filter UFs
@@ -514,30 +547,89 @@ export function ClientesPorRepresentanteTab() {
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">
+                      <TableRow className="text-xs">
+                        <TableHead className="w-10 px-2">
                           <Checkbox checked={selectedClientIds.size === clients.length && clients.length > 0} onCheckedChange={toggleAllClients} />
                         </TableHead>
-                        <TableHead className="w-20">ID</TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead className="w-24">Cidade</TableHead>
+                        <TableHead className="w-28">Código</TableHead>
+                        <TableHead className="min-w-[240px]">Nome</TableHead>
+                        <TableHead className="w-44">Fantasia</TableHead>
+                        <TableHead className="w-36">CNPJ/CPF</TableHead>
+                        <TableHead className="w-16">Pessoa</TableHead>
+                        <TableHead className="w-32">Cidade</TableHead>
                         <TableHead className="w-12">UF</TableHead>
-                        <TableHead className="w-28">Bairro</TableHead>
+                        <TableHead className="w-36">Bairro</TableHead>
+                        <TableHead className="w-44">Endereço</TableHead>
+                        <TableHead className="w-20">Número</TableHead>
+                        <TableHead className="w-24">CEP</TableHead>
+                        <TableHead className="w-32">Telefone</TableHead>
+                        <TableHead className="w-32">WhatsApp</TableHead>
+                        <TableHead className="w-44">Email</TableHead>
+                        <TableHead className="w-36">Comprador</TableHead>
+                        <TableHead className="w-36">Segmento</TableHead>
+                        <TableHead className="w-36">Rede</TableHead>
+                        <TableHead className="w-36">Rota</TableHead>
+                        <TableHead className="w-40">Forma Pagto</TableHead>
+                        <TableHead className="w-40">Prazo Pagto</TableHead>
+                        <TableHead className="w-28 text-right">Limite Créd.</TableHead>
+                        <TableHead className="w-24 text-right">Crédito</TableHead>
+                        <TableHead className="w-24 text-right">Aberto</TableHead>
+                        <TableHead className="w-24 text-right">Disponível</TableHead>
+                        <TableHead className="w-16 text-center">B2B</TableHead>
+                        <TableHead className="w-16 text-center">Simples</TableHead>
+                        <TableHead className="w-24 text-center">Cons. Final</TableHead>
+                        <TableHead className="w-16 text-center">Inativo</TableHead>
+                        <TableHead className="w-36">Tab. Preço</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {clients.map(c => (
-                        <TableRow key={c.id}>
-                          <TableCell>
-                            <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
-                          </TableCell>
-                          <TableCell className="text-xs">{c.codigoCliente || c.id}</TableCell>
-                          <TableCell className="text-xs">{c.nome}</TableCell>
-                          <TableCell className="text-xs">{c.cidade}</TableCell>
-                          <TableCell className="text-xs">{c.uf}</TableCell>
-                          <TableCell className="text-xs">{c.bairro}</TableCell>
-                        </TableRow>
-                      ))}
+                      {clients.map(c => {
+                        const formaPagtoLabel = c.formaPagtoId != null ? formasMap.get(Number(c.formaPagtoId)) || String(c.formaPagtoId) : '-';
+                        const prazoPagtoLabel = c.prazoPagtoId != null ? prazosMap.get(Number(c.prazoPagtoId)) || String(c.prazoPagtoId) : '-';
+                        const segmentoLabel = c.segmentoId != null ? segmentosMap.get(Number(c.segmentoId)) || String(c.segmentoId) : '-';
+                        const redeLabel = c.redeId != null ? redesMap.get(Number(c.redeId)) || String(c.redeId) : '-';
+                        const rotaLabel = c.rotaId != null ? rotasMap.get(Number(c.rotaId)) || String(c.rotaId) : '-';
+                        return (
+                          <TableRow key={c.id} className="text-xs">
+                            <TableCell className="px-2">
+                              <Checkbox checked={selectedClientIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
+                            </TableCell>
+                            <TableCell className="font-mono">{c.codigoCliente ?? ''}</TableCell>
+                            <TableCell className="font-medium">
+                              <div className="truncate whitespace-nowrap max-w-[240px]" title={c.nome}>{c.nome}</div>
+                            </TableCell>
+                            <TableCell>{c.fantasia || '-'}</TableCell>
+                            <TableCell>{c.cnpjCpf || '-'}</TableCell>
+                            <TableCell>{c.tipoPessoa || '-'}</TableCell>
+                            <TableCell>{c.cidade || '-'}</TableCell>
+                            <TableCell>{c.uf || '-'}</TableCell>
+                            <TableCell>{c.bairro || '-'}</TableCell>
+                            <TableCell>{c.endereco || '-'}</TableCell>
+                            <TableCell>{c.numero || '-'}</TableCell>
+                            <TableCell>{c.cep || '-'}</TableCell>
+                            <TableCell>{c.fone || '-'}</TableCell>
+                            <TableCell>{c.whatsapp || '-'}</TableCell>
+                            <TableCell>{c.email || '-'}</TableCell>
+                            <TableCell>{c.compradorNome || '-'}</TableCell>
+                            <TableCell>{segmentoLabel}</TableCell>
+                            <TableCell>{redeLabel}</TableCell>
+                            <TableCell>{rotaLabel}</TableCell>
+                            <TableCell>{formaPagtoLabel}</TableCell>
+                            <TableCell>{prazoPagtoLabel}</TableCell>
+                            <TableCell className="text-right font-mono">{formatGridNumber(c.limiteCredito)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatGridNumber(c.credito)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatGridNumber(c.aberto)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatGridNumber(c.disponivel)}</TableCell>
+                            <TableCell className="text-center">{c.b2bLiberado ? 'Sim' : 'Não'}</TableCell>
+                            <TableCell className="text-center">{c.simplesNacional ? 'Sim' : 'Não'}</TableCell>
+                            <TableCell className="text-center">{c.consumidorFinal ? 'Sim' : 'Não'}</TableCell>
+                            <TableCell className="text-center">{c.inativo ? 'Sim' : 'Não'}</TableCell>
+                            <TableCell className="font-mono">
+                              {c.tabelasCodigos?.length ? c.tabelasCodigos.join(', ') : '-'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   <div ref={sentinelRef} className="py-2 flex justify-center">
