@@ -82,6 +82,7 @@ export function RelatorioEscalaTab() {
     for (const i of itens) {
       rows.push({
         Produto: i.codigo_produto,
+        'Cód. Fábrica': i.codigo_fabrica,
         Descrição: i.descricao_produto,
         Apresentação: i.apresentacao,
         UN: i.un,
@@ -89,7 +90,6 @@ export function RelatorioEscalaTab() {
         Divisão: i.divisao,
         Fornecedor: i.fornecedor,
         'Preço Venda': i.preco,
-        Estoque: i.estoque,
         'Tem Escala': i.has_escala ? 'SIM' : 'NÃO',
         'Qtd Mín. Escala': '',
         'Desconto Escala (%)': '',
@@ -99,6 +99,7 @@ export function RelatorioEscalaTab() {
         for (const t of i.escala_tiers) {
           rows.push({
             Produto: '',
+            'Cód. Fábrica': '',
             Descrição: '',
             Apresentação: '',
             UN: '',
@@ -106,7 +107,6 @@ export function RelatorioEscalaTab() {
             Divisão: '',
             Fornecedor: '',
             'Preço Venda': '',
-            Estoque: '',
             'Tem Escala': '',
             'Qtd Mín. Escala': t.quantidade,
             'Desconto Escala (%)': t.desconto,
@@ -135,6 +135,7 @@ export function RelatorioEscalaTab() {
       return `
         <tr class="produto-row${item.has_escala ? ' com-escala' : ''}">
           <td class="mono">${item.codigo_produto}</td>
+          <td class="mono">${item.codigo_fabrica}</td>
           <td>${item.descricao_produto}${item.produto_inativo ? ' <span class="inativo">(inativo)</span>' : ''}</td>
           <td>${item.apresentacao}</td>
           <td>${item.un}</td>
@@ -142,12 +143,11 @@ export function RelatorioEscalaTab() {
           <td>${item.divisao}</td>
           <td>${item.fornecedor}</td>
           <td class="num">${fmt2(item.preco)}</td>
-          <td class="num">${item.estoque}</td>
           <td class="center escala-badge">${item.has_escala ? `SIM (${tiers.length})` : 'NÃO'}</td>
         </tr>
         ${tiers.map((t) => `
         <tr class="tier-row">
-          <td colspan="7" class="tier-desc">↳ Qtd ≥ ${t.quantidade}</td>
+          <td colspan="8" class="tier-desc">↳ Qtd ≥ ${t.quantidade}</td>
           <td class="num tier-val">${fmt2(t.desconto)}% desc.</td>
           <td class="num tier-val">${fmt2(t.comissao)}% com.</td>
           <td></td>
@@ -206,10 +206,9 @@ export function RelatorioEscalaTab() {
   <table>
     <thead>
       <tr>
-        <th>Produto</th><th>Descrição</th><th>Apres.</th><th>UN</th>
+        <th>Produto</th><th>Cód. Fábrica</th><th>Descrição</th><th>Apres.</th><th>UN</th>
         <th>Marca</th><th>Divisão</th><th>Fornecedor</th>
         <th style="text-align:right">Preço Venda</th>
-        <th style="text-align:right">Estoque</th>
         <th style="text-align:center">Escalonado</th>
       </tr>
     </thead>
@@ -375,6 +374,7 @@ export function RelatorioEscalaTab() {
             <TableHeader className="sticky top-0 bg-muted/90 z-10">
               <TableRow>
                 <TableHead className="w-20">Produto</TableHead>
+                <TableHead className="w-32">Cód. Fábrica</TableHead>
                 <TableHead className="min-w-[280px]">Descrição</TableHead>
                 <TableHead className="w-24">Apres.</TableHead>
                 <TableHead className="w-12">UN</TableHead>
@@ -382,7 +382,6 @@ export function RelatorioEscalaTab() {
                 <TableHead className="w-36">Divisão</TableHead>
                 <TableHead className="w-44">Fornecedor</TableHead>
                 <TableHead className="w-28 text-right">Preço Venda</TableHead>
-                <TableHead className="w-20 text-right">Estoque</TableHead>
                 <TableHead className="w-28 text-center">Escalonado</TableHead>
               </TableRow>
             </TableHeader>
@@ -391,6 +390,7 @@ export function RelatorioEscalaTab() {
                 <>
                   <TableRow key={item.produto_id} className={item.has_escala ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}>
                     <TableCell className="text-xs font-mono">{item.codigo_produto}</TableCell>
+                    <TableCell className="text-xs font-mono">{item.codigo_fabrica || '-'}</TableCell>
                     <TableCell className="text-xs">
                       <div>{item.descricao_produto}</div>
                       {item.produto_inativo && <span className="text-[10px] text-red-500">(inativo)</span>}
@@ -401,12 +401,11 @@ export function RelatorioEscalaTab() {
                     <TableCell className="text-xs">{item.divisao}</TableCell>
                     <TableCell className="text-xs">{item.fornecedor}</TableCell>
                     <TableCell className="text-xs text-right font-mono">{fmt2(item.preco)}</TableCell>
-                    <TableCell className="text-xs text-right">{item.estoque}</TableCell>
                     <TableCell className="text-xs text-center">{labelEscala(item)}</TableCell>
                   </TableRow>
                   {item.escala_tiers?.map((tier, idx) => (
                     <TableRow key={`${item.produto_id}-tier-${idx}`} className="bg-blue-50/70 dark:bg-blue-950/30 border-t-0">
-                      <TableCell colSpan={7} className="text-xs text-blue-700 dark:text-blue-300 pl-8 py-1 font-mono">
+                      <TableCell colSpan={8} className="text-xs text-blue-700 dark:text-blue-300 pl-8 py-1 font-mono">
                         ↳ Qtd ≥ {tier.quantidade}
                       </TableCell>
                       <TableCell className="text-xs text-right font-mono text-blue-700 dark:text-blue-300 py-1">
