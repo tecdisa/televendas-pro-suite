@@ -415,7 +415,7 @@ function validateRequiredProductFields(form: ProductFormState): RequiredProductE
 
 interface ImportRow {
   rowIndex: number;
-  action: 'criar' | 'erro' | 'aviso';
+  action: 'criar' | 'erro' | 'aviso' | 'ignorado';
   data: Partial<ProductFormState>;
   error?: string;
   preview?: { prvenda?: number; comissao?: number };
@@ -1143,12 +1143,12 @@ export function ProdutosTab() {
 
         if (ean13Val) {
           if (byEan13.has(ean13Val)) {
-            return { rowIndex: idx + 1, action: 'erro' as const, data, preview, error: `Produto já existente (EAN13: ${ean13Val})` };
+            return { rowIndex: idx + 1, action: 'ignorado' as const, data, preview, error: `Produto já existente (EAN13: ${ean13Val})` };
           }
         } else if (codFab && fornId != null) {
           const key = `${codFab}|${fornId}`;
           if (byCodFabFornecedor.has(key)) {
-            return { rowIndex: idx + 1, action: 'erro' as const, data, preview, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
+            return { rowIndex: idx + 1, action: 'ignorado' as const, data, preview, error: `Produto já existente (Cód.Fábrica: ${codFab} / Forn. ID: ${fornId})` };
           }
         }
 
@@ -1169,7 +1169,7 @@ export function ProdutosTab() {
       const validDivIds  = new Set(divChecks.filter(([, ok]) => ok).map(([id]) => id));
 
       const finalParsed: ImportRow[] = parsed.map((row) => {
-        if (row.action === 'erro') return row;
+        if (row.action === 'erro' || row.action === 'ignorado') return row;
         const fornId = row.data.fornecedorId;
         if (fornId != null && !validFornIds.has(fornId)) {
           return { ...row, action: 'aviso' as const, error: `Fornecedor ID ${fornId} não cadastrado para esta empresa` };
@@ -1181,12 +1181,8 @@ export function ProdutosTab() {
         return row;
       });
 
-      const errorRows = finalParsed.filter((r) => r.action === 'erro');
       const avisoRows = finalParsed.filter((r) => r.action === 'aviso');
-      const criarRows = finalParsed.filter((r) => r.action === 'criar');
-      if (errorRows.length) toast.warning(`${errorRows.length} linha(s) ignorada(s) por duplicidade`);
       if (avisoRows.length) toast.warning(`${avisoRows.length} linha(s) com aviso — verifique na prévia antes de confirmar`);
-      if (!criarRows.length && !avisoRows.length) { toast.error('Nenhuma linha válida encontrada'); return; }
 
       setImportRows(finalParsed);
       setImportDialogOpen(true);
@@ -1196,7 +1192,7 @@ export function ProdutosTab() {
   }
 
   async function handleConfirmImport() {
-    const validRows = importRows.filter((r) => r.action !== 'erro');
+    const validRows = importRows.filter((r) => r.action === 'criar' || r.action === 'aviso');
     if (!validRows.length) return;
     setImportLoading(true);
     let created = 0;
@@ -1846,12 +1842,17 @@ export function ProdutosTab() {
           <DialogHeader>
             <DialogTitle>Prévia da importação</DialogTitle>
           </DialogHeader>
-          <div className="text-xs text-muted-foreground mb-2">
-            {importRows.filter((r) => r.action === 'criar').length} a criar &nbsp;|&nbsp;
+          <div className="text-xs text-muted-foreground mb-2 flex flex-wrap gap-x-3 gap-y-1">
+            <span>{importRows.filter((r) => r.action === 'criar').length} a criar</span>
             {importRows.filter((r) => r.action === 'aviso').length > 0 && (
-              <><span className="text-amber-600 font-medium">{importRows.filter((r) => r.action === 'aviso').length} com aviso</span> &nbsp;|&nbsp;</>
+              <span className="text-amber-600 font-medium">{importRows.filter((r) => r.action === 'aviso').length} com aviso</span>
             )}
-            {importRows.filter((r) => r.action === 'erro').length} com erro (ignorados)
+            {importRows.filter((r) => r.action === 'ignorado').length > 0 && (
+              <span className="text-slate-500 font-medium">{importRows.filter((r) => r.action === 'ignorado').length} ignorado(s) por duplicidade</span>
+            )}
+            {importRows.filter((r) => r.action === 'erro').length > 0 && (
+              <span className="text-red-600 font-medium">{importRows.filter((r) => r.action === 'erro').length} com erro</span>
+            )}
           </div>
           <div className="flex-1 overflow-auto border rounded-md">
             <table className="w-full text-xs border-collapse">
@@ -1883,17 +1884,19 @@ export function ProdutosTab() {
                   );
                   return importRows.map((row) => (
                     <tr key={row.rowIndex} className={`border-b ${
-                      row.action === 'erro'  ? 'bg-red-50 dark:bg-red-950/20' :
-                      row.action === 'aviso' ? 'bg-amber-50 dark:bg-amber-950/20' :
+                      row.action === 'erro'     ? 'bg-red-50 dark:bg-red-950/20' :
+                      row.action === 'ignorado' ? 'bg-slate-50 dark:bg-slate-900/30' :
+                      row.action === 'aviso'    ? 'bg-amber-50 dark:bg-amber-950/20' :
                       'bg-green-50/50 dark:bg-green-950/20'
                     }`}>
                       <td className="px-2 py-1">
                         <span className={`font-semibold ${
-                          row.action === 'erro'  ? 'text-red-600' :
-                          row.action === 'aviso' ? 'text-amber-600' :
+                          row.action === 'erro'     ? 'text-red-600' :
+                          row.action === 'ignorado' ? 'text-slate-500' :
+                          row.action === 'aviso'    ? 'text-amber-600' :
                           'text-green-700'
                         }`}>
-                          {row.action === 'criar' ? 'Criar' : row.action === 'aviso' ? 'Aviso' : 'Erro'}
+                          {row.action === 'criar' ? 'Criar' : row.action === 'aviso' ? 'Aviso' : row.action === 'ignorado' ? 'Ignorado' : 'Erro'}
                         </span>
                       </td>
                       <td className="px-2 py-1">{row.data.descricao || '—'}</td>
@@ -1919,7 +1922,7 @@ export function ProdutosTab() {
             <Button variant="outline" onClick={() => { setImportDialogOpen(false); setImportRows([]); }} disabled={importLoading}>
               Cancelar
             </Button>
-            <Button onClick={() => void handleConfirmImport()} disabled={importLoading || !importRows.some((r) => r.action !== 'erro')}>
+            <Button onClick={() => void handleConfirmImport()} disabled={importLoading || !importRows.some((r) => r.action === 'criar' || r.action === 'aviso')}>
               {importLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Confirmar importação
             </Button>

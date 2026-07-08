@@ -17,6 +17,7 @@ import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 import { ProductSearchDialog } from '@/components/televendas/overlays/ProductSearchDialog';
+import { API_BASE } from '@/utils/env';
 
 const PAGE_LIMIT = 100;
 
@@ -118,6 +119,7 @@ const initialFormData = {
 const initialItemFormData = {
   preco: '',
   desconto_maximo: '',
+  desconto_valor: '',
   comissao: '',
   quantidade_minima: '',
   pvs: '',
@@ -135,7 +137,7 @@ const initialItemFormData = {
 type ItemFormData = typeof initialItemFormData;
 
 type NumericItemField =
-  | 'preco' | 'desconto_maximo' | 'comissao' | 'quantidade_minima' | 'pvs'
+  | 'preco' | 'desconto_maximo' | 'desconto_valor' | 'comissao' | 'quantidade_minima' | 'pvs'
   | 'markup' | 'despesa' | 'lucro' | 'frete' | 'majoracao';
 
 type BooleanItemField =
@@ -834,7 +836,7 @@ export function TabelasPrecoTab() {
     const toastId = toast.loading('Iniciando aplicação de referências...');
     try {
       const { jobId } = await tabelasPrecoService.iniciarAplicarReferenciaTodas();
-      const url = `${(await import('@/utils/env')).API_BASE}/api/jobs/${jobId}/events`;
+      const url = `${API_BASE}/api/jobs/${jobId}/events`;
       const es = new EventSource(url);
       aplicarTodasEsRef.current = es;
 
@@ -882,6 +884,7 @@ export function TabelasPrecoTab() {
     setItemFormData({
       preco: item.preco ? String(item.preco) : '',
       desconto_maximo: item.desconto_maximo ? String(item.desconto_maximo) : '',
+      desconto_valor: item.desconto_valor ? String(item.desconto_valor) : '',
       comissao: item.comissao ? String(item.comissao) : '',
       quantidade_minima: item.quantidade_minima ? String(item.quantidade_minima) : '',
       pvs: item.pvs ? String(item.pvs) : '',
@@ -906,6 +909,7 @@ export function TabelasPrecoTab() {
         produto_id: editingItem.produto_id,
         preco: itemFormData.preco !== '' ? Number(itemFormData.preco) : undefined,
         desconto_maximo: itemFormData.desconto_maximo !== '' ? Number(itemFormData.desconto_maximo) : undefined,
+        desconto_valor: itemFormData.desconto_valor !== '' ? Number(itemFormData.desconto_valor) : undefined,
         comissao: itemFormData.comissao !== '' ? Number(itemFormData.comissao) : undefined,
         quantidade_minima: itemFormData.quantidade_minima !== '' ? Number(itemFormData.quantidade_minima) : undefined,
         pvs: itemFormData.pvs !== '' ? Number(itemFormData.pvs) : undefined,
@@ -1188,7 +1192,8 @@ export function TabelasPrecoTab() {
       <div className="grid grid-cols-2 gap-3">
         {([
           ['Preço', 'preco'], ['% Desc. máx.', 'desconto_maximo'],
-          ['% Comissão', 'comissao'], ['% Markup', 'markup'],
+          ['Desc. valor', 'desconto_valor'], ['% Comissão', 'comissao'],
+          ['% Markup', 'markup'],
           ['% Despesa', 'despesa'], ['% Majoração', 'majoracao'],
           ['% Lucro', 'lucro'], ['% Frete', 'frete'],
           ['Qtd. mínima', 'quantidade_minima'], ['PVS', 'pvs'],

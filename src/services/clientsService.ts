@@ -453,6 +453,7 @@ type ClientSearchFilters = {
   ultimaCompraDe?: string;
   ultimaCompraAte?: string;
   status?: 'ativos' | 'inativos' | 'todos';
+  representanteId?: number | string;
 };
 
 type BulkAdjustPayload = {
@@ -568,6 +569,8 @@ async function fetchFromApi({
     if (clean.consumidorFinal !== undefined) params.set('consumidorFinal', String(clean.consumidorFinal));
     if (clean.redeId !== undefined) params.set('redeId', String(clean.redeId));
     if (clean.rotaId !== undefined) params.set('rotaId', String(clean.rotaId));
+    if (clean.representanteId !== undefined && clean.representanteId !== null && String(clean.representanteId).trim() !== '')
+      params.set('representanteId', String(clean.representanteId).trim());
     setParam('situacaoCredito', clean.situacaoCredito);
     setParam('dependencia', clean.dependencia);
 

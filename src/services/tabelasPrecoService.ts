@@ -54,6 +54,7 @@ export interface TabelaPrecoItem {
   produto_inativo: boolean;
   preco: number;
   desconto_maximo: number;
+  desconto_valor: number;
   comissao: number;
   permite_bonificacao: boolean;
   permite_debito_credito: boolean;
@@ -111,6 +112,7 @@ function normalizeTabelaPrecoItem(raw: any): TabelaPrecoItem {
     produto_inativo: Boolean(raw?.produto_inativo ?? false),
     preco: Number(raw?.preco ?? 0),
     desconto_maximo: Number(raw?.desconto_maximo ?? 0),
+    desconto_valor: Number(raw?.desconto_valor ?? 0),
     comissao: Number(raw?.comissao ?? 0),
     permite_bonificacao: Boolean(raw?.permite_bonificacao ?? false),
     permite_debito_credito: Boolean(raw?.permite_debito_credito ?? false),
@@ -436,6 +438,7 @@ export const tabelasPrecoService = {
       produto_id: number;
       preco?: number;
       desconto_maximo?: number;
+      desconto_valor?: number;
       comissao?: number;
       permite_bonificacao?: boolean;
       permite_debito_credito?: boolean;
@@ -475,6 +478,7 @@ export const tabelasPrecoService = {
     data: Partial<{
       preco: number;
       desconto_maximo: number;
+      desconto_valor: number;
       comissao: number;
       permite_bonificacao: boolean;
       permite_debito_credito: boolean;

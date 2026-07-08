@@ -143,6 +143,7 @@ type ClientListFilters = {
   rota: string;
   rede: string;
   tabelaPreco: string;
+  representanteId: string;
   naoPositivadoDesde: string;
   cadastroDe: string;
   cadastroAte: string;
@@ -165,6 +166,7 @@ const defaultClientFilters: ClientListFilters = {
   rota: 'all',
   rede: 'all',
   tabelaPreco: 'all',
+  representanteId: 'all',
   naoPositivadoDesde: '',
   cadastroDe: '',
   cadastroAte: '',
@@ -530,6 +532,7 @@ export const ClientesTab = () => {
   const [filterCidadesLoading, setFilterCidadesLoading] = useState(false);
   const [filterRotas, setFilterRotas] = useState<Rota[]>([]);
   const [filterRedes, setFilterRedes] = useState<Rede[]>([]);
+  const [filterReps, setFilterReps] = useState<Representative[]>([]);
   const [filterFormas, setFilterFormas] = useState<FormaPagamento[]>([]);
   const formasMap = useMemo(
     () =>
@@ -744,6 +747,7 @@ export const ClientesTab = () => {
     // Load rotas and redes for filter dropdowns
     metadataService.getRotas().then(setFilterRotas).catch(() => {});
     metadataService.getRedes().then(setFilterRedes).catch(() => {});
+    representativesService.find(undefined, 1, 200).then(setFilterReps).catch(() => {});
     metadataService.getFormasPagamento().then(setFilterFormas).catch(() => {});
     loadSegmentos();
     loadPrazos();
@@ -1077,6 +1081,7 @@ export const ClientesTab = () => {
       formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
       prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
       tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
+      representanteId: active.representanteId !== 'all' ? active.representanteId : undefined,
       rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
       redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
       naoPositivadoDesde: active.naoPositivadoDesde || undefined,
@@ -1418,18 +1423,19 @@ type ExistingClientDuplicate = Pick<Client, 'id' | 'codigoCliente' | 'nome' | 'i
 interface ImportClientRow {
   rowIndex: number;
   data: Record<string, any>;
-  action: 'importar' | 'erro';
+  action: 'importar' | 'erro' | 'ignorado';
   cnpj: string;
   nome: string;
   obs: string;
 }
 
-function parseClientImportRows(data: Record<string, any>[]): ImportClientRow[] {
+function parseClientImportRows(data: Record<string, any>[], existingCnpjs?: Set<string>): ImportClientRow[] {
   return data.map((row, i) => {
     const cnpj = String(row['Cnpj_Cpf'] ?? row['cnpj_cpf'] ?? '').replace(/\D/g, '');
     const nome = String(row['Nome_RazaoSocial'] ?? row['nome'] ?? '').trim();
     if (!cnpj) return { rowIndex: i + 2, data: row, action: 'erro', cnpj: '', nome, obs: 'CNPJ/CPF obrigatório' };
     if (!nome) return { rowIndex: i + 2, data: row, action: 'erro', cnpj, nome: '', obs: 'Nome/Razão Social obrigatório' };
+    if (existingCnpjs?.has(cnpj)) return { rowIndex: i + 2, data: row, action: 'ignorado', cnpj, nome, obs: 'Já cadastrado (ignorado por duplicidade)' };
     return { rowIndex: i + 2, data: row, action: 'importar', cnpj, nome, obs: '' };
   });
 }
@@ -1794,8 +1800,11 @@ const validateFormData = (data: ClientFormData): string[] => {
         'Complemento', 'cidade', 'uf', 'cep', 'CodigoIbge', 'email', 'email_danfe',
         'CodigoSegmento', 'CodigoRepresentante', 'CodigoRota', 'consumidor_final', 'observacao',
       ];
+      const exportList = selectedClients.length > 0
+        ? clients.filter((c) => selectedClients.includes(c.id))
+        : clients;
       const txt = (v: string | null | undefined) => ({ t: 's' as const, v: v ?? '' });
-      const rows = clients.map((c) => [
+      const rows = exportList.map((c) => [
         txt(c.cnpjCpf),
         txt(c.inscricaoEstadual),
         c.nome ?? '',
@@ -1842,7 +1851,8 @@ const validateFormData = (data: ClientFormData): string[] => {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' });
         if (!data.length) { toast.error('Planilha vazia'); return; }
-        const parsed = parseClientImportRows(data);
+        const existingCnpjs = new Set(clients.map((c) => String(c.cnpjCpf ?? '').replace(/\D/g, '')));
+        const parsed = parseClientImportRows(data, existingCnpjs);
         setImportRows(data);
         setParsedImportRows(parsed);
         setImportResult(null);
@@ -2134,6 +2144,20 @@ const validateFormData = (data: ClientFormData): string[] => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="md:col-span-4">
+              <label className="text-sm font-medium mb-1 block">Representante</label>
+              <Select value={filters.representanteId} onValueChange={(v) => setFilters({ ...filters, representanteId: v })}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {filterReps.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.codigoRepresentante ? `${r.codigoRepresentante} - ${r.nome}` : r.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
@@ -2227,7 +2251,9 @@ const validateFormData = (data: ClientFormData): string[] => {
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={exportLoading || clients.length === 0} className="flex-1 sm:flex-none">
                 {exportLoading ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Download className="h-4 w-4 sm:mr-2" />}
-                <span className="hidden sm:inline">Exportar</span>
+                <span className="hidden sm:inline">
+                  {selectedClients.length > 0 ? `Exportar (${selectedClients.length})` : 'Exportar'}
+                </span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => xlsxImportRef.current?.click()} className="flex-1 sm:flex-none">
                 <Upload className="h-4 w-4 sm:mr-2" />
@@ -2425,7 +2451,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                   </TableHead>
                   <TableHead
                     style={getStickyStyle('tabelasPreco')}
-                    className={cn('w-36', getStickyHeadClass('tabelasPreco'))}
+                    className={cn('min-w-[160px]', getStickyHeadClass('tabelasPreco'))}
                   >
                     Tab. Preço
                   </TableHead>
@@ -2656,11 +2682,17 @@ const validateFormData = (data: ClientFormData): string[] => {
                         </TableCell>
                         <TableCell
                           style={getStickyStyle('tabelasPreco')}
-                          className={cn('font-mono text-xs', getStickyCellClass('tabelasPreco'))}
+                          className={cn('text-xs', getStickyCellClass('tabelasPreco'))}
                         >
-                          {client.tabelasCodigos?.length
-                            ? client.tabelasCodigos.join(', ')
-                            : '-'}
+                          {client.tabelasCodigos?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {client.tabelasCodigos.map((cod) => (
+                                <span key={cod} className="inline-block font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap">
+                                  {cod}
+                                </span>
+                              ))}
+                            </div>
+                          ) : '-'}
                         </TableCell>
                         <TableCell
                           style={getStickyStyle('acoes')}
@@ -4947,14 +4979,13 @@ const validateFormData = (data: ClientFormData): string[] => {
               {/* Summary */}
               {(() => {
                 const toImport = parsedImportRows.filter((r) => r.action === 'importar').length;
+                const toIgnored = parsedImportRows.filter((r) => r.action === 'ignorado').length;
                 const toError = parsedImportRows.filter((r) => r.action === 'erro').length;
                 return (
                   <div className="flex flex-wrap gap-4 text-sm">
                     <span className="text-green-600 font-medium">{toImport} a importar</span>
-                    {toError > 0 && <span className="text-red-600 font-medium">{toError} com erro (ignorados)</span>}
-                    <span className="text-muted-foreground text-xs self-center">
-                      Chave: CNPJ/CPF — existentes serão atualizados, novos serão criados
-                    </span>
+                    {toIgnored > 0 && <span className="text-slate-500 font-medium">{toIgnored} ignorado(s) por duplicidade</span>}
+                    {toError > 0 && <span className="text-red-600 font-medium">{toError} com erro</span>}
                   </div>
                 );
               })()}
@@ -4979,11 +5010,12 @@ const validateFormData = (data: ClientFormData): string[] => {
                   <tbody>
                     {parsedImportRows.map((r) => {
                       const isErr = r.action === 'erro';
+                      const isIgnored = r.action === 'ignorado';
                       return (
-                        <tr key={r.rowIndex} className={isErr ? 'border-t bg-red-50 dark:bg-red-950/20' : 'border-t bg-green-50/30 dark:bg-green-950/10'}>
+                        <tr key={r.rowIndex} className={isErr ? 'border-t bg-red-50 dark:bg-red-950/20' : isIgnored ? 'border-t bg-slate-50 dark:bg-slate-900/30' : 'border-t bg-green-50/30 dark:bg-green-950/10'}>
                           <td className="px-2 py-1 whitespace-nowrap">
-                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${isErr ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}`}>
-                              {isErr ? 'Erro' : 'Importar'}
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${isErr ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : isIgnored ? 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}`}>
+                              {isErr ? 'Erro' : isIgnored ? 'Ignorado' : 'Importar'}
                             </span>
                           </td>
                           <td className="px-2 py-1 text-muted-foreground">{r.rowIndex}</td>
@@ -4994,7 +5026,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                             .map(([k, v]) => (
                               <td key={k} className="px-2 py-1 whitespace-nowrap">{String(v ?? '')}</td>
                             ))}
-                          <td className={`px-2 py-1 whitespace-nowrap ${isErr ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                          <td className={`px-2 py-1 whitespace-nowrap ${isErr ? 'text-red-600 font-medium' : isIgnored ? 'text-slate-500 font-medium' : 'text-muted-foreground'}`}>
                             {r.obs || '—'}
                           </td>
                         </tr>
@@ -5031,6 +5063,7 @@ const validateFormData = (data: ClientFormData): string[] => {
                 const backendErrMap = new Map(importResult.erros.map((e) => [e.linha, e.mensagem]));
                 const rows = parsedImportRows.map((r) => {
                   if (r.action === 'erro') return { ...r, resultAction: 'erro' as const, resultObs: r.obs };
+                  if (r.action === 'ignorado') return { ...r, resultAction: 'ignorado' as const, resultObs: r.obs };
                   const beErr = backendErrMap.get(r.rowIndex);
                   if (beErr) return { ...r, resultAction: 'erro' as const, resultObs: beErr };
                   return { ...r, resultAction: 'ok' as const, resultObs: '' };
@@ -5050,17 +5083,18 @@ const validateFormData = (data: ClientFormData): string[] => {
                       <tbody>
                         {rows.map((r) => {
                           const isErr = r.resultAction === 'erro';
+                          const isIgnored = r.resultAction === 'ignorado';
                           return (
-                            <tr key={r.rowIndex} className={isErr ? 'border-t bg-red-50 dark:bg-red-950/20' : 'border-t'}>
+                            <tr key={r.rowIndex} className={isErr ? 'border-t bg-red-50 dark:bg-red-950/20' : isIgnored ? 'border-t bg-slate-50 dark:bg-slate-900/30' : 'border-t'}>
                               <td className="px-2 py-1">
-                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${isErr ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}`}>
-                                  {isErr ? 'Erro' : 'OK'}
+                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${isErr ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : isIgnored ? 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}`}>
+                                  {isErr ? 'Erro' : isIgnored ? 'Ignorado' : 'OK'}
                                 </span>
                               </td>
                               <td className="px-2 py-1 text-muted-foreground">{r.rowIndex}</td>
                               <td className="px-2 py-1 font-mono">{r.cnpj}</td>
                               <td className="px-2 py-1">{r.nome}</td>
-                              <td className={`px-2 py-1 ${isErr ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                              <td className={`px-2 py-1 ${isErr ? 'text-red-600 font-medium' : isIgnored ? 'text-slate-500 font-medium' : 'text-muted-foreground'}`}>
                                 {r.resultObs || '—'}
                               </td>
                             </tr>
