@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { representativesService, Representante, RepresentanteFornecedorItem } from '@/services/representativesService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { representativesService, Representante, RepresentanteFornecedorItem, FornecedorDivisaoItem } from '@/services/representativesService';
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { divisionsService, Divisao } from '@/services/divisionsService';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
+import { Copy, Layers, Loader2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
 
 const FORNECEDORES_LIMIT = 200;
 
@@ -55,6 +57,17 @@ export function RepresentantesPastasTab() {
   const [copyRepList, setCopyRepList] = useState<Representante[]>([]);
   const [copyFromRepId, setCopyFromRepId] = useState<string>('');
   const [copySubmitting, setCopySubmitting] = useState(false);
+
+  // Divisões modal state
+  const [divisoesOpen, setDivisoesOpen] = useState(false);
+  const [divisoesFornecedor, setDivisoesFornecedor] = useState<RepresentanteFornecedorItem | null>(null);
+  const [divisoesItems, setDivisoesItems] = useState<FornecedorDivisaoItem[]>([]);
+  const [divisoesLoading, setDivisoesLoading] = useState(false);
+  const [divisoesTab, setDivisoesTab] = useState<'pesquisa' | 'dados'>('pesquisa');
+  const [divisoesCatalog, setDivisoesCatalog] = useState<Divisao[]>([]);
+  const [divisaoFormDivisaoId, setDivisaoFormDivisaoId] = useState('');
+  const [divisaoFormLoading, setDivisaoFormLoading] = useState(false);
+  const [divisaoDeleteLoading, setDivisaoDeleteLoading] = useState<number | null>(null);
 
   const fornecedorReqRef = useRef(0);
   const refreshRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -455,6 +468,78 @@ export function RepresentantesPastasTab() {
     }
   };
 
+  const loadDivisoesFornecedor = async (item: RepresentanteFornecedorItem) => {
+    setDivisoesLoading(true);
+    try {
+      const res = await representativesService.getFornecedorDivisoes(
+        item.representante.representante_id,
+        item.fornecedor.fornecedor_id,
+      );
+      setDivisoesItems(res.data);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao carregar divisões');
+    } finally {
+      setDivisoesLoading(false);
+    }
+  };
+
+  const openDivisoes = async (item: RepresentanteFornecedorItem) => {
+    setDivisoesFornecedor(item);
+    setDivisoesItems([]);
+    setDivisoesTab('pesquisa');
+    setDivisaoFormDivisaoId('');
+    setDivisoesOpen(true);
+    loadDivisoesFornecedor(item);
+    if (divisoesCatalog.length === 0) {
+      try {
+        const res = await divisionsService.getAll(undefined, undefined, 1, 500);
+        setDivisoesCatalog(res.data);
+      } catch {}
+    }
+  };
+
+  const handleAddDivisao = async () => {
+    if (!divisoesFornecedor || !divisaoFormDivisaoId) {
+      toast.error('Selecione a divisão');
+      return;
+    }
+    setDivisaoFormLoading(true);
+    try {
+      await representativesService.addFornecedorDivisao(
+        divisoesFornecedor.representante.representante_id,
+        divisoesFornecedor.fornecedor.fornecedor_id,
+        Number(divisaoFormDivisaoId),
+      );
+      toast.success('Divisão adicionada');
+      setDivisaoFormDivisaoId('');
+      setDivisoesTab('pesquisa');
+      loadDivisoesFornecedor(divisoesFornecedor);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao adicionar divisão');
+    } finally {
+      setDivisaoFormLoading(false);
+    }
+  };
+
+  const handleDeleteDivisao = async (item: FornecedorDivisaoItem) => {
+    if (!divisoesFornecedor) return;
+    if (!confirm(`Excluir divisão "${item.descricao_divisao || item.codigo_divisao}"?`)) return;
+    setDivisaoDeleteLoading(item.id);
+    try {
+      await representativesService.removeFornecedorDivisao(
+        divisoesFornecedor.representante.representante_id,
+        divisoesFornecedor.fornecedor.fornecedor_id,
+        item.id,
+      );
+      toast.success('Divisão excluída');
+      loadDivisoesFornecedor(divisoesFornecedor);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao excluir divisão');
+    } finally {
+      setDivisaoDeleteLoading(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
@@ -674,23 +759,34 @@ export function RepresentantesPastasTab() {
                           className="text-right"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              handleExcluirFornecedor(fornecedor.fornecedor_id)
-                            }
-                            disabled={
-                              removeFornecedorLoadingId === fornecedor.fornecedor_id
-                            }
-                          >
-                            {removeFornecedorLoadingId === fornecedor.fornecedor_id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Divisões"
+                              onClick={() => openDivisoes(item)}
+                            >
+                              <Layers className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                handleExcluirFornecedor(fornecedor.fornecedor_id)
+                              }
+                              disabled={
+                                removeFornecedorLoadingId === fornecedor.fornecedor_id
+                              }
+                            >
+                              {removeFornecedorLoadingId === fornecedor.fornecedor_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )})}
@@ -855,6 +951,127 @@ export function RepresentantesPastasTab() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={divisoesOpen} onOpenChange={(v) => { setDivisoesOpen(v); if (!v) { setDivisoesFornecedor(null); setDivisaoFormDivisaoId(''); } }}>
+        <DialogContent className="w-[95vw] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              Divisões do Fornecedor
+              {divisoesFornecedor && (
+                <span className="text-muted-foreground font-normal text-sm ml-1">
+                  — {divisoesFornecedor.fornecedor.codigo_fornecedor} {divisoesFornecedor.fornecedor.nome_fornecedor}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex border-b">
+            {(['pesquisa', 'dados'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => { setDivisoesTab(tab); if (tab === 'dados') setDivisaoFormDivisaoId(''); }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  divisoesTab === tab
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab === 'pesquisa' ? 'Pesquisa' : 'Dados da divisão'}
+              </button>
+            ))}
+          </div>
+
+          {divisoesTab === 'pesquisa' && (
+            <div className="space-y-3">
+              <div className="border rounded-md overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/60">
+                    <tr className="border-b">
+                      <th className="w-12 px-2 py-1.5 text-left">Id</th>
+                      <th className="w-24 px-2 py-1.5 text-left">Divisão</th>
+                      <th className="px-2 py-1.5 text-left">Descrição</th>
+                      <th className="w-16 px-2 py-1.5 text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {divisoesLoading ? (
+                      <tr><td colSpan={4} className="text-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </td></tr>
+                    ) : divisoesItems.length === 0 ? (
+                      <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">
+                        Nenhuma divisão cadastrada
+                      </td></tr>
+                    ) : (
+                      divisoesItems.map((d) => (
+                        <tr key={d.id} className="border-b hover:bg-muted/30">
+                          <td className="px-2 py-1.5 font-mono">{d.id}</td>
+                          <td className="px-2 py-1.5 font-mono">{d.codigo_divisao || '-'}</td>
+                          <td className="px-2 py-1.5">{d.descricao_divisao || '-'}</td>
+                          <td className="px-2 py-1.5 text-center">
+                            <Button
+                              variant="ghost" size="icon" className="h-6 w-6"
+                              disabled={divisaoDeleteLoading === d.id}
+                              onClick={() => handleDeleteDivisao(d)}
+                            >
+                              {divisaoDeleteLoading === d.id
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : <Trash2 className="h-3 w-3" />}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                <span>Registros: {divisoesItems.length}</span>
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => { setDivisoesTab('dados'); setDivisaoFormDivisaoId(''); }}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Nova divisão
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {divisoesTab === 'dados' && (
+            <div className="space-y-4 py-1">
+              <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+                <label className="text-sm font-medium text-right">Divisão</label>
+                <Select value={divisaoFormDivisaoId} onValueChange={setDivisaoFormDivisaoId}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {divisoesCatalog.map((d) => (
+                      <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
+                        {d.descricao_divisao}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {divisoesTab === 'dados' ? (
+              <>
+                <Button variant="outline" onClick={() => { setDivisaoFormDivisaoId(''); setDivisoesTab('pesquisa'); }}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleAddDivisao} disabled={divisaoFormLoading}>
+                  {divisaoFormLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Adicionar
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setDivisoesOpen(false)}>Fechar</Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

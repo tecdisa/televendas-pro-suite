@@ -98,6 +98,16 @@ export interface CopyRepresentanteResult {
   totalIgnorados: number;
 }
 
+export interface FornecedorDivisaoItem {
+  id: number;
+  empresa_id: number;
+  usuario_empresa_id: number;
+  fornecedor_id: number;
+  divisao_id: number;
+  codigo_divisao: string | null;
+  descricao_divisao: string | null;
+}
+
 function normalizeRepresentante(raw: any): Representante {
   const parseNumber = (value: any, fallback = 0) => {
     if (value === undefined || value === null || value === '') return fallback;
@@ -187,6 +197,18 @@ function normalizeRepresentanteFornecedorItem(raw: any): RepresentanteFornecedor
     ),
     fornecedor: normalizeRepresentanteFornecedor(raw?.fornecedor ?? {}),
     objetivo_de_venda: Number.isFinite(objetivo) ? objetivo : undefined,
+  };
+}
+
+function normalizeFornecedorDivisaoItem(raw: any): FornecedorDivisaoItem {
+  return {
+    id: Number(raw.id),
+    empresa_id: Number(raw.empresa_id),
+    usuario_empresa_id: Number(raw.usuario_empresa_id ?? raw.forca_de_vendas_id),
+    fornecedor_id: Number(raw.fornecedor_id),
+    divisao_id: Number(raw.divisao_id),
+    codigo_divisao: raw.codigo_divisao ?? null,
+    descricao_divisao: raw.descricao_divisao ?? null,
   };
 }
 
@@ -619,6 +641,64 @@ export const representativesService = {
       totalCriados: Number(json?.totalCriados ?? 0),
       totalIgnorados: Number(json?.totalIgnorados ?? 0),
     };
+  },
+
+  async getFornecedorDivisoes(
+    representanteId: number | string,
+    fornecedorId: number | string,
+  ): Promise<{ data: FornecedorDivisaoItem[]; total: number }> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}/divisoes?${params.toString()}`;
+    const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
+    if (!res.ok) {
+      let message = 'Falha ao buscar divisões do fornecedor';
+      try { const err = await res.json(); message = err?.message || message; } catch {}
+      throw new Error(message);
+    }
+    const json = await res.json();
+    const arr = Array.isArray(json?.data) ? json.data : [];
+    return { data: arr.map(normalizeFornecedorDivisaoItem), total: json?.total ?? arr.length };
+  },
+
+  async addFornecedorDivisao(
+    representanteId: number | string,
+    fornecedorId: number | string,
+    divisaoId: number,
+  ): Promise<FornecedorDivisaoItem> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}/divisoes?${params.toString()}`;
+    const res = await apiClient.fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ divisaoId }),
+    });
+    if (!res.ok) {
+      let message = 'Falha ao adicionar divisão';
+      try { const err = await res.json(); message = err?.message || message; } catch {}
+      throw new Error(message);
+    }
+    return normalizeFornecedorDivisaoItem(await res.json());
+  },
+
+  async removeFornecedorDivisao(
+    representanteId: number | string,
+    fornecedorId: number | string,
+    divisaoItemId: number,
+  ): Promise<void> {
+    const empresaId = await getEmpresaId();
+    const params = new URLSearchParams();
+    params.set('empresaId', String(empresaId));
+    const url = `${API_BASE}/api/forca-de-vendas/${encodeURIComponent(representanteId)}/fornecedores/${encodeURIComponent(fornecedorId)}/divisoes/${encodeURIComponent(divisaoItemId)}?${params.toString()}`;
+    const res = await apiClient.fetch(url, { method: 'DELETE', headers: { accept: 'application/json' } });
+    if (!res.ok && res.status !== 204) {
+      let message = 'Falha ao remover divisão';
+      try { const err = await res.json(); message = err?.message || message; } catch {}
+      throw new Error(message);
+    }
   },
 
   // Legacy method for backward compatibility with existing components
