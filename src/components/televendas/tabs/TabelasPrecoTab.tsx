@@ -313,9 +313,13 @@ export function TabelasPrecoTab() {
   const [copiarDestino, setCopiarDestino] = useState('');
   const [copiarLoading, setCopiarLoading] = useState(false);
 
-  // Aplicar referência dialog
+  // Aplicar referência dialog (individual)
   const [aplicarRefOpen, setAplicarRefOpen] = useState(false);
   const [aplicarRefLoading, setAplicarRefLoading] = useState(false);
+
+  // Aplicar referência em todas (background job + SSE)
+  const [aplicarTodasLoading, setAplicarTodasLoading] = useState(false);
+  const aplicarTodasEsRef = useRef<EventSource | null>(null);
 
   // Divisões dialog
   const [divisoesOpen, setDivisoesOpen] = useState(false);
@@ -821,6 +825,55 @@ export function TabelasPrecoTab() {
       setAplicarRefLoading(false);
     }
   };
+
+  const tabelasComReferencia = tabelas.filter((t) => t.tabela_referencia_id);
+
+  const handleAplicarReferenciaTodas = async () => {
+    if (aplicarTodasLoading) return;
+    setAplicarTodasLoading(true);
+    const toastId = toast.loading('Iniciando aplicação de referências...');
+    try {
+      const { jobId } = await tabelasPrecoService.iniciarAplicarReferenciaTodas();
+      const url = `${(await import('@/utils/env')).API_BASE}/api/jobs/${jobId}/events`;
+      const es = new EventSource(url);
+      aplicarTodasEsRef.current = es;
+
+      es.onmessage = (e) => {
+        try {
+          const ev = JSON.parse(e.data) as { status: string; processed?: number; total?: number; totalAtualizados?: number; erros?: number; message?: string };
+          if (ev.status === 'progress') {
+            toast.loading(`Aplicando referências... ${ev.processed ?? 0}/${ev.total ?? 0} tabelas`, { id: toastId });
+          } else if (ev.status === 'done') {
+            const errosTxt = ev.erros ? `, ${ev.erros} erro(s)` : '';
+            toast.success(`Concluído: ${ev.totalAtualizados} preço(s) em ${ev.total} tabela(s)${errosTxt}`, { id: toastId });
+            es.close();
+            aplicarTodasEsRef.current = null;
+            setAplicarTodasLoading(false);
+          } else if (ev.status === 'error') {
+            toast.error(ev.message || 'Erro ao aplicar referências', { id: toastId });
+            es.close();
+            aplicarTodasEsRef.current = null;
+            setAplicarTodasLoading(false);
+          }
+        } catch {}
+      };
+
+      es.onerror = () => {
+        toast.error('Conexão perdida com o servidor', { id: toastId });
+        es.close();
+        aplicarTodasEsRef.current = null;
+        setAplicarTodasLoading(false);
+      };
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao iniciar processo', { id: toastId });
+      setAplicarTodasLoading(false);
+    }
+  };
+
+  // Fecha EventSource ao desmontar o componente
+  useEffect(() => {
+    return () => { aplicarTodasEsRef.current?.close(); };
+  }, []);
 
   // ── Edit item dialog ─────────────────────────────────────────────────────
 
@@ -2176,10 +2229,27 @@ export function TabelasPrecoTab() {
               <Tag className="h-5 w-5" />
               Tabelas de Preço ({tabelas.length})
             </CardTitle>
-            <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Tabela
-            </Button>
+            <div className="flex items-center gap-2">
+              {tabelasComReferencia.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAplicarReferenciaTodas}
+                  disabled={aplicarTodasLoading}
+                >
+                  {aplicarTodasLoading
+                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    : <Percent className="h-4 w-4 mr-2" />}
+                  {aplicarTodasLoading
+                    ? 'Aplicando...'
+                    : `Aplicar referência em todas (${tabelasComReferencia.length})`}
+                </Button>
+              )}
+              <Button variant="default" onClick={openCreate} size="sm" disabled={!canInsert}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Tabela
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
