@@ -814,7 +814,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
 
       {/* Botões de ação - filtros */}
       <div className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-        <Button variant="outline" onClick={handleNovoPedido} className="w-full sm:w-auto" disabled={!canInsert}>
+        <Button onClick={handleNovoPedido} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white" disabled={!canInsert}>
           <FileEdit className="h-4 w-4 mr-2" />
           Digitar Pedido
         </Button>

@@ -157,6 +157,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   const [newItemPreco, setNewItemPreco] = useState<number | null>(null);
   const [loadingNewItemPreco, setLoadingNewItemPreco] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  const [clientSearchField, setClientSearchField] = useState<'nome' | 'fantasia' | 'cnpjCpf' | 'codigoCliente' | 'telefone' | 'bairro'>('nome');
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
@@ -169,6 +170,31 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   const prevOrderIdRef = useRef<number | null>(null);
 
   const parametrosAppMobile = useMemo(() => authService.getParametrosAppMobile(), []);
+
+  const isAdmin = useMemo(() => authService.isAdmin(), []);
+  const sessionRepresentante = useMemo(() => {
+    if (isAdmin) return null;
+    const session = authService.getSession();
+    const p = session?.payload;
+    const id =
+      p?.usuario_empresa_id ??
+      p?.user?.usuario_empresa_id ??
+      p?.representante_id ??
+      p?.user?.representante_id ??
+      p?.forcaDeVendasId ??
+      p?.user?.forcaDeVendasId ??
+      null;
+    if (!id) return null;
+    const nome =
+      p?.nome_representante ??
+      p?.user?.nome_representante ??
+      p?.representanteNome ??
+      p?.user?.representanteNome ??
+      session?.nome ??
+      '';
+    return { id: String(id), nome: String(nome) };
+  }, [isAdmin]);
+
   const bloqueiaDescontoAcimaTabela = useMemo(
     () => Boolean(parametrosAppMobile?.bloqueia_desconto_acima_tabela),
     [parametrosAppMobile?.bloqueia_desconto_acima_tabela],
@@ -239,14 +265,24 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   const CLIENT_LIMIT = 100;
   const loadClients = async (reset = false) => {
     if (loadingClients) return;
+    if (!formData.representanteId) return;
     setLoadingClients(true);
     setClientsError(null);
     try {
       const nextPage = reset ? 1 : clientPage + 1;
-      const data = await clientsService.find(clientSearch || undefined, nextPage, CLIENT_LIMIT);
+      const filters: Record<string, any> = { representanteId: formData.representanteId };
+      const q = clientSearch.trim();
+      if (q) {
+        if (clientSearchField === 'nome') filters.nome = q;
+        else if (clientSearchField === 'fantasia') filters.fantasia = q;
+        else if (clientSearchField === 'cnpjCpf') filters.query = q;
+        else if (clientSearchField === 'codigoCliente') filters.codigoCliente = q;
+        else if (clientSearchField === 'telefone') filters.fone = q;
+        else if (clientSearchField === 'bairro') filters.bairro = q;
+      }
+      const data = await clientsService.find(filters, nextPage, CLIENT_LIMIT);
       setClients((prev) => {
         const combined = reset ? data : [...prev, ...data];
-        // dedupe by id
         const seen = new Set<number>();
         return combined.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
       });
@@ -537,6 +573,15 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   }, [formData.tabela, prazoMax]);
 
   useEffect(() => {
+    if (!sessionRepresentante) return;
+    setFormData((prev) => ({
+      ...prev,
+      representanteId: prev.representanteId || sessionRepresentante.id,
+      representanteNome: prev.representanteNome || sessionRepresentante.nome,
+    }));
+  }, [sessionRepresentante]);
+
+  useEffect(() => {
     if (!clientSearchOpen) return;
     // initial load when opening dialog
     loadClients(true);
@@ -551,6 +596,12 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientSearch]);
+
+  useEffect(() => {
+    if (!clientSearchOpen) return;
+    loadClients(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientSearchField]);
 
   const REP_LIMIT = 100;
   const loadReps = async (reset = false) => {
@@ -1337,7 +1388,11 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
               <label className="text-sm font-medium mb-2 block">Representante *</label>
               <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    disabled={!!sessionRepresentante}
+                  >
                     <Search className="h-4 w-4 mr-2" />
                     {formData.representanteNome || 'Buscar representante'}
                   </Button>
@@ -1381,6 +1436,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                                     ...formData,
                                     representanteId: r.id,
                                     representanteNome: r.nome,
+                                    clienteId: 0,
+                                    clienteNome: '',
                                   });
                                   setRepSearchOpen(false);
                                   setRepSearch('');
@@ -1411,9 +1468,17 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
               <div className="flex gap-1">
                 <Dialog open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start min-w-0 overflow-hidden">
+                    <Button
+                      variant="outline"
+                      className="flex-1 justify-start min-w-0 overflow-hidden"
+                      disabled={!formData.representanteId}
+                    >
                       <Search className="h-4 w-4 mr-2 shrink-0" />
-                      <span className="truncate">{formData.clienteNome || 'Buscar cliente'}</span>
+                      <span className="truncate">
+                        {!formData.representanteId
+                          ? 'Selecione um representante primeiro'
+                          : formData.clienteNome || 'Buscar cliente'}
+                      </span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="w-[95vw] max-w-2xl">
@@ -1421,12 +1486,31 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       <DialogTitle>Buscar Cliente</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <Input
-                        placeholder="Digite nome ou código..."
-                        value={clientSearch}
-                        onChange={(e) => setClientSearch(e.target.value)}
-                        autoFocus
-                      />
+                      <div className="flex gap-2">
+                        <Select
+                          value={clientSearchField}
+                          onValueChange={(v) => setClientSearchField(v as typeof clientSearchField)}
+                        >
+                          <SelectTrigger className="w-40 shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nome">Nome</SelectItem>
+                            <SelectItem value="fantasia">Fantasia</SelectItem>
+                            <SelectItem value="cnpjCpf">CNPJ/CPF</SelectItem>
+                            <SelectItem value="codigoCliente">Código</SelectItem>
+                            <SelectItem value="telefone">Telefone</SelectItem>
+                            <SelectItem value="bairro">Bairro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder="Digite para buscar..."
+                          value={clientSearch}
+                          onChange={(e) => setClientSearch(e.target.value)}
+                          autoFocus
+                          className="flex-1"
+                        />
+                      </div>
                       <div className="max-h-96 overflow-auto" onScroll={(e) => {
                         const el = e.currentTarget;
                         if (clientHasMore && !loadingClients && el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
