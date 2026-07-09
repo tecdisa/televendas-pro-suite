@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Search, Tag, Plus, Pencil, Trash2, Loader2, List, ArrowLeft, Save, Undo2, X, Copy, Percent, Layers, FileSpreadsheet, Upload, AlertCircle, AlertTriangle, CheckCircle2, Star } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -235,6 +236,7 @@ export function TabelasPrecoTab() {
   const [editId, setEditId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void | Promise<void> } | null>(null);
   const [formData, setFormData] = useState(initialFormData);
 
   // ── Items view state ────────────────────────────────────────────────────
@@ -494,15 +496,19 @@ export function TabelasPrecoTab() {
     finally { setFormLoading(false); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir esta tabela de preço?')) return;
-    setDeleteLoading(id);
-    try {
-      await tabelasPrecoService.delete(id);
-      toast.success('Tabela excluída com sucesso');
-      loadTabelas(true);
-    } catch (e: any) { toast.error(e?.message || 'Erro ao excluir tabela'); }
-    finally { setDeleteLoading(null); }
+  const handleDelete = (id: number) => {
+    setConfirmDialog({
+      message: 'Tem certeza que deseja excluir esta tabela de preço?',
+      onConfirm: async () => {
+        setDeleteLoading(id);
+        try {
+          await tabelasPrecoService.delete(id);
+          toast.success('Tabela excluída com sucesso');
+          loadTabelas(true);
+        } catch (e: any) { toast.error(e?.message || 'Erro ao excluir tabela'); }
+        finally { setDeleteLoading(null); }
+      },
+    });
   };
 
   const [padraoLoading, setPadraoLoading] = useState<number | null>(null);
@@ -626,16 +632,21 @@ export function TabelasPrecoTab() {
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) loadItens();
   };
 
-  const backToTabelas = () => {
-    if (Object.keys(pendingChanges).length > 0) {
-      if (!confirm('Há alterações não salvas. Deseja sair sem salvar?')) return;
-    }
+  const doBackToTabelas = () => {
     itensLoadingRef.current = false;
     itensTabelaRef.current = null;
     setItensView(false);
     setItensTabela(null);
     setPendingChanges({});
     setSelectedRows(new Set());
+  };
+
+  const backToTabelas = () => {
+    if (Object.keys(pendingChanges).length > 0) {
+      setConfirmDialog({ message: 'Há alterações não salvas. Deseja sair sem salvar?', onConfirm: doBackToTabelas });
+      return;
+    }
+    doBackToTabelas();
   };
 
   // ── Inline editing ──────────────────────────────────────────────────────
@@ -730,32 +741,42 @@ export function TabelasPrecoTab() {
   };
 
   // ── Delete item ─────────────────────────────────────────────────────────
-  const handleDeleteItem = async (produtoId: number) => {
+  const handleDeleteItem = (produtoId: number) => {
     if (!itensTabela) return;
-    if (!confirm('Excluir este item?')) return;
-    setDeleteItemLoading(produtoId);
-    try {
-      await tabelasPrecoService.deleteItem(itensTabela.tabela_preco_id, produtoId);
-      toast.success('Item excluído');
-      setPendingChanges((prev) => { const n = { ...prev }; delete n[produtoId]; return n; });
-      setSelectedRows((prev) => { const n = new Set(prev); n.delete(produtoId); return n; });
-      loadItens(true);
-    } catch (e: any) { toast.error(e?.message || 'Erro ao excluir item'); }
-    finally { setDeleteItemLoading(null); }
+    setConfirmDialog({
+      message: 'Excluir este item da tabela de preço?',
+      onConfirm: async () => {
+        setDeleteItemLoading(produtoId);
+        try {
+          await tabelasPrecoService.deleteItem(itensTabela.tabela_preco_id, produtoId);
+          toast.success('Item excluído');
+          setPendingChanges((prev) => { const n = { ...prev }; delete n[produtoId]; return n; });
+          setSelectedRows((prev) => { const n = new Set(prev); n.delete(produtoId); return n; });
+          loadItens(true);
+        } catch (e: any) { toast.error(e?.message || 'Erro ao excluir item'); }
+        finally { setDeleteItemLoading(null); }
+      },
+    });
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (!itensTabela || selectedRows.size === 0) return;
-    if (!confirm(`Excluir ${selectedRows.size} item(s) selecionado(s)?`)) return;
-    let errors = 0;
-    for (const id of Array.from(selectedRows)) {
-      try { await tabelasPrecoService.deleteItem(itensTabela.tabela_preco_id, id); }
-      catch { errors++; }
-    }
-    if (errors > 0) toast.error(`${errors} item(s) não puderam ser excluídos`);
-    else toast.success(`${selectedRows.size} item(s) excluídos`);
-    setSelectedRows(new Set());
-    loadItens(true);
+    const size = selectedRows.size;
+    const ids = Array.from(selectedRows);
+    setConfirmDialog({
+      message: `Excluir ${size} item(s) selecionado(s)?`,
+      onConfirm: async () => {
+        let errors = 0;
+        for (const id of ids) {
+          try { await tabelasPrecoService.deleteItem(itensTabela.tabela_preco_id, id); }
+          catch { errors++; }
+        }
+        if (errors > 0) toast.error(`${errors} item(s) não puderam ser excluídos`);
+        else toast.success(`${size} item(s) excluídos`);
+        setSelectedRows(new Set());
+        loadItens(true);
+      },
+    });
   };
 
   // ── Add item via product search dialog ─────────────────────────────────
@@ -998,16 +1019,20 @@ export function TabelasPrecoTab() {
     finally { setDivisaoFormLoading(false); }
   };
 
-  const handleDeleteDivisao = async (d: TabelaPrecoDivisao) => {
+  const handleDeleteDivisao = (d: TabelaPrecoDivisao) => {
     if (!divisoesTabela) return;
-    if (!confirm(`Excluir divisão "${d.descricao_divisao}"?`)) return;
-    setDivisaoDeleteLoading(d.id);
-    try {
-      await tabelasPrecoService.deleteDivisao(divisoesTabela.tabela_preco_id, d.divisao_id);
-      toast.success('Divisão excluída');
-      loadDivisoes(divisoesTabela, divisoesSearch);
-    } catch (e: any) { toast.error(e?.message || 'Erro ao excluir divisão'); }
-    finally { setDivisaoDeleteLoading(null); }
+    setConfirmDialog({
+      message: `Excluir divisão "${d.descricao_divisao}"?`,
+      onConfirm: async () => {
+        setDivisaoDeleteLoading(d.id);
+        try {
+          await tabelasPrecoService.deleteDivisao(divisoesTabela.tabela_preco_id, d.divisao_id);
+          toast.success('Divisão excluída');
+          loadDivisoes(divisoesTabela, divisoesSearch);
+        } catch (e: any) { toast.error(e?.message || 'Erro ao excluir divisão'); }
+        finally { setDivisaoDeleteLoading(null); }
+      },
+    });
   };
 
   // ── Escala ──────────────────────────────────────────────────────────────
@@ -1064,16 +1089,20 @@ export function TabelasPrecoTab() {
     finally { setEscalaFormLoading(false); }
   };
 
-  const handleDeleteEscala = async (row: TabelaPrecoEscala) => {
+  const handleDeleteEscala = (row: TabelaPrecoEscala) => {
     if (!itensTabela || !escalaItem) return;
-    if (!confirm(`Excluir escala de quantidade ${row.quantidade}?`)) return;
-    setEscalaDeleteLoading(row.id);
-    try {
-      await tabelasPrecoService.deleteEscala(itensTabela.tabela_preco_id, escalaItem.produto_id, row.id);
-      setEscalaRows((prev) => prev.filter((r) => r.id !== row.id));
-      toast.success('Escala excluída');
-    } catch (e: any) { toast.error(e?.message || 'Erro ao excluir escala'); }
-    finally { setEscalaDeleteLoading(null); }
+    setConfirmDialog({
+      message: `Excluir escala de quantidade ${row.quantidade}?`,
+      onConfirm: async () => {
+        setEscalaDeleteLoading(row.id);
+        try {
+          await tabelasPrecoService.deleteEscala(itensTabela.tabela_preco_id, escalaItem.produto_id, row.id);
+          setEscalaRows((prev) => prev.filter((r) => r.id !== row.id));
+          toast.success('Escala excluída');
+        } catch (e: any) { toast.error(e?.message || 'Erro ao excluir escala'); }
+        finally { setEscalaDeleteLoading(null); }
+      },
+    });
   };
 
   // ── Derived ─────────────────────────────────────────────────────────────
@@ -2611,6 +2640,24 @@ export function TabelasPrecoTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDialog !== null} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { const fn = confirmDialog?.onConfirm; setConfirmDialog(null); fn?.(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

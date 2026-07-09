@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Save, Undo, Search, Plus, Trash2, Info, DollarSign, History, Package } from 'lucide-react';
@@ -1189,8 +1190,14 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     }
   };
 
-  const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const [removeItemConfirm, setRemoveItemConfirm] = useState<number | null>(null);
+
+  const handleRemoveItem = (index: number) => setRemoveItemConfirm(index);
+
+  const executeRemoveItem = () => {
+    if (removeItemConfirm === null) return;
+    setItems(items.filter((_, i) => i !== removeItemConfirm));
+    setRemoveItemConfirm(null);
   };
 
   const totals = items.reduce((acc, item) => {
@@ -1957,6 +1964,23 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         produtoDescricao={selectedBatchItem?.descricao ?? ''}
         estoqueAtual={selectedBatchItem?.estoque}
       />
+
+      <AlertDialog open={removeItemConfirm !== null} onOpenChange={(open) => !open && setRemoveItemConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este item do pedido?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeRemoveItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

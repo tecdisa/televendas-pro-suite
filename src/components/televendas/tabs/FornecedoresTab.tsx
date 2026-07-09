@@ -162,6 +162,7 @@ export function FornecedoresTab() {
   const [existingFornecedorByCnpj, setExistingFornecedorByCnpj] =
     useState<ExistingFornecedorDuplicate | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [formData, setFormData] = useState(() => createInitialFormData());
   const [empresaGroups, setEmpresaGroups] = useState<EmpresaMasterGroup[]>([]);
   const [empresasLoading, setEmpresasLoading] = useState(false);
@@ -682,8 +683,12 @@ export function FornecedoresTab() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este fornecedor?')) return;
+  const handleDelete = (id: number) => setDeleteConfirm(id);
+
+  const executeDelete = async () => {
+    if (!deleteConfirm) return;
+    const id = deleteConfirm;
+    setDeleteConfirm(null);
     setDeleteLoading(id);
     try {
       await suppliersService.delete(id);
@@ -1275,6 +1280,23 @@ export function FornecedoresTab() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelClose}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmClose}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Loader2, Download, Copy, Trash2, UserCheck, Info, UserMinus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -39,6 +40,7 @@ export function ClientesPorRepresentanteTab() {
   const [clientsHasMore, setClientsHasMore] = useState(false);
   const [clientsTotal, setClientsTotal] = useState(0);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void | Promise<void> } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Filters
@@ -97,16 +99,20 @@ export function ClientesPorRepresentanteTab() {
   const [clientInfoOpen, setClientInfoOpen] = useState(false);
   const [clientInfoId, setClientInfoId] = useState<number | null>(null);
 
-  const handleDesvinculaUm = async (clientId: number, clientNome: string) => {
+  const handleDesvinculaUm = (clientId: number, clientNome: string) => {
     if (!selectedRep) return;
-    if (!confirm(`Desvincular "${clientNome}" deste representante?`)) return;
-    try {
-      await representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id);
-      toast.success('Cliente desvinculado');
-      loadClients();
-    } catch {
-      toast.error('Erro ao desvincular cliente');
-    }
+    setConfirmDialog({
+      message: `Desvincular "${clientNome}" deste representante?`,
+      onConfirm: async () => {
+        try {
+          await representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id);
+          toast.success('Cliente desvinculado');
+          loadClients();
+        } catch {
+          toast.error('Erro ao desvincular cliente');
+        }
+      },
+    });
   };
 
   // Load representatives
@@ -416,19 +422,24 @@ export function ClientesPorRepresentanteTab() {
 
 
   // Remove client from representative
-  const handleRemoveClients = async () => {
+  const handleRemoveClients = () => {
     if (!selectedRep || selectedClientIds.size === 0) return;
-    if (!confirm(`Deseja remover ${selectedClientIds.size} cliente(s) deste representante?`)) return;
-    try {
-      const promises = Array.from(selectedClientIds).map(clientId =>
-        representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id)
-      );
-      await Promise.all(promises);
-      toast.success(`${selectedClientIds.size} cliente(s) removido(s)`);
-      loadClients();
-    } catch {
-      toast.error('Erro ao remover clientes');
-    }
+    const size = selectedClientIds.size;
+    const ids = Array.from(selectedClientIds);
+    setConfirmDialog({
+      message: `Deseja remover ${size} cliente(s) deste representante?`,
+      onConfirm: async () => {
+        try {
+          await Promise.all(ids.map(clientId =>
+            representativesService.removeClienteRepresentante(clientId, selectedRep.representante_id)
+          ));
+          toast.success(`${size} cliente(s) removido(s)`);
+          loadClients();
+        } catch {
+          toast.error('Erro ao remover clientes');
+        }
+      },
+    });
   };
 
   // Filtered copy rep list
@@ -880,6 +891,23 @@ export function ClientesPorRepresentanteTab() {
 
       <ClientInfoModal open={clientInfoOpen} onOpenChange={setClientInfoOpen} clienteId={clientInfoId ?? 0} />
 
+      <AlertDialog open={confirmDialog !== null} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { const fn = confirmDialog?.onConfirm; setConfirmDialog(null); fn?.(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

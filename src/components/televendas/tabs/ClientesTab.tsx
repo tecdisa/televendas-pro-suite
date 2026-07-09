@@ -602,6 +602,7 @@ export const ClientesTab = () => {
     return getCpfOrCnpjValidationMessage(cleaned);
   }, [formData.cnpjCpf]);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [deleteConfirmClientId, setDeleteConfirmClientId] = useState<number | null>(null);
   const [pendingClose, setPendingClose] = useState<'create' | 'edit' | null>(null);
   const formSnapshotRef = useRef<string>(
     JSON.stringify(createEmptyFormData(getLoggedCompanyUf())),
@@ -1769,22 +1770,30 @@ const validateFormData = (data: ClientFormData): string[] => {
     }
   };
 
-  const handleDelete = async (clientId?: number) => {
-    const targetIds =
-      clientId && Number.isFinite(clientId) && clientId > 0
-        ? [clientId]
-        : selectedClients;
-    if (targetIds.length === 0) {
-      toast.error('Selecione pelo menos um cliente');
-      return;
+  const handleDelete = (clientId?: number) => {
+    if (clientId && Number.isFinite(clientId) && clientId > 0) {
+      setDeleteConfirmClientId(clientId);
+    } else {
+      if (selectedClients.length === 0) {
+        toast.error('Selecione pelo menos um cliente');
+        return;
+      }
+      setDeleteConfirmClientId(-1);
     }
+  };
+
+  const executeDelete = async () => {
+    if (deleteConfirmClientId === null) return;
+    const pendingId = deleteConfirmClientId;
+    const targetIds = pendingId > 0 ? [pendingId] : selectedClients;
+    setDeleteConfirmClientId(null);
     try {
       for (const id of targetIds) {
         await clientsService.remove(id);
       }
       if (targetIds.length === 1) toast.success('Cliente excluído com sucesso');
       else toast.success(`${targetIds.length} cliente(s) excluído(s)`);
-      if (!clientId) setSelectedClients([]);
+      if (pendingId <= 0) setSelectedClients([]);
       loadClients(undefined, true);
     } catch (e: any) {
       toast.error(String(e));
@@ -5115,6 +5124,25 @@ const validateFormData = (data: ClientFormData): string[] => {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmClientId !== null} onOpenChange={(open) => !open && setDeleteConfirmClientId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmClientId !== null && deleteConfirmClientId > 0
+                ? 'Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.'
+                : `Tem certeza que deseja excluir ${selectedClients.length} cliente(s) selecionado(s)? Esta ação não pode ser desfeita.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

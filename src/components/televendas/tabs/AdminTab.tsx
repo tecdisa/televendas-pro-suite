@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,7 @@ export function AdminTab() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [togglingMasterId, setTogglingMasterId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [removeConfirmUsuario, setRemoveConfirmUsuario] = useState<EmpresaUsuario | null>(null);
 
   const [associarOpen, setAssociarOpen] = useState(false);
   const [assocSearch, setAssocSearch] = useState('');
@@ -334,8 +336,12 @@ export function AdminTab() {
     }
   };
 
-  const handleRemove = async (usuario: EmpresaUsuario) => {
-    if (!confirm(`Remover ${usuario.nome || usuario.usuario} desta empresa?`)) return;
+  const handleRemove = (usuario: EmpresaUsuario) => setRemoveConfirmUsuario(usuario);
+
+  const executeRemove = async () => {
+    if (!removeConfirmUsuario) return;
+    const usuario = removeConfirmUsuario;
+    setRemoveConfirmUsuario(null);
     setDeletingId(usuario.usuario_empresa_id);
     try {
       await adminService.deleteVinculo(usuario.usuario_empresa_id);
@@ -1144,6 +1150,23 @@ export function AdminTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={removeConfirmUsuario !== null} onOpenChange={(open) => !open && setRemoveConfirmUsuario(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remover {removeConfirmUsuario?.nome || removeConfirmUsuario?.usuario} desta empresa? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

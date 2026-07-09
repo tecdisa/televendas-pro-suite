@@ -10,6 +10,7 @@ import { representativesService, Representante, RepresentanteFornecedorItem, For
 import { suppliersService, Fornecedor } from '@/services/suppliersService';
 import { divisionsService, Divisao } from '@/services/divisionsService';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Copy, Layers, Loader2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
 
@@ -46,6 +47,7 @@ export function RepresentantesPastasTab() {
   const [saveObjetivoLoading, setSaveObjetivoLoading] = useState<number | null>(null);
   const [removeFornecedorLoadingId, setRemoveFornecedorLoadingId] = useState<number | null>(null);
   const [removeSelecionadosLoading, setRemoveSelecionadosLoading] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void | Promise<void> } | null>(null);
   const [includeDialogOpen, setIncludeDialogOpen] = useState(false);
   const [includeSearch, setIncludeSearch] = useState('');
   const [includeLoading, setIncludeLoading] = useState(false);
@@ -358,31 +360,34 @@ export function RepresentantesPastasTab() {
     setSelectedFornecedorById(next);
   };
 
-  const handleExcluirFornecedor = async (fornecedorId: number) => {
+  const handleExcluirFornecedor = (fornecedorId: number) => {
     if (!selectedRepresentanteId) {
       toast.error('Selecione uma força de vendas');
       return;
     }
-    if (!confirm('Deseja excluir este fornecedor da pasta da força de vendas?')) return;
-
-    setRemoveFornecedorLoadingId(fornecedorId);
-    try {
-      await representativesService.removeFornecedor(selectedRepresentanteId, fornecedorId);
-      setSelectedFornecedorById((prev) => {
-        const next = { ...prev };
-        delete next[fornecedorId];
-        return next;
-      });
-      toast.success('Fornecedor excluído da pasta');
-      await loadFornecedores(selectedRepresentanteId, '');
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao excluir fornecedor da pasta');
-    } finally {
-      setRemoveFornecedorLoadingId(null);
-    }
+    setConfirmDialog({
+      message: 'Deseja excluir este fornecedor da pasta da força de vendas?',
+      onConfirm: async () => {
+        setRemoveFornecedorLoadingId(fornecedorId);
+        try {
+          await representativesService.removeFornecedor(selectedRepresentanteId, fornecedorId);
+          setSelectedFornecedorById((prev) => {
+            const next = { ...prev };
+            delete next[fornecedorId];
+            return next;
+          });
+          toast.success('Fornecedor excluído da pasta');
+          await loadFornecedores(selectedRepresentanteId, '');
+        } catch (error: any) {
+          toast.error(error?.message || 'Erro ao excluir fornecedor da pasta');
+        } finally {
+          setRemoveFornecedorLoadingId(null);
+        }
+      },
+    });
   };
 
-  const handleExcluirSelecionados = async () => {
+  const handleExcluirSelecionados = () => {
     if (!selectedRepresentanteId) {
       toast.error('Selecione uma força de vendas');
       return;
@@ -394,26 +399,25 @@ export function RepresentantesPastasTab() {
       toast.error('Selecione ao menos um fornecedor');
       return;
     }
-    if (!confirm(`Deseja excluir ${ids.length} fornecedor(es) da pasta?`)) return;
-
-    setRemoveSelecionadosLoading(true);
-    try {
-      const results = await Promise.allSettled(
-        ids.map((id) => representativesService.removeFornecedor(selectedRepresentanteId, id)),
-      );
-      const removidos = results.filter((result) => result.status === 'fulfilled').length;
-      const falhas = results.length - removidos;
-      if (removidos > 0) {
-        toast.success(`${removidos} fornecedor(es) excluído(s) da pasta`);
-      }
-      if (falhas > 0) {
-        toast.error(`Falha ao excluir ${falhas} fornecedor(es)`);
-      }
-      setSelectedFornecedorById({});
-      await loadFornecedores(selectedRepresentanteId, '');
-    } finally {
-      setRemoveSelecionadosLoading(false);
-    }
+    setConfirmDialog({
+      message: `Deseja excluir ${ids.length} fornecedor(es) da pasta?`,
+      onConfirm: async () => {
+        setRemoveSelecionadosLoading(true);
+        try {
+          const results = await Promise.allSettled(
+            ids.map((id) => representativesService.removeFornecedor(selectedRepresentanteId, id)),
+          );
+          const removidos = results.filter((result) => result.status === 'fulfilled').length;
+          const falhas = results.length - removidos;
+          if (removidos > 0) toast.success(`${removidos} fornecedor(es) excluído(s) da pasta`);
+          if (falhas > 0) toast.error(`Falha ao excluir ${falhas} fornecedor(es)`);
+          setSelectedFornecedorById({});
+          await loadFornecedores(selectedRepresentanteId, '');
+        } finally {
+          setRemoveSelecionadosLoading(false);
+        }
+      },
+    });
   };
 
   const openCopyDialog = async () => {
@@ -521,23 +525,27 @@ export function RepresentantesPastasTab() {
     }
   };
 
-  const handleDeleteDivisao = async (item: FornecedorDivisaoItem) => {
+  const handleDeleteDivisao = (item: FornecedorDivisaoItem) => {
     if (!divisoesFornecedor) return;
-    if (!confirm(`Excluir divisão "${item.descricao_divisao || item.codigo_divisao}"?`)) return;
-    setDivisaoDeleteLoading(item.id);
-    try {
-      await representativesService.removeFornecedorDivisao(
-        divisoesFornecedor.representante.representante_id,
-        divisoesFornecedor.fornecedor.fornecedor_id,
-        item.id,
-      );
-      toast.success('Divisão excluída');
-      loadDivisoesFornecedor(divisoesFornecedor);
-    } catch (e: any) {
-      toast.error(e?.message || 'Erro ao excluir divisão');
-    } finally {
-      setDivisaoDeleteLoading(null);
-    }
+    setConfirmDialog({
+      message: `Excluir divisão "${item.descricao_divisao || item.codigo_divisao}"?`,
+      onConfirm: async () => {
+        setDivisaoDeleteLoading(item.id);
+        try {
+          await representativesService.removeFornecedorDivisao(
+            divisoesFornecedor.representante.representante_id,
+            divisoesFornecedor.fornecedor.fornecedor_id,
+            item.id,
+          );
+          toast.success('Divisão excluída');
+          loadDivisoesFornecedor(divisoesFornecedor);
+        } catch (e: any) {
+          toast.error(e?.message || 'Erro ao excluir divisão');
+        } finally {
+          setDivisaoDeleteLoading(null);
+        }
+      },
+    });
   };
 
   return (
@@ -1074,6 +1082,24 @@ export function RepresentantesPastasTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDialog !== null} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { const fn = confirmDialog?.onConfirm; setConfirmDialog(null); fn?.(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
