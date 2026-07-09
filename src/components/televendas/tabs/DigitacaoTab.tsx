@@ -883,7 +883,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     const itemToAdd = productToAdd || newItem;
     
     if (!formData.operacao || !formData.clienteId || !formData.representanteId) {
-      toast.error('Preencha operação, cliente e força de vendas antes de adicionar itens');
+      toast.error('Preencha operação, cliente e representante antes de adicionar itens');
       return;
     }
     
@@ -1212,7 +1212,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
 
   const handleSave = async () => {
     if (!formData.operacao || !formData.clienteId || !formData.representanteId || items.length === 0) {
-      toast.error('Preencha operação, cliente, força de vendas e adicione pelo menos um item');
+      toast.error('Preencha operação, cliente, representante e adicione pelo menos um item');
       return;
     }
     // Valida prazo máximo conforme a tabela selecionada
@@ -1334,6 +1334,79 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             </div>
 
             <div>
+              <label className="text-sm font-medium mb-2 block">Representante *</label>
+              <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Search className="h-4 w-4 mr-2" />
+                    {formData.representanteNome || 'Buscar representante'}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Buscar Representante</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Digite nome ou código..."
+                      value={repSearch}
+                      onChange={(e) => setRepSearch(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="max-h-96 overflow-auto" onScroll={(e) => {
+                      const el = e.currentTarget;
+                      if (repHasMore && !loadingReps && el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+                        loadReps(false);
+                      }
+                    }}>
+                      {loadingReps ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">Carregando representantes...</div>
+                      ) : repsError ? (
+                        <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Código</TableHead>
+                              <TableHead>Nome</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredRepresentatives.map((r) => (
+                              <TableRow
+                                key={r.id}
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  setFormData({
+                                    ...formData,
+                                    representanteId: r.id,
+                                    representanteNome: r.nome,
+                                  });
+                                  setRepSearchOpen(false);
+                                  setRepSearch('');
+                                }}
+                              >
+                                <TableCell>{r.codigoRepresentante ?? ''}</TableCell>
+                                <TableCell>{r.nome}</TableCell>
+                              </TableRow>
+                            ))}
+                            {filteredRepresentatives.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
+                                  Nenhum representante encontrado
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div>
               <label className="text-sm font-medium mb-2 block">Cliente *</label>
               <div className="flex gap-1">
                 <Dialog open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
@@ -1348,7 +1421,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       <DialogTitle>Buscar Cliente</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <Input 
+                      <Input
                         placeholder="Digite nome ou código..."
                         value={clientSearch}
                         onChange={(e) => setClientSearch(e.target.value)}
@@ -1399,8 +1472,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                     </div>
                   </DialogContent>
                 </Dialog>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="icon"
                   onClick={() => setClientInfoOpen(true)}
                   disabled={!formData.clienteId}
@@ -1408,8 +1481,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                 >
                   <Info className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="icon"
                   onClick={() => setClientReceivablesOpen(true)}
                   disabled={!formData.clienteId}
@@ -1417,8 +1490,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                 >
                   <DollarSign className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="icon"
                   onClick={() => setClientPurchasesOpen(true)}
                   disabled={!formData.clienteId}
@@ -1427,79 +1500,6 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                   <History className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Força de Vendas *</label>
-              <Dialog open={repSearchOpen} onOpenChange={setRepSearchOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Search className="h-4 w-4 mr-2" />
-                    {formData.representanteNome || 'Buscar força de vendas'}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Buscar Força de Vendas</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <Input
-                      placeholder="Digite nome ou código..."
-                      value={repSearch}
-                      onChange={(e) => setRepSearch(e.target.value)}
-                      autoFocus
-                    />
-                    <div className="max-h-96 overflow-auto" onScroll={(e) => {
-                      const el = e.currentTarget;
-                      if (repHasMore && !loadingReps && el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
-                        loadReps(false);
-                      }
-                    }}>
-                      {loadingReps ? (
-                        <div className="py-6 text-center text-sm text-muted-foreground">Carregando força de vendas...</div>
-                      ) : repsError ? (
-                        <div className="py-6 text-center text-sm text-red-600">{repsError}</div>
-                      ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Código</TableHead>
-                              <TableHead>Nome</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredRepresentatives.map((r) => (
-                              <TableRow
-                                key={r.id}
-                                className="cursor-pointer"
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    representanteId: r.id,
-                                    representanteNome: r.nome,
-                                  });
-                                  setRepSearchOpen(false);
-                                  setRepSearch('');
-                                }}
-                              >
-                                <TableCell>{r.codigoRepresentante ?? ''}</TableCell>
-                                <TableCell>{r.nome}</TableCell>
-                              </TableRow>
-                            ))}
-                            {filteredRepresentatives.length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={2} className="text-center text-sm text-muted-foreground">
-                                  Nenhuma força de vendas encontrada
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      )}
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
 
             <div>
