@@ -895,9 +895,7 @@ export function AdminTab() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">ID Tecdisa</Label>
-                  <Input value={editForm.tecdisa_id}
-                    onChange={(e) => setEditForm((f) => ({ ...f, tecdisa_id: e.target.value }))}
-                    className="text-sm" />
+                  <Input value={editForm.tecdisa_id} readOnly className="text-sm bg-muted cursor-not-allowed text-muted-foreground" />
                 </div>
               </div>
 
