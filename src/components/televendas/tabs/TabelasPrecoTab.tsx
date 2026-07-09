@@ -50,7 +50,7 @@ const EXPORT_COLS: ExportColDef[] = [
   { header: 'Bon.',              field: 'permite_bonificacao',    type: 'boolean', editable: true },
   { header: 'Déb/Cr.',           field: 'permite_debito_credito', type: 'boolean', editable: true },
   { header: 'Vd.Esp.',           field: 'permite_venda_especial', type: 'boolean', editable: true },
-  { header: 'Estoque',           field: 'estoque',                type: 'number',  editable: false, digits: 0 },
+  { header: 'Desc.Vl.',          field: 'desconto_valor',         type: 'number',  editable: true,  digits: 2 },
   { header: 'Divisão',           field: 'divisao',                type: 'string',  editable: false },
   { header: 'Fornecedor',        field: 'fornecedor',             type: 'string',  editable: false },
   { header: 'EAN13',             field: 'ean13',                  type: 'string',  editable: false },
@@ -1687,7 +1687,7 @@ export function TabelasPrecoTab() {
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Bonificação">Bon.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Débito/Crédito">Déb/Cr.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Venda Especial">Vd.Esp.</th>
-                  <th className="w-20 px-1 py-1.5 text-right">Estoque</th>
+                  <th className="w-20 px-1 py-1.5 text-right">Desc.Vl.</th>
                   <th className="w-32 px-1 py-1.5 text-left">Divisão</th>
                   <th className="w-36 px-1 py-1.5 text-left">Fornecedor</th>
                   <th className="w-24 px-1 py-1.5 text-left">EAN13</th>
@@ -1782,7 +1782,9 @@ export function TabelasPrecoTab() {
                             onCheckedChange={(c) => commitBool(item.produto_id, 'permite_venda_especial', c === true)}
                           />
                         </td>
-                        <td className="px-1 py-0.5 text-right text-muted-foreground">{fmt(item.estoque, 3)}</td>
+                        <td className="px-1 py-0.5 text-right">
+                          <EditableCell value={item.desconto_valor} field="desconto_valor" produtoId={item.produto_id} pending={pending} onCommit={commitCell} />
+                        </td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[128px]" title={item.divisao}>{item.divisao || '-'}</td>
                         <td className="px-1 py-0.5 text-muted-foreground truncate max-w-[144px]" title={item.fornecedor}>{item.fornecedor || '-'}</td>
                         <td className="px-1 py-0.5 font-mono text-[11px]">{item.ean13 || '-'}</td>
