@@ -9,10 +9,40 @@ export interface AdminEmpresa {
   cnpj_cpf: string;
   uf: string;
   cidade: string | null;
+  fone: string | null;
+  celular: string | null;
+  email: string | null;
+  tecdisa_id: string | null;
   empresa_master_id: number | null;
   usuario_master_id: number | null;
   inativo: boolean;
   total_usuarios: number;
+}
+
+export interface AdminEmpresaDetalhe {
+  empresa_id: number;
+  razao_social: string;
+  fantasia: string;
+  cnpj_cpf: string;
+  inscricao_estadual: string | null;
+  endereco: string;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string;
+  cidade: string | null;
+  uf: string;
+  cep: string;
+  fone: string;
+  celular: string;
+  whatsapp: string | null;
+  contato: string | null;
+  email: string | null;
+  site: string | null;
+  tecdisa_id: string;
+  empresa_master_id: number | null;
+  usuario_master_id: number | null;
+  inativo: boolean;
+  obs: string | null;
 }
 
 export interface AdminUsuario {
@@ -129,6 +159,50 @@ export const adminService = {
       body: JSON.stringify({ master }),
     });
     return handleResponse(res, 'Erro ao atualizar flag master');
+  },
+
+  async getEmpresa(id: number): Promise<AdminEmpresaDetalhe> {
+    const headers = await authHeaders();
+    const res = await apiClient.fetch(`${API_BASE}/api/empresas/${id}`, { headers });
+    return handleResponse<AdminEmpresaDetalhe>(res, 'Erro ao buscar empresa');
+  },
+
+  async updateEmpresa(id: number, data: Partial<{
+    razao_social: string;
+    fantasia: string;
+    inscricao_estadual: string;
+    endereco: string;
+    numero: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    cep: string;
+    fone: string;
+    celular: string;
+    whatsapp: string;
+    email: string;
+    tecdisa_id: string;
+    inativo: boolean;
+    obs: string;
+    empresa_master_id: number | null;
+  }>): Promise<AdminEmpresaDetalhe> {
+    const headers = await authHeaders();
+    const res = await apiClient.fetch(`${API_BASE}/api/empresas/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    });
+    return handleResponse<AdminEmpresaDetalhe>(res, 'Erro ao atualizar empresa');
+  },
+
+  async deleteEmpresa(id: number): Promise<void> {
+    const headers = await authHeaders();
+    const res = await apiClient.fetch(`${API_BASE}/api/empresas/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    await handleResponse<void>(res, 'Erro ao excluir empresa');
   },
 
   async createEmpresa(data: {

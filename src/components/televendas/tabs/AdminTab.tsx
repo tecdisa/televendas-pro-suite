@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, Plus, Trash2, Loader2, Building2, Users, ShieldCheck, UserCheck, RefreshCw } from 'lucide-react';
+import { Search, Plus, Trash2, Loader2, Building2, Users, ShieldCheck, UserCheck, RefreshCw, Pencil, PowerOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { adminService, type AdminEmpresa, type EmpresaUsuario, type AdminUsuario } from '@/services/adminService';
+import { adminService, type AdminEmpresa, type AdminEmpresaDetalhe, type EmpresaUsuario, type AdminUsuario } from '@/services/adminService';
 import { clientsService } from '@/services/clientsService';
 import { normalizeCnpjCpf, formatCnpjCpf, isNumericCnpj } from '@/utils/cnpjCpf';
 
@@ -39,6 +39,7 @@ const EMPTY_EMPRESA_FORM = {
   tecdisa_id: '',
   empresa_master_id: '',
   master: false,
+  inativo: false,
 };
 
 export function AdminTab() {
@@ -180,6 +181,103 @@ export function AdminTab() {
       toast.error(e?.message || 'Erro ao carregar empresas');
     } finally {
       setLoadingEmpresas(false);
+    }
+  };
+
+  // --- Editar Empresa ---
+  const [editOpen, setEditOpen] = useState(false);
+  const [editEmpresaId, setEditEmpresaId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ ...EMPTY_EMPRESA_FORM });
+  const [editLoading, setEditLoading] = useState(false);
+
+  const handleOpenEdit = async (empresa: AdminEmpresa) => {
+    setEditEmpresaId(empresa.empresa_id);
+    setEditForm({ ...EMPTY_EMPRESA_FORM });
+    setEditOpen(true);
+    setEditLoading(true);
+    try {
+      const d: AdminEmpresaDetalhe = await adminService.getEmpresa(empresa.empresa_id);
+      setEditForm({
+        cnpj: formatCnpjCpf(d.cnpj_cpf),
+        razao_social: d.razao_social,
+        fantasia: d.fantasia,
+        inscricao_estadual: d.inscricao_estadual ?? '',
+        cep: formatCep(d.cep),
+        endereco: d.endereco,
+        numero: d.numero ?? '',
+        complemento: d.complemento ?? '',
+        bairro: d.bairro,
+        cidade: d.cidade ?? '',
+        uf: d.uf,
+        fone: d.fone,
+        celular: d.celular,
+        whatsapp: d.whatsapp ?? '',
+        email: d.email ?? '',
+        tecdisa_id: d.tecdisa_id,
+        empresa_master_id: d.empresa_master_id ? String(d.empresa_master_id) : '',
+        master: false,
+        inativo: d.inativo,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao carregar empresa');
+      setEditOpen(false);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editEmpresaId) return;
+    setEditLoading(true);
+    try {
+      await adminService.updateEmpresa(editEmpresaId, {
+        razao_social: editForm.razao_social.trim(),
+        fantasia: editForm.fantasia.trim(),
+        inscricao_estadual: editForm.inscricao_estadual || undefined,
+        endereco: editForm.endereco.trim(),
+        numero: editForm.numero || undefined,
+        complemento: editForm.complemento || undefined,
+        bairro: editForm.bairro.trim(),
+        cidade: editForm.cidade || undefined,
+        uf: editForm.uf.trim(),
+        cep: normalizeCep(editForm.cep),
+        fone: normalizePhone(editForm.fone),
+        celular: normalizePhone(editForm.celular),
+        whatsapp: editForm.whatsapp || undefined,
+        email: editForm.email || undefined,
+        tecdisa_id: editForm.tecdisa_id,
+        inativo: editForm.inativo,
+        empresa_master_id: editForm.empresa_master_id ? Number(editForm.empresa_master_id) : null,
+      });
+      toast.success('Empresa atualizada');
+      setEditOpen(false);
+      loadEmpresas();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao atualizar empresa');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // --- Deletar Empresa ---
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminEmpresa | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDeleteEmpresa = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await adminService.deleteEmpresa(deleteTarget.empresa_id);
+      toast.success(`Empresa ${deleteTarget.fantasia || deleteTarget.razao_social} excluída`);
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+      if (selectedEmpresa?.empresa_id === deleteTarget.empresa_id) setSelectedEmpresa(null);
+      loadEmpresas();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao excluir empresa');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -356,23 +454,48 @@ export function AdminTab() {
             <ul className="space-y-0.5">
               {empresas.map((e) => (
                 <li key={e.empresa_id}>
-                  <button
-                    onClick={() => handleEmpresaSelect(e)}
-                    className={cn(
-                      'w-full text-left px-3 py-2 rounded-md text-xs transition-colors',
-                      selectedEmpresa?.empresa_id === e.empresa_id
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'hover:bg-muted text-foreground',
-                    )}
-                  >
-                    <div className="font-medium truncate">{e.fantasia || e.razao_social}</div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-muted-foreground truncate text-[10px]">{e.uf} · {e.cnpj_cpf}</span>
-                      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 ml-1 shrink-0">
-                        {e.total_usuarios}
-                      </Badge>
-                    </div>
-                  </button>
+                  <div className={cn(
+                    'flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors',
+                    selectedEmpresa?.empresa_id === e.empresa_id
+                      ? 'bg-primary/10 text-primary'
+                      : 'hover:bg-muted text-foreground',
+                    e.inativo && 'opacity-60',
+                  )}>
+                    <button onClick={() => handleEmpresaSelect(e)} className="flex-1 text-left min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-medium truncate">{e.fantasia || e.razao_social}</span>
+                        {e.inativo && (
+                          <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5 shrink-0">Inativa</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-muted-foreground truncate text-[10px]">
+                          #{e.empresa_id} · {e.uf} · {e.cnpj_cpf}
+                        </span>
+                        {!e.inativo && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 ml-1 shrink-0">
+                            {e.total_usuarios}
+                          </Badge>
+                        )}
+                      </div>
+                    </button>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                      title="Editar empresa"
+                      onClick={(ev) => { ev.stopPropagation(); handleOpenEdit(e); }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-6 w-6 shrink-0 text-destructive hover:text-destructive"
+                      title="Excluir empresa"
+                      onClick={(ev) => { ev.stopPropagation(); setDeleteTarget(e); setDeleteConfirmOpen(true); }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -523,6 +646,7 @@ export function AdminTab() {
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               Nova Empresa
+              <span className="text-xs font-normal text-muted-foreground">ID gerado automaticamente</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -733,6 +857,208 @@ export function AdminTab() {
             <Button onClick={handleCriarEmpresa} disabled={criarLoading}>
               {criarLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Criar Empresa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Editar Empresa dialog */}
+      <Dialog open={editOpen} onOpenChange={(o) => { if (!editLoading) setEditOpen(o); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" />
+              Editar Empresa
+              {editEmpresaId && (
+                <span className="text-xs font-normal text-muted-foreground">ID #{editEmpresaId}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {editLoading && !editForm.razao_social ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4 py-1">
+              {/* CNPJ (read-only no edit) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">CNPJ</Label>
+                  <Input value={editForm.cnpj} readOnly className="text-sm bg-muted cursor-not-allowed text-muted-foreground" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">ID Tecdisa</Label>
+                  <Input value={editForm.tecdisa_id}
+                    onChange={(e) => setEditForm((f) => ({ ...f, tecdisa_id: e.target.value }))}
+                    className="text-sm" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Razão Social *</Label>
+                  <Input value={editForm.razao_social}
+                    onChange={(e) => setEditForm((f) => ({ ...f, razao_social: e.target.value.toUpperCase() }))}
+                    className="text-sm uppercase" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Fantasia *</Label>
+                  <Input value={editForm.fantasia}
+                    onChange={(e) => setEditForm((f) => ({ ...f, fantasia: e.target.value.toUpperCase() }))}
+                    className="text-sm uppercase" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Inscrição Estadual</Label>
+                  <Input value={editForm.inscricao_estadual}
+                    onChange={(e) => setEditForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
+                    className="text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">ID Empresa Master</Label>
+                  <Input type="number" value={editForm.empresa_master_id}
+                    onChange={(e) => setEditForm((f) => ({ ...f, empresa_master_id: e.target.value }))}
+                    placeholder="Deixe vazio se for a matriz"
+                    className="text-sm" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">CEP *</Label>
+                  <Input value={editForm.cep}
+                    onChange={(e) => setEditForm((f) => ({ ...f, cep: formatCep(e.target.value) }))}
+                    placeholder="00000-000" className="text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">UF *</Label>
+                  <Input value={editForm.uf} maxLength={2}
+                    onChange={(e) => setEditForm((f) => ({ ...f, uf: e.target.value.toUpperCase().slice(0,2) }))}
+                    placeholder="SP" className="text-sm uppercase" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Cidade</Label>
+                  <Input value={editForm.cidade}
+                    onChange={(e) => setEditForm((f) => ({ ...f, cidade: e.target.value.toUpperCase() }))}
+                    className="text-sm uppercase" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3">
+                <div className="col-span-3 space-y-1">
+                  <Label className="text-xs">Endereço *</Label>
+                  <Input value={editForm.endereco}
+                    onChange={(e) => setEditForm((f) => ({ ...f, endereco: e.target.value.toUpperCase() }))}
+                    className="text-sm uppercase" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Número</Label>
+                  <Input value={editForm.numero}
+                    onChange={(e) => setEditForm((f) => ({ ...f, numero: e.target.value }))}
+                    className="text-sm" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Bairro *</Label>
+                  <Input value={editForm.bairro}
+                    onChange={(e) => setEditForm((f) => ({ ...f, bairro: e.target.value.toUpperCase() }))}
+                    className="text-sm uppercase" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Complemento</Label>
+                  <Input value={editForm.complemento}
+                    onChange={(e) => setEditForm((f) => ({ ...f, complemento: e.target.value.toUpperCase() }))}
+                    className="text-sm" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Fone *</Label>
+                  <Input value={editForm.fone}
+                    onChange={(e) => setEditForm((f) => ({ ...f, fone: e.target.value.replace(/\D/g,'').slice(0,11) }))}
+                    placeholder="11999999999" className="text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Celular *</Label>
+                  <Input value={editForm.celular}
+                    onChange={(e) => setEditForm((f) => ({ ...f, celular: e.target.value.replace(/\D/g,'').slice(0,11) }))}
+                    placeholder="11999999999" className="text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">WhatsApp</Label>
+                  <Input value={editForm.whatsapp}
+                    onChange={(e) => setEditForm((f) => ({ ...f, whatsapp: e.target.value.replace(/\D/g,'').slice(0,11) }))}
+                    placeholder="11999999999" className="text-sm" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">E-mail</Label>
+                <Input type="email" value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="text-sm" />
+              </div>
+
+              {/* Ativo/Inativo */}
+              <div className="flex items-center gap-3 pt-1 border-t">
+                <PowerOff className={cn('h-4 w-4', editForm.inativo ? 'text-destructive' : 'text-muted-foreground')} />
+                <div className="flex-1">
+                  <Label className="text-xs font-medium">
+                    {editForm.inativo ? 'Empresa Inativa' : 'Empresa Ativa'}
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    {editForm.inativo
+                      ? 'Usuários desta empresa não conseguem fazer login.'
+                      : 'Empresa ativa e operacional.'}
+                  </p>
+                </div>
+                <Switch
+                  checked={!editForm.inativo}
+                  onCheckedChange={(v) => setEditForm((f) => ({ ...f, inativo: !v }))}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editLoading}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={editLoading}>
+              {editLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar exclusão */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={(o) => { if (!deleteLoading) setDeleteConfirmOpen(o); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-4 w-4" />
+              Excluir Empresa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2">
+            <p className="text-sm">
+              Deseja excluir permanentemente a empresa{' '}
+              <strong>{deleteTarget?.fantasia || deleteTarget?.razao_social}</strong>?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Esta ação não pode ser desfeita. Se a empresa tiver registros vinculados, use <strong>Desativar</strong> em vez de excluir.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={deleteLoading}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteEmpresa} disabled={deleteLoading}>
+              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Excluir
             </Button>
           </DialogFooter>
         </DialogContent>
