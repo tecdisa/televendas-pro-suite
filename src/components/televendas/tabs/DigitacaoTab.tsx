@@ -1728,6 +1728,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                 }}
                 selectedTabelaId={formData.tabela}
                 availableTabelas={tabelas}
+                representanteId={formData.representanteId || undefined}
                 trigger={
                   <Button 
                     variant="outline" 

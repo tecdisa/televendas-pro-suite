@@ -11,6 +11,7 @@ import { productsService, type Product, type ProductFiltersParams } from '@/serv
 import { metadataService, type Tabela } from '@/services/metadataService';
 import { suppliersService, type Fornecedor } from '@/services/suppliersService';
 import { divisionsService, type Divisao } from '@/services/divisionsService';
+import { representativesService } from '@/services/representativesService';
 import { formatCurrency } from '@/utils/format';
 import { ProductPriceTablesModal, type ProductPriceTableEntry, fetchProductPriceTables } from './ProductPriceTablesModal';
 import { toast } from 'sonner';
@@ -60,6 +61,7 @@ interface ProductSearchDialogProps {
   selectedTabelaId?: string;
   availableTabelas?: Tabela[];
   showRecordCounter?: boolean;
+  representanteId?: string;
 }
 
 export const ProductSearchDialog = ({
@@ -72,6 +74,7 @@ export const ProductSearchDialog = ({
   selectedTabelaId,
   availableTabelas,
   showRecordCounter = false,
+  representanteId,
 }: ProductSearchDialogProps) => {
   const [filters, setFilters] = useState<ProductFilters>(emptyFilters);
   const [products, setProducts] = useState<Product[]>([]);
@@ -86,6 +89,9 @@ export const ProductSearchDialog = ({
   const [loadingFornecedores, setLoadingFornecedores] = useState(false);
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
   const [loadingDivisoes, setLoadingDivisoes] = useState(false);
+  // null = sem restrição (mostra todas), array = apenas as divisões permitidas do rep
+  const [allowedDivisoes, setAllowedDivisoes] = useState<Divisao[] | null>(null);
+  const [loadingAllowedDivisoes, setLoadingAllowedDivisoes] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [priceTablesModalOpen, setPriceTablesModalOpen] = useState(false);
   const [selectedProductForPrices, setSelectedProductForPrices] = useState<Product | null>(null);
@@ -118,7 +124,7 @@ export const ProductSearchDialog = ({
   // Use available tabelas from props, or fallback to fetching
   const displayTabelas = availableTabelas && availableTabelas.length > 0 ? availableTabelas : tabelas;
 
-  // Load tabelas and fornecedores on mount
+  // Load tabelas, fornecedores and divisões on mount / when representanteId changes
   useEffect(() => {
     const loadMetadata = async () => {
       // Load tabelas only if not provided via props
@@ -134,18 +140,30 @@ export const ProductSearchDialog = ({
         }
       }
 
-      // Load fornecedores
+      // Load fornecedores – se há representante, só os autorizados para ele
       setLoadingFornecedores(true);
       try {
-        const result = await suppliersService.getAll(undefined, 1, 100, 'ativos', true);
-        setFornecedores(result.data);
+        if (representanteId) {
+          const result = await representativesService.getFornecedores(representanteId, { limit: 200 });
+          setFornecedores(
+            result.data.map((item) => ({
+              fornecedor_id: item.fornecedor.fornecedor_id,
+              nome_fornecedor: item.fornecedor.nome_fornecedor,
+              codigo_fornecedor: item.fornecedor.codigo_fornecedor,
+              inativo: item.fornecedor.inativo,
+            })),
+          );
+        } else {
+          const result = await suppliersService.getAll(undefined, 1, 200, 'ativos', true);
+          setFornecedores(result.data);
+        }
       } catch (e) {
         console.error('Erro ao carregar fornecedores:', e);
       } finally {
         setLoadingFornecedores(false);
       }
 
-      // Load divisões
+      // Load all divisões (fallback quando rep não tem restrição de divisão)
       setLoadingDivisoes(true);
       try {
         const result = await divisionsService.getAll();
@@ -156,16 +174,59 @@ export const ProductSearchDialog = ({
         setLoadingDivisoes(false);
       }
     };
-    
-    loadMetadata();
-  }, [availableTabelas]);
 
-  // Reset multi-selection when dialog opens
+    loadMetadata();
+  }, [availableTabelas, representanteId]);
+
+  // Reset multi-selection and pre-fill tabela when dialog opens
   useEffect(() => {
-    if (open) {
-      setSelectedIds(new Set());
+    if (!open) return;
+    setSelectedIds(new Set());
+    if (selectedTabelaId) {
+      setFilters((prev) => ({ ...prev, tabela: selectedTabelaId }));
     }
-  }, [open]);
+  }, [open, selectedTabelaId]);
+
+  // Carrega as divisões permitidas do representante quando o fornecedor muda
+  useEffect(() => {
+    if (!representanteId || !filters.fornecedor || filters.fornecedor === '_all') {
+      setAllowedDivisoes(null);
+      return;
+    }
+    let active = true;
+    setLoadingAllowedDivisoes(true);
+    representativesService
+      .getFornecedorDivisoes(representanteId, filters.fornecedor)
+      .then((result) => {
+        if (!active) return;
+        if (result.data.length === 0) {
+          // Sem restrição de divisão para este fornecedor
+          setAllowedDivisoes(null);
+          setFilters((prev) => ({ ...prev, divisao: '' }));
+        } else {
+          const mapped: Divisao[] = result.data.map((d) => ({
+            empresa_id: d.empresa_id,
+            divisao_id: d.divisao_id,
+            codigo_divisao: d.codigo_divisao ?? undefined,
+            descricao_divisao: d.descricao_divisao ?? '',
+          }));
+          setAllowedDivisoes(mapped);
+          // Auto-seleciona se só há uma divisão permitida
+          setFilters((prev) => ({
+            ...prev,
+            divisao: mapped.length === 1 ? String(mapped[0].divisao_id) : '',
+          }));
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setAllowedDivisoes(null);
+      })
+      .finally(() => {
+        if (active) setLoadingAllowedDivisoes(false);
+      });
+    return () => { active = false; };
+  }, [representanteId, filters.fornecedor]);
 
   // Build filters object for API
   const buildFiltersParams = useCallback((): ProductFiltersParams => {
@@ -225,7 +286,8 @@ export const ProductSearchDialog = ({
   };
 
   const handleClearFilters = () => {
-    setFilters(emptyFilters);
+    setFilters({ ...emptyFilters, tabela: selectedTabelaId || '' });
+    setAllowedDivisoes(null);
   };
 
   const handleSelectProduct = (product: Product) => {
@@ -372,13 +434,14 @@ export const ProductSearchDialog = ({
                       <Select
                         value={filters.divisao}
                         onValueChange={(v) => setFilters(prev => ({ ...prev, divisao: v === '_all' ? '' : v }))}
+                        disabled={loadingAllowedDivisoes}
                       >
                         <SelectTrigger className="h-8 flex-1">
-                          <SelectValue placeholder={loadingDivisoes ? '...' : 'Todas'} />
+                          <SelectValue placeholder={loadingAllowedDivisoes ? '...' : (loadingDivisoes ? '...' : 'Todas')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="_all">Todas</SelectItem>
-                          {divisoes.map((d) => (
+                          {!allowedDivisoes && <SelectItem value="_all">Todas</SelectItem>}
+                          {(allowedDivisoes ?? divisoes).map((d) => (
                             <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
                               {d.descricao_divisao}
                             </SelectItem>
