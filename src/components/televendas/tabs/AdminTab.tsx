@@ -14,6 +14,8 @@ import { adminService, type AdminEmpresa, type EmpresaUsuario, type AdminUsuario
 import { clientsService } from '@/services/clientsService';
 import { normalizeCnpjCpf, formatCnpjCpf, isNumericCnpj } from '@/utils/cnpjCpf';
 
+const TECDISA_API_KEY = 'HKemZzPV6hpvTR5pVqzomLzLe30rY5Gs4q45b4yHd2uEABXUcf6MQTFKMVgiKJeD';
+
 const normalizeCep = (v: string) => v.replace(/\D/g, '').slice(0, 8);
 const formatCep = (v: string) => { const d = normalizeCep(v); return d.length > 5 ? `${d.slice(0,5)}-${d.slice(5)}` : d; };
 const normalizePhone = (v: string) => v.replace(/\D/g, '').slice(0, 11);
@@ -77,6 +79,10 @@ export function AdminTab() {
 
   const lookupCnpj = async (digits: string) => {
     setCnpjLookupLoading(true);
+    const tecdisaPromise = fetch(
+      `https://hom.adsapi.com.br/api/v1/${digits}/dados-tecdisa-id`,
+      { headers: { 'User-Agent': 'AdsVendas', 'x-api-key': TECDISA_API_KEY } },
+    ).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     try {
       const result = await clientsService.lookupCnpj(digits);
       if (!result?.data) return;
@@ -106,6 +112,10 @@ export function AdminTab() {
         inscricao_estadual: (estab.inscricoes_estaduais?.[0]?.inscricao_estadual || f.inscricao_estadual),
       }));
       toast.success('Dados preenchidos pela consulta de CNPJ');
+      const tecdisaData = await tecdisaPromise;
+      if (Array.isArray(tecdisaData) && tecdisaData[0]?.tecdisaID) {
+        setCriarForm((f) => ({ ...f, tecdisa_id: String(tecdisaData[0].tecdisaID) }));
+      }
     } catch (e: any) {
       toast.error(String(e?.message ?? e ?? 'Erro ao consultar CNPJ'));
     } finally {
@@ -126,7 +136,6 @@ export function AdminTab() {
     if (cepDigits.length !== 8) errors.push('CEP inválido');
     if (!normalizePhone(criarForm.fone)) errors.push('Fone obrigatório');
     if (!normalizePhone(criarForm.celular)) errors.push('Celular obrigatório');
-    if (!criarForm.tecdisa_id.trim()) errors.push('ID Tecdisa obrigatório');
     if (errors.length) { toast.error(errors[0]); return; }
 
     setCriarLoading(true);
@@ -572,12 +581,12 @@ export function AdminTab() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">ID Tecdisa *</Label>
+                <Label className="text-xs">ID Tecdisa</Label>
                 <Input
                   value={criarForm.tecdisa_id}
-                  onChange={(e) => setCriarForm((f) => ({ ...f, tecdisa_id: e.target.value }))}
-                  placeholder="ex: TCD001"
-                  className="text-sm"
+                  readOnly
+                  placeholder="Preenchido automaticamente via CNPJ"
+                  className="text-sm bg-muted cursor-not-allowed text-muted-foreground"
                 />
               </div>
             </div>
