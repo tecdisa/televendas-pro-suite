@@ -224,8 +224,25 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     [bloqueiaDescontoAcimaTabela, normalizeMaxDesconto],
   );
 
+  const draftKey = useMemo(() => {
+    const session = authService.getSession();
+    const userId = session?.usuario ?? 'unknown';
+    return `televendas_draft_pedido_${userId}`;
+  }, []);
+
+  const [draftAvailable, setDraftAvailable] = useState<{ savedAt: string } | null>(null);
+
+  const clearDraft = useCallback(() => {
+    try { localStorage.removeItem(draftKey); } catch {}
+    setDraftAvailable(null);
+  }, [draftKey]);
+
   const resetFormState = useCallback(() => {
-    setFormData(createEmptyFormData());
+    setFormData({
+      ...createEmptyFormData(),
+      representanteId: sessionRepresentante?.id || '',
+      representanteNome: sessionRepresentante?.nome || '',
+    });
     setItems([]);
     setNewItem(createEmptyNewItem());
     setObservacoes(createEmptyObservacoes());
@@ -234,7 +251,23 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     setProductCodeInput('');
     setNewItemTabelaId('');
     setNewItemPreco(null);
-  }, []);
+    clearDraft();
+  }, [sessionRepresentante, clearDraft]);
+
+  const restoreDraft = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.formData) setFormData(draft.formData);
+      if (Array.isArray(draft.items)) setItems(draft.items);
+      if (draft.observacoes) setObservacoes(draft.observacoes);
+      setDraftAvailable(null);
+      toast.success('Rascunho restaurado');
+    } catch {
+      toast.error('Não foi possível restaurar o rascunho');
+    }
+  }, [draftKey]);
 
   const handleDuplicateOrder = useCallback((purchaseOrder: PurchaseOrder) => {
     // Map purchase order items to order items format
@@ -580,6 +613,41 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       representanteNome: prev.representanteNome || sessionRepresentante.nome,
     }));
   }, [sessionRepresentante]);
+
+  // On mount: check for saved draft (new orders only)
+  useEffect(() => {
+    if (currentOrder) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft?.savedAt && (draft?.formData?.clienteId > 0 || (Array.isArray(draft?.items) && draft.items.length > 0))) {
+        setDraftAvailable({ savedAt: draft.savedAt });
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save draft for new orders (debounced 1s)
+  useEffect(() => {
+    if (currentOrder) return;
+    const hasData = formData.clienteId > 0 || items.length > 0;
+    if (!hasData) {
+      clearDraft();
+      return;
+    }
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({
+          formData,
+          items,
+          observacoes,
+          savedAt: new Date().toISOString(),
+        }));
+      } catch {}
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [formData, items, observacoes, currentOrder, draftKey, clearDraft]);
 
   useEffect(() => {
     if (!clientSearchOpen) return;
@@ -1325,6 +1393,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         // Atualiza array local
         setOrders(orders.map(o => (o.id === currentOrder.id ? { ...(o as any), ...saved } : o)) as any);
         toast.success(`Pedido ${currentOrder.id} atualizado com sucesso!`);
+        clearDraft();
         if (onSaveSuccess) {
           onSaveSuccess();
         }
@@ -1332,6 +1401,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         saved = await ordersService.create(order as any);
         setOrders([saved, ...orders]);
         toast.success(`Pedido ${saved.id} criado com sucesso!`);
+        clearDraft();
         if (onSaveSuccess) {
           onSaveSuccess();
         }
@@ -1345,8 +1415,27 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     }
   };
 
+  const formatDraftDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {draftAvailable && !currentOrder && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/50 px-4 py-3 text-sm">
+          <span className="text-amber-800 dark:text-amber-200">
+            Você tem um rascunho salvo{draftAvailable.savedAt ? ` em ${formatDraftDate(draftAvailable.savedAt)}` : ''}. Deseja continuar de onde parou?
+          </span>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={clearDraft}>Descartar</Button>
+            <Button size="sm" onClick={restoreDraft}>Restaurar rascunho</Button>
+          </div>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Dados do Pedido</CardTitle>
