@@ -104,7 +104,12 @@ export const ProductSearchDialog = ({
     setLoadingPriceTables(product.id);
     try {
       const data = await fetchProductPriceTables(product.id);
-      setPriceTablesData(data);
+      // Filtra para exibir apenas tabelas que o cliente tem acesso
+      const allowedIds =
+        availableTabelas && availableTabelas.length > 0
+          ? new Set(availableTabelas.map((t) => Number(t.id)))
+          : null;
+      setPriceTablesData(allowedIds ? data.filter((e) => allowedIds.has(e.tabelaPrecoId)) : data);
       setSelectedProductForPrices(product);
       setPriceTablesModalOpen(true);
     } catch (err) {
