@@ -1840,7 +1840,9 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                   <TableCell>{item.descricao}</TableCell>
                   <TableCell>
                     {(() => {
-                      const tabs = itemTabelas[item.produtoId] || [];
+                      const allTabs = itemTabelas[item.produtoId] || [];
+                      const allowedTabelaIds = tabelas.length > 0 ? new Set(tabelas.map((t) => String(t.id))) : null;
+                      const tabs = allowedTabelaIds ? allTabs.filter((t) => allowedTabelaIds.has(String(t.id))) : allTabs;
                       const loading = !!itemTabelasLoading[item.produtoId];
                       const error = itemTabelasError[item.produtoId];
                       const valueTabela = item.tabelaId != null && String(item.tabelaId).trim() !== ''
