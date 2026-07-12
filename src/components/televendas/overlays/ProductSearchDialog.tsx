@@ -92,6 +92,10 @@ export const ProductSearchDialog = ({
   // null = sem restrição (mostra todas), array = apenas as divisões permitidas do rep
   const [allowedDivisoes, setAllowedDivisoes] = useState<Divisao[] | null>(null);
   const [loadingAllowedDivisoes, setLoadingAllowedDivisoes] = useState(false);
+  // IDs de fornecedores/divisões presentes na tabela selecionada; null = sem restrição
+  const [tabelaFornecedorIds, setTabelaFornecedorIds] = useState<Set<number> | null>(null);
+  const [tabelaDivisaoIds, setTabelaDivisaoIds] = useState<Set<number> | null>(null);
+  const [loadingTabelaFilter, setLoadingTabelaFilter] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [priceTablesModalOpen, setPriceTablesModalOpen] = useState(false);
   const [selectedProductForPrices, setSelectedProductForPrices] = useState<Product | null>(null);
@@ -129,6 +133,15 @@ export const ProductSearchDialog = ({
   // Use available tabelas from props, or fallback to fetching
   const displayTabelas = availableTabelas && availableTabelas.length > 0 ? availableTabelas : tabelas;
 
+  // Fornecedores e divisões filtrados pela tabela selecionada
+  const displayFornecedores = tabelaFornecedorIds
+    ? fornecedores.filter((f) => tabelaFornecedorIds.has(f.fornecedor_id))
+    : fornecedores;
+  const baseDivisoes = allowedDivisoes ?? divisoes;
+  const displayDivisoes = tabelaDivisaoIds
+    ? baseDivisoes.filter((d) => tabelaDivisaoIds.has(d.divisao_id))
+    : baseDivisoes;
+
   // Load tabelas, fornecedores and divisões on mount / when representanteId changes
   useEffect(() => {
     const loadMetadata = async () => {
@@ -159,7 +172,7 @@ export const ProductSearchDialog = ({
             })),
           );
         } else {
-          const result = await suppliersService.getAll(undefined, 1, 200, 'ativos', true);
+          const result = await suppliersService.getAll(undefined, 1, 200, 'ativos');
           setFornecedores(result.data);
         }
       } catch (e) {
@@ -232,6 +245,38 @@ export const ProductSearchDialog = ({
       });
     return () => { active = false; };
   }, [representanteId, filters.fornecedor]);
+
+  // Filtra fornecedores e divisões pelos itens presentes na tabela selecionada
+  useEffect(() => {
+    if (!filters.tabela) {
+      setTabelaFornecedorIds(null);
+      setTabelaDivisaoIds(null);
+      return;
+    }
+    let active = true;
+    setLoadingTabelaFilter(true);
+    productsService.findPaged({ tabela: filters.tabela }, 1, 999)
+      .then((result) => {
+        if (!active) return;
+        const fIds = new Set<number>();
+        const dIds = new Set<number>();
+        result.data.forEach((p) => {
+          if (p.fornecedorId) fIds.add(p.fornecedorId);
+          if (p.divisaoId) dIds.add(p.divisaoId);
+        });
+        setTabelaFornecedorIds(fIds.size > 0 ? fIds : null);
+        setTabelaDivisaoIds(dIds.size > 0 ? dIds : null);
+        // Reseta fornecedor/divisão se saiu do conjunto permitido
+        setFilters((prev) => ({
+          ...prev,
+          fornecedor: fIds.size > 0 && prev.fornecedor && !fIds.has(Number(prev.fornecedor)) ? '' : prev.fornecedor,
+          divisao: dIds.size > 0 && prev.divisao && !dIds.has(Number(prev.divisao)) ? '' : prev.divisao,
+        }));
+      })
+      .catch((e) => console.error('Erro ao carregar filtros de tabela:', e))
+      .finally(() => { if (active) setLoadingTabelaFilter(false); });
+    return () => { active = false; };
+  }, [filters.tabela]);
 
   // Build filters object for API
   const buildFiltersParams = useCallback((): ProductFiltersParams => {
@@ -420,13 +465,14 @@ export const ProductSearchDialog = ({
                       <Select
                         value={filters.fornecedor}
                         onValueChange={(v) => setFilters(prev => ({ ...prev, fornecedor: v === '_all' ? '' : v }))}
+                        disabled={loadingFornecedores || loadingTabelaFilter}
                       >
                         <SelectTrigger className="h-8 flex-1">
-                          <SelectValue placeholder={loadingFornecedores ? '...' : 'Todos'} />
+                          <SelectValue placeholder={loadingFornecedores || loadingTabelaFilter ? '...' : 'Todos'} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_all">Todos</SelectItem>
-                          {fornecedores.map((f) => (
+                          {displayFornecedores.map((f) => (
                             <SelectItem key={f.fornecedor_id} value={String(f.fornecedor_id)}>
                               {f.nome_fornecedor} - {f.fornecedor_id}
                             </SelectItem>
@@ -439,14 +485,14 @@ export const ProductSearchDialog = ({
                       <Select
                         value={filters.divisao}
                         onValueChange={(v) => setFilters(prev => ({ ...prev, divisao: v === '_all' ? '' : v }))}
-                        disabled={loadingAllowedDivisoes}
+                        disabled={loadingAllowedDivisoes || loadingTabelaFilter}
                       >
                         <SelectTrigger className="h-8 flex-1">
-                          <SelectValue placeholder={loadingAllowedDivisoes ? '...' : (loadingDivisoes ? '...' : 'Todas')} />
+                          <SelectValue placeholder={loadingAllowedDivisoes || loadingTabelaFilter ? '...' : (loadingDivisoes ? '...' : 'Todas')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {!allowedDivisoes && <SelectItem value="_all">Todas</SelectItem>}
-                          {(allowedDivisoes ?? divisoes).map((d) => (
+                          {!allowedDivisoes && !tabelaDivisaoIds && <SelectItem value="_all">Todas</SelectItem>}
+                          {displayDivisoes.map((d) => (
                             <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
                               {d.descricao_divisao}
                             </SelectItem>
