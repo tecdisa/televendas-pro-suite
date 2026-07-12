@@ -1053,7 +1053,7 @@ export function RepresentantesPastasTab() {
                 <label className="text-sm font-medium text-right">Divisão</label>
                 <Select value={divisaoFormDivisaoId} onValueChange={setDivisaoFormDivisaoId}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" side="bottom" sideOffset={4}>
                     {divisoesCatalog.map((d) => (
                       <SelectItem key={d.divisao_id} value={String(d.divisao_id)}>
                         {d.descricao_divisao}

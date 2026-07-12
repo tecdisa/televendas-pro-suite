@@ -1408,6 +1408,7 @@ export function TabelasPrecoTab() {
             { header: '%Major.',     field: 'majoracao',       digits: 2 },
             { header: 'Preço Venda', field: 'preco',           digits: 2 },
             { header: '%DescMáx',    field: 'desconto_maximo', digits: 2 },
+            { header: 'Desc.Vl.',    field: 'desconto_valor',  digits: 2 },
             { header: 'Qtd.Mín.',    field: 'quantidade_minima', digits: 0 },
           ];
           for (const { header, field, digits } of numericEditableFields) {
@@ -1491,6 +1492,7 @@ export function TabelasPrecoTab() {
         await tabelasPrecoService.updateItem(tabelaId, produtoId, {
           preco: merged.preco,
           desconto_maximo: merged.desconto_maximo,
+          desconto_valor: merged.desconto_valor,
           comissao: merged.comissao,
           quantidade_minima: merged.quantidade_minima,
           pvs: merged.pvs,

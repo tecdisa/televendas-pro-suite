@@ -1811,6 +1811,25 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
               <ProductSearchDialog
                 open={productSearchOpen}
                 onOpenChange={setProductSearchOpen}
+                multiSelect={true}
+                onSelectProducts={async (products) => {
+                  setProductSearchOpen(false);
+                  for (const product of products) {
+                    const maxDesconto = normalizeMaxDesconto(product.descontoMaximo);
+                    const item: Partial<OrderItem> = {
+                      produtoId: product.id,
+                      codigoProduto: product.codigoProduto ?? '',
+                      descricao: product.descricao,
+                      un: product.un,
+                      preco: product.preco,
+                      estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
+                      quant: 1,
+                      descontoPerc: 0,
+                      descontoMaximo: maxDesconto,
+                    };
+                    await handleAddItemWithProduct(item);
+                  }
+                }}
                 onSelectProduct={(product) => {
                   handleSelectProduct(product);
                   setProductCodeInput(product.codigoProduto ?? String(product.id));
