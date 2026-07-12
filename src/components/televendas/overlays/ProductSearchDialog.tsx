@@ -96,6 +96,8 @@ export const ProductSearchDialog = ({
   const [tabelaFornecedorIds, setTabelaFornecedorIds] = useState<Set<number> | null>(null);
   const [tabelaDivisaoIds, setTabelaDivisaoIds] = useState<Set<number> | null>(null);
   const [loadingTabelaFilter, setLoadingTabelaFilter] = useState(false);
+  // IDs dos fornecedores da pasta do representante; null = sem restrição (admin)
+  const [pastaFornecedorIds, setPastaFornecedorIds] = useState<Set<number> | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [priceTablesModalOpen, setPriceTablesModalOpen] = useState(false);
   const [selectedProductForPrices, setSelectedProductForPrices] = useState<Product | null>(null);
@@ -163,17 +165,18 @@ export const ProductSearchDialog = ({
       try {
         if (representanteId) {
           const result = await representativesService.getFornecedores(representanteId, { limit: 200 });
-          setFornecedores(
-            result.data.map((item) => ({
-              fornecedor_id: item.fornecedor.fornecedor_id,
-              nome_fornecedor: item.fornecedor.nome_fornecedor,
-              codigo_fornecedor: item.fornecedor.codigo_fornecedor,
-              inativo: item.fornecedor.inativo,
-            })),
-          );
+          const mapped = result.data.map((item) => ({
+            fornecedor_id: item.fornecedor.fornecedor_id,
+            nome_fornecedor: item.fornecedor.nome_fornecedor,
+            codigo_fornecedor: item.fornecedor.codigo_fornecedor,
+            inativo: item.fornecedor.inativo,
+          }));
+          setFornecedores(mapped);
+          setPastaFornecedorIds(new Set(mapped.map((f) => f.fornecedor_id)));
         } else {
           const result = await suppliersService.getAll(undefined, 1, 200, 'ativos');
           setFornecedores(result.data);
+          setPastaFornecedorIds(null);
         }
       } catch (e) {
         console.error('Erro ao carregar fornecedores:', e);
@@ -286,7 +289,11 @@ export const ProductSearchDialog = ({
     if (filters.marca.trim()) params.marca = filters.marca.trim();
     if (filters.tabela) params.tabela = filters.tabela;
     if (filters.codFabrica.trim()) params.codFabrica = filters.codFabrica.trim();
-    if (filters.fornecedor) params.fornecedor = filters.fornecedor;
+    if (filters.fornecedor) {
+      params.fornecedor = filters.fornecedor;
+    } else if (pastaFornecedorIds && pastaFornecedorIds.size === 1) {
+      params.fornecedor = String([...pastaFornecedorIds][0]);
+    }
     if (filters.ean13.trim()) params.ean13 = filters.ean13.trim();
     if (filters.divisao) params.divisao = filters.divisao;
     if (filters.dun14.trim()) params.dun14 = filters.dun14.trim();
@@ -298,7 +305,7 @@ export const ProductSearchDialog = ({
       params.ultimasComprasDesde = format(filters.ultimasComprasDesde, 'yyyy-MM-dd');
     }
     return params;
-  }, [filters]);
+  }, [filters, pastaFornecedorIds]);
 
   const loadProducts = useCallback(async (reset = false) => {
     if (loading) return;
@@ -353,18 +360,23 @@ export const ProductSearchDialog = ({
     }
   };
 
-  const allSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
+  // Produtos filtrados pelos fornecedores da pasta do representante (quando aplicável)
+  const displayProducts = pastaFornecedorIds && !filters.fornecedor
+    ? products.filter((p) => p.fornecedorId != null && pastaFornecedorIds.has(p.fornecedorId))
+    : products;
+
+  const allSelected = displayProducts.length > 0 && displayProducts.every((p) => selectedIds.has(p.id));
 
   const toggleAll = () => {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(products.map((p) => p.id)));
+      setSelectedIds(new Set(displayProducts.map((p) => p.id)));
     }
   };
 
   const handleImportSelected = () => {
-    const selected = products.filter((p) => selectedIds.has(p.id));
+    const selected = displayProducts.filter((p) => selectedIds.has(p.id));
     if (selected.length === 0) { toast.error('Selecione ao menos um produto'); return; }
     onSelectProducts?.(selected);
     onOpenChange(false);
@@ -558,12 +570,12 @@ export const ProductSearchDialog = ({
         {/* Products Table */}
         {showRecordCounter && (
           <div className="flex items-center justify-end text-sm text-muted-foreground">
-            Exibindo {products.length.toLocaleString('pt-BR')} de {totalProducts.toLocaleString('pt-BR')} registro(s)
+            Exibindo {displayProducts.length.toLocaleString('pt-BR')} de {totalProducts.toLocaleString('pt-BR')} registro(s)
           </div>
         )}
 
         <div className="flex-1 min-h-[250px] border rounded-lg overflow-hidden flex flex-col">
-          {loading && products.length === 0 ? (
+          {loading && displayProducts.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">Carregando produtos...</div>
           ) : error ? (
             <div className="py-6 text-center text-sm text-destructive">{error}</div>
@@ -602,7 +614,7 @@ export const ProductSearchDialog = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
+                  {displayProducts.map((product) => (
                     <TableRow
                       key={product.id}
                       className={`cursor-pointer hover:bg-primary/10 ${multiSelect && selectedIds.has(product.id) ? 'bg-primary/5' : ''}`}
@@ -655,14 +667,14 @@ export const ProductSearchDialog = ({
                       <TableCell className="text-xs py-2">{product.codigoFabrica ?? '-'}</TableCell>
                     </TableRow>
                   ))}
-                  {products.length === 0 && !loading && (
+                  {displayProducts.length === 0 && !loading && (
                     <TableRow>
                       <TableCell colSpan={18} className="text-center text-sm text-muted-foreground py-8">
                         Nenhum produto encontrado
                       </TableCell>
                     </TableRow>
                   )}
-                  {loading && products.length > 0 && (
+                  {loading && displayProducts.length > 0 && (
                     <TableRow>
                       <TableCell colSpan={18} className="text-center text-sm text-muted-foreground">
                         Carregando mais...
