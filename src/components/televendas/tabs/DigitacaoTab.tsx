@@ -173,12 +173,15 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
 
   const isAdmin = useMemo(() => authService.isAdmin(), []);
   const sessionRepresentante = useMemo(() => {
-    if (isAdmin) return null;
     const session = authService.getSession();
     const p = session?.payload;
+    const isForcaDeVendas =
+      p?.user?.forca_de_vendas === true ||
+      Boolean(p?.user?.usuario_empresa_id);
+    if (!isForcaDeVendas && isAdmin) return null;
     const id =
-      p?.usuario_empresa_id ??
       p?.user?.usuario_empresa_id ??
+      p?.usuario_empresa_id ??
       p?.representante_id ??
       p?.user?.representante_id ??
       p?.forcaDeVendasId ??
@@ -186,10 +189,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       null;
     if (!id) return null;
     const nome =
-      p?.nome_representante ??
       p?.user?.nome_representante ??
-      p?.representanteNome ??
+      p?.nome_representante ??
       p?.user?.representanteNome ??
+      p?.representanteNome ??
       session?.nome ??
       '';
     return { id: String(id), nome: String(nome) };
@@ -230,7 +233,19 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     return `televendas_draft_pedido_${userId}`;
   }, []);
 
-  const [draftAvailable, setDraftAvailable] = useState<{ savedAt: string } | null>(null);
+  const [draftAvailable, setDraftAvailable] = useState<{ savedAt: string } | null>(() => {
+    if (currentOrder) return null;
+    try {
+      const key = `televendas_draft_pedido_${authService.getSession()?.usuario ?? 'unknown'}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const draft = JSON.parse(raw);
+      if (draft?.savedAt && (draft?.formData?.clienteId > 0 || (Array.isArray(draft?.items) && draft.items.length > 0))) {
+        return { savedAt: draft.savedAt };
+      }
+    } catch {}
+    return null;
+  });
 
   const clearDraft = useCallback(() => {
     try { localStorage.removeItem(draftKey); } catch {}
@@ -614,26 +629,13 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     }));
   }, [sessionRepresentante]);
 
-  // On mount: check for saved draft (new orders only)
-  useEffect(() => {
-    if (currentOrder) return;
-    try {
-      const raw = localStorage.getItem(draftKey);
-      if (!raw) return;
-      const draft = JSON.parse(raw);
-      if (draft?.savedAt && (draft?.formData?.clienteId > 0 || (Array.isArray(draft?.items) && draft.items.length > 0))) {
-        setDraftAvailable({ savedAt: draft.savedAt });
-      }
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Auto-save draft for new orders (debounced 1s)
   useEffect(() => {
     if (currentOrder) return;
     const hasData = formData.clienteId > 0 || items.length > 0;
     if (!hasData) {
-      clearDraft();
+      // Only wipe the draft if there's no pending recovery banner
+      if (!draftAvailable) clearDraft();
       return;
     }
     const timer = setTimeout(() => {
@@ -647,7 +649,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       } catch {}
     }, 1000);
     return () => clearTimeout(timer);
-  }, [formData, items, observacoes, currentOrder, draftKey, clearDraft]);
+  }, [formData, items, observacoes, currentOrder, draftKey, clearDraft, draftAvailable]);
 
   useEffect(() => {
     if (!clientSearchOpen) return;
@@ -774,8 +776,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       ...prev,
       clienteId: client.id,
       clienteNome: client.nome,
-      representanteId: repIdFromClient || prev.representanteId || '',
-      representanteNome: repNomeFromClient || prev.representanteNome || '',
+      representanteId: prev.representanteId || repIdFromClient || '',
+      representanteNome: prev.representanteNome || repNomeFromClient || '',
       tabela: '',
       formaPagamento: '',
       formaPagtoId: client.formaPagtoId ?? '',
@@ -810,8 +812,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           if (prev.clienteId !== client.id) return prev;
           return {
             ...prev,
-            representanteId: repId ? String(repId).trim() : prev.representanteId,
-            representanteNome: repNome ? String(repNome).trim() : prev.representanteNome,
+            representanteId: prev.representanteId || (repId ? String(repId).trim() : ''),
+            representanteNome: prev.representanteNome || (repNome ? String(repNome).trim() : ''),
           };
         });
       }).catch(() => {});

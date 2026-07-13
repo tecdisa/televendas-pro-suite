@@ -29,6 +29,7 @@ export interface SessionUser {
   usuario: string;
   nome: string;
   token: string;
+  userId?: number;
   admin?: boolean;
   admin_master?: boolean;
   payload?: any;
@@ -36,6 +37,15 @@ export interface SessionUser {
   parametros_app_mobile?: ParametrosAppMobile | null;
   timestamp: string;
 }
+
+const decodeJwtPayload = (token: string): Record<string, unknown> => {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return {};
+  }
+};
 
 export interface RegisterPayload {
   usuario: string;
@@ -149,10 +159,12 @@ export const authService = {
         return { success: false, error: 'Token não recebido do servidor' } as const;
       }
 
+      const jwtPayload = decodeJwtPayload(token);
       const session: SessionUser = {
         usuario: data?.user?.usuario ?? data?.usuario ?? usuario,
         nome: data?.user?.nome ?? data?.nome ?? data?.name ?? data?.username ?? usuario,
         token,
+        userId: Number(jwtPayload.userId ?? jwtPayload.sub ?? 0) || undefined,
         admin: Boolean(data?.user?.admin ?? data?.admin ?? false),
         admin_master: Boolean(
           data?.user?.admin_master ?? data?.admin_master ?? false,
