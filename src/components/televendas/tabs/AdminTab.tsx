@@ -138,7 +138,6 @@ export function AdminTab() {
     if (!criarForm.uf.trim() || criarForm.uf.trim().length !== 2) errors.push('UF inválida');
     if (cepDigits.length !== 8) errors.push('CEP inválido');
     if (!normalizePhone(criarForm.fone)) errors.push('Fone obrigatório');
-    if (!normalizePhone(criarForm.celular)) errors.push('Celular obrigatório');
     if (errors.length) { toast.error(errors[0]); return; }
 
     setCriarLoading(true);
@@ -156,10 +155,10 @@ export function AdminTab() {
         cidade: criarForm.cidade.trim() || undefined,
         uf: criarForm.uf.trim().toUpperCase(),
         fone: normalizePhone(criarForm.fone),
-        celular: normalizePhone(criarForm.celular),
+        celular: normalizePhone(criarForm.celular) || undefined,
         whatsapp: normalizePhone(criarForm.whatsapp) || undefined,
         email: criarForm.email.trim() || undefined,
-        tecdisa_id: criarForm.tecdisa_id.trim(),
+        tecdisa_id: criarForm.tecdisa_id.trim() || undefined,
         empresa_master_id: criarForm.empresa_master_id ? Number(criarForm.empresa_master_id) : null,
         master: criarForm.master,
       });
@@ -804,7 +803,7 @@ export function AdminTab() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Celular *</Label>
+                <Label className="text-xs">Celular</Label>
                 <Input
                   value={criarForm.celular}
                   onChange={(e) => setCriarForm((f) => ({ ...f, celular: e.target.value.replace(/\D/g,'').slice(0,11) }))}

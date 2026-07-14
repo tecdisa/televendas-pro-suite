@@ -87,7 +87,11 @@ async function authHeaders() {
 async function handleResponse<T>(res: Response, fallback: string): Promise<T> {
   if (!res.ok) {
     let msg = fallback;
-    try { const err = await res.json(); msg = err?.message ?? err?.error ?? fallback; } catch {}
+    try {
+      const err = await res.json();
+      const raw = err?.message ?? err?.error ?? fallback;
+      msg = Array.isArray(raw) ? raw.join(', ') : (typeof raw === 'string' ? raw : fallback);
+    } catch {}
     throw new Error(msg);
   }
   if (res.status === 204) return undefined as unknown as T;

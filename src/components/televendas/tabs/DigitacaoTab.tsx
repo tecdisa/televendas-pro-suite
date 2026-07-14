@@ -593,7 +593,9 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       try {
         const tabs = await metadataService.getTabelasByCliente(formData.clienteId);
         setTabelas(tabs);
-        const principal = tabs.find((t) => t.principal);
+        // Prioriza a tabela marcada como principal; na ausência, cai para a primeira
+        // disponível para nunca deixar a pesquisa de produtos sem tabela selecionada.
+        const principal = tabs.find((t) => t.principal) ?? tabs[0];
         setFormData((prev) => {
           if (prev.tabela) return prev;
           return { ...prev, tabela: principal ? String(principal.id) : '' };

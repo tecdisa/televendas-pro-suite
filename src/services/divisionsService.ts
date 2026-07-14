@@ -37,6 +37,7 @@ export const divisionsService = {
     limit = 100,
     status: 'ativos' | 'inativos' | 'todos' = 'ativos',
     empresaIdOverride?: number,
+    fornecedorId?: number | string,
   ): Promise<{ data: Divisao[]; total: number }> {
     const empresa = authService.getEmpresa();
     const empresaId = empresaIdOverride ?? empresa?.empresa_id;
@@ -54,6 +55,7 @@ export const divisionsService = {
     if (status === 'todos') params.set('incluirInativos', 'true');
     if (query?.trim()) params.set('q', query.trim());
     if (grupoId) params.set('grupoId', String(grupoId));
+    if (fornecedorId) params.set('fornecedorId', String(fornecedorId));
 
     try {
       const res = await apiClient.fetch(`${API_BASE}/api/divisoes-produtos?${params.toString()}`);

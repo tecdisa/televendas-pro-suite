@@ -452,7 +452,17 @@ export function FornecedoresTab() {
       .getEmpresas()
       .then((empresas) => {
         if (cancelled) return;
-        setEmpresaGroups(groupEmpresasByMaster(empresas));
+        const empresaAtual = authService.getEmpresa();
+        const masterId = Number(
+          empresaAtual?.empresa_master_id ?? empresaAtual?.empresa_id ?? 0,
+        );
+        const groups = groupEmpresasByMaster(empresas);
+        // Só devem aparecer as unidades vinculadas à mesma empresa master da sessão atual
+        const scopedGroups =
+          Number.isInteger(masterId) && masterId > 0
+            ? groups.filter((g) => g.empresa_master_id === masterId)
+            : groups;
+        setEmpresaGroups(scopedGroups);
       })
       .catch((error) => {
         if (cancelled) return;

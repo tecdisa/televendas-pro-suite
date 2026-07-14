@@ -92,6 +92,8 @@ export const ProductSearchDialog = ({
   // null = sem restrição (mostra todas), array = apenas as divisões permitidas do rep
   const [allowedDivisoes, setAllowedDivisoes] = useState<Divisao[] | null>(null);
   const [loadingAllowedDivisoes, setLoadingAllowedDivisoes] = useState(false);
+  // Divisões existentes no fornecedor selecionado (quando não há restrição explícita de pasta); null = sem fornecedor selecionado
+  const [fornecedorDivisoes, setFornecedorDivisoes] = useState<Divisao[] | null>(null);
   // IDs de fornecedores/divisões presentes na tabela selecionada; null = sem restrição
   const [tabelaFornecedorIds, setTabelaFornecedorIds] = useState<Set<number> | null>(null);
   const [tabelaDivisaoIds, setTabelaDivisaoIds] = useState<Set<number> | null>(null);
@@ -139,7 +141,7 @@ export const ProductSearchDialog = ({
   const displayFornecedores = tabelaFornecedorIds
     ? fornecedores.filter((f) => tabelaFornecedorIds.has(f.fornecedor_id))
     : fornecedores;
-  const baseDivisoes = allowedDivisoes ?? divisoes;
+  const baseDivisoes = allowedDivisoes ?? fornecedorDivisoes ?? divisoes;
   const displayDivisoes = tabelaDivisaoIds
     ? baseDivisoes.filter((d) => tabelaDivisaoIds.has(d.divisao_id))
     : baseDivisoes;
@@ -221,9 +223,8 @@ export const ProductSearchDialog = ({
       .then((result) => {
         if (!active) return;
         if (result.data.length === 0) {
-          // Sem restrição de divisão para este fornecedor
+          // Sem restrição explícita de divisão nesta pasta: cai no filtro por fornecedor abaixo
           setAllowedDivisoes(null);
-          setFilters((prev) => ({ ...prev, divisao: '' }));
         } else {
           const mapped: Divisao[] = result.data.map((d) => ({
             empresa_id: d.empresa_id,
@@ -248,6 +249,31 @@ export const ProductSearchDialog = ({
       });
     return () => { active = false; };
   }, [representanteId, filters.fornecedor]);
+
+  // Carrega as divisões existentes para o fornecedor selecionado (escopo por fornecedor, independente de restrição de pasta)
+  useEffect(() => {
+    if (!filters.fornecedor || filters.fornecedor === '_all') {
+      setFornecedorDivisoes(null);
+      return;
+    }
+    let active = true;
+    divisionsService
+      .getAll(undefined, undefined, 1, 200, 'ativos', undefined, filters.fornecedor)
+      .then((result) => {
+        if (!active) return;
+        setFornecedorDivisoes(result.data);
+        // Reseta a divisão selecionada se ela não pertence a este fornecedor
+        setFilters((prev) => ({
+          ...prev,
+          divisao: prev.divisao && !result.data.some((d) => String(d.divisao_id) === prev.divisao) ? '' : prev.divisao,
+        }));
+      })
+      .catch(() => {
+        if (!active) return;
+        setFornecedorDivisoes(null);
+      });
+    return () => { active = false; };
+  }, [filters.fornecedor]);
 
   // Filtra fornecedores e divisões pelos itens presentes na tabela selecionada
   useEffect(() => {
