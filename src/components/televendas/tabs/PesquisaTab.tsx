@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -90,6 +90,24 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
   const [deletingOrder, setDeletingOrder] = useState(false);
   const [clienteNome, setClienteNome] = useState<string>('');
   const [representanteNome, setRepresentanteNome] = useState<string>('');
+
+  const isAdmin = authService.isAdmin();
+  const sessionRepresentante = useMemo(() => {
+    const session = authService.getSession();
+    const p = session?.payload;
+    const isForcaDeVendas = p?.user?.forca_de_vendas === true || Boolean(p?.user?.usuario_empresa_id);
+    if (!isForcaDeVendas || isAdmin) return null;
+    const codigoRep = p?.user?.codigo_representante ?? null;
+    const nome = p?.user?.nome_representante ?? p?.user?.nome ?? session?.nome ?? '';
+    if (!codigoRep && !p?.user?.usuario_empresa_id) return null;
+    return { codigo: String(codigoRep ?? ''), nome: String(nome) };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!sessionRepresentante) return;
+    setFilters((prev) => ({ ...prev, representante: sessionRepresentante.codigo }));
+    setRepresentanteNome(sessionRepresentante.nome);
+  }, [sessionRepresentante]);
 
   const normalizeOperacaoCodigo = (codigo?: string | number | null) => {
     const str = String(codigo ?? '').trim();
@@ -671,7 +689,12 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
 
         <div className="space-y-2">
           <Label className="text-xs">Força de Vendas</Label>
-          <Button variant="outline" className="w-full justify-start text-xs truncate" onClick={() => setRepSearchOpen(true)}>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-xs truncate"
+            onClick={() => { if (!sessionRepresentante) setRepSearchOpen(true); }}
+            disabled={!!sessionRepresentante}
+          >
             <Search className="h-3 w-3 mr-1 shrink-0" />
             <span className="truncate">{representanteNome || (filters.representante ? `Cód. ${filters.representante}` : 'Buscar força de vendas')}</span>
           </Button>
