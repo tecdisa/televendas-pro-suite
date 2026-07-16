@@ -83,6 +83,7 @@ export interface RepresentanteFornecedor {
   cnpj_cpf?: string;
   fone?: string;
   inativo?: boolean;
+  revenda?: boolean;
 }
 
 export interface RepresentanteFornecedorItem {
@@ -181,6 +182,7 @@ function normalizeRepresentanteFornecedor(raw: any): RepresentanteFornecedor {
     cnpj_cpf: raw?.cnpj_cpf ?? raw?.cnpjCpf ?? undefined,
     fone: raw?.fone ?? raw?.telefone ?? undefined,
     inativo: Boolean(raw?.inativo ?? false),
+    revenda: Boolean(raw?.revenda ?? false),
   };
 }
 

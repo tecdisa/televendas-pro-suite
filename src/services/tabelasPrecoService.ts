@@ -394,6 +394,7 @@ export const tabelasPrecoService = {
       permiteVendaB2b?: boolean;
       permiteVendaB2c?: boolean;
       escala?: 'com' | 'sem';
+      campoBusca?: 'descricao' | 'codigo' | 'codigoFabrica' | 'ean';
     },
   ): Promise<{ data: TabelaPrecoItem[]; total: number }> {
     const empresa = authService.getEmpresa();
@@ -405,6 +406,7 @@ export const tabelasPrecoService = {
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (query?.trim()) params.set('q', query.trim());
+    if (filters?.campoBusca) params.set('campoBusca', filters.campoBusca);
     if (filters?.status) params.set('status', filters.status);
     if (filters?.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
     if (filters?.divisaoId) params.set('divisaoId', String(filters.divisaoId));

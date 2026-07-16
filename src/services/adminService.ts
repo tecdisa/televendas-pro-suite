@@ -33,12 +33,12 @@ export interface AdminEmpresaDetalhe {
   uf: string;
   cep: string;
   fone: string;
-  celular: string;
+  celular: string | null;
   whatsapp: string | null;
   contato: string | null;
   email: string | null;
   site: string | null;
-  tecdisa_id: string;
+  tecdisa_id: string | null;
   empresa_master_id: number | null;
   usuario_master_id: number | null;
   inativo: boolean;
@@ -222,10 +222,10 @@ export const adminService = {
     uf: string;
     cep: string;
     fone: string;
-    celular: string;
+    celular?: string;
     whatsapp?: string;
     email?: string;
-    tecdisa_id: string;
+    tecdisa_id?: string;
     empresa_master_id?: number | null;
     master?: boolean;
   }): Promise<{ empresa_id: number; razao_social: string; fantasia: string; cnpj_cpf: string; empresa_master_id: number | null; uf: string; inativo: boolean }> {

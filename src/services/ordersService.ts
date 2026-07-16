@@ -641,7 +641,8 @@ export const ordersService = {
       boleto: Boolean(order?.boleto ?? false),
       rede: order?.rede,
       valor: order?.valor,
-      observacoes: order?.observacoes,
+      observacaoPedido: order?.observacoes?.pedido || undefined,
+      observacaoNF: order?.observacoes?.nf || undefined,
       itens: buildItens(order?.itens),
     };
 
@@ -778,7 +779,8 @@ export const ordersService = {
       boleto: Boolean(order?.boleto ?? false),
       rede: order?.rede,
       valor: order?.valor,
-      observacoes: order?.observacoes,
+      observacaoPedido: order?.observacoes?.pedido || undefined,
+      observacaoNF: order?.observacoes?.nf || undefined,
       itens: buildItens(order?.itens),
     };
 

@@ -490,16 +490,23 @@ export function RepresentantesPastasTab() {
   const openDivisoes = async (item: RepresentanteFornecedorItem) => {
     setDivisoesFornecedor(item);
     setDivisoesItems([]);
+    setDivisoesCatalog([]);
     setDivisoesTab('pesquisa');
     setDivisaoFormDivisaoId('');
     setDivisoesOpen(true);
     loadDivisoesFornecedor(item);
-    if (divisoesCatalog.length === 0) {
-      try {
-        const res = await divisionsService.getAll(undefined, undefined, 1, 500);
-        setDivisoesCatalog(res.data);
-      } catch {}
-    }
+    try {
+      const res = await divisionsService.getAll(
+        undefined,
+        undefined,
+        1,
+        500,
+        'ativos',
+        undefined,
+        item.fornecedor.fornecedor_id,
+      );
+      setDivisoesCatalog(res.data);
+    } catch {}
   };
 
   const handleAddDivisao = async () => {

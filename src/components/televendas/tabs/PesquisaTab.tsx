@@ -26,7 +26,7 @@ import { useStore } from '@/store/useStore';
 import { situacoes } from '@/mocks/data';
 import { metadataService, type Operacao } from '@/services/metadataService';
 import { representativesService, type Representative } from '@/services/representativesService';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatDate } from '@/utils/format';
 import { useModuleCrudPermission } from '@/hooks/use-module-crud-permission';
 
 interface PesquisaTabProps {
@@ -519,7 +519,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
         <div style="font-size:13px;font-weight:bold;margin-bottom:6px">${nomeEmpresa}</div>
         <h1>Pedido #${order.id}</h1>
         <div class="meta">
-          <div>Data: ${new Date(order.data).toLocaleDateString('pt-BR')}</div>
+          <div>Data: ${formatDate(order.data)}</div>
           <div>Cliente: ${order.clienteNome ?? ''}${clienteCodigoLabel}</div>
           <div>Operação: ${opLabel ?? ''}</div>
           <div>Força de Vendas: ${representanteLabel}</div>
@@ -890,7 +890,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
                       <TableCell className="hidden lg:table-cell w-10">
                         <div className="w-4 h-4 bg-primary/20 rounded" />
                       </TableCell>
-                      <TableCell className="w-24 text-xs">{new Date(order.data).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className="w-24 text-xs">{formatDate(order.data)}</TableCell>
                       <TableCell className="w-16 font-medium text-xs">{order.id}</TableCell>
                       <TableCell className="hidden md:table-cell w-28 text-xs">{formatOperacao(order)}</TableCell>
                       <TableCell className="hidden lg:table-cell w-24 text-xs">{formatClienteCodigo(order)}</TableCell>
@@ -1065,7 +1065,7 @@ export const PesquisaTab = ({ onNavigateToDigitacao }: PesquisaTabProps) => {
           {previewOrder && (
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                <div>Data: {new Date(previewOrder.data).toLocaleDateString('pt-BR')}</div>
+                <div>Data: {formatDate(previewOrder.data)}</div>
                 <div>Cliente: {previewOrder.clienteNome}{previewClienteCodigo ? ` (Cód.: ${previewClienteCodigo})` : ''}</div>
                 <div>Operação: {formatOperacao(previewOrder)}</div>
                 <div>Força de Vendas: {previewRepresentanteCodigo ? `${previewRepresentanteCodigo} - ` : ''}{previewOrder.representanteNome}</div>

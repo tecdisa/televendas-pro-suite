@@ -258,6 +258,7 @@ export function TabelasPrecoTab() {
   const [itensB2b, setItensB2b] = useState(false);
   const [itensB2c, setItensB2c] = useState(false);
   const [itensEscala, setItensEscala] = useState<'all' | 'com' | 'sem'>('all');
+  const [itensCampoBusca, setItensCampoBusca] = useState<'descricao' | 'codigo' | 'codigoFabrica' | 'ean'>('descricao');
 
   // Refs que sempre apontam para os valores mais recentes dos filtros
   // (atualizados sincronamente no render — evita closure stale em loadItens)
@@ -270,6 +271,7 @@ export function TabelasPrecoTab() {
   const itensB2bRef = useRef(itensB2b);
   const itensB2cRef = useRef(itensB2c);
   const itensEscalaRef = useRef(itensEscala);
+  const itensCampoBuscaRef = useRef(itensCampoBusca);
   const itensSearchRef = useRef(itensSearch);
   const itensTabelaRef = useRef(itensTabela);
   const itensPageRef = useRef(itensPage);
@@ -285,6 +287,7 @@ export function TabelasPrecoTab() {
   itensB2bRef.current = itensB2b;
   itensB2cRef.current = itensB2c;
   itensEscalaRef.current = itensEscala;
+  itensCampoBuscaRef.current = itensCampoBusca;
   itensSearchRef.current = itensSearch;
   itensTabelaRef.current = itensTabela;
   itensPageRef.current = itensPage;
@@ -558,6 +561,7 @@ export function TabelasPrecoTab() {
         permiteVendaB2b: itensB2bRef.current || undefined,
         permiteVendaB2c: itensB2cRef.current || undefined,
         escala: itensEscalaRef.current !== 'all' ? itensEscalaRef.current : undefined,
+        campoBusca: itensCampoBuscaRef.current,
       };
       console.debug('[loadItens] tabelaId=%d page=%d filters=%o', itensTabelaRef.current.tabela_preco_id, nextPage, filters);
       const result = await tabelasPrecoService.getItens(
@@ -589,7 +593,9 @@ export function TabelasPrecoTab() {
     itensB2bRef.current = false;
     itensB2cRef.current = false;
     itensEscalaRef.current = 'all';
+    itensCampoBuscaRef.current = 'descricao';
     itensSearchRef.current = '';
+    setItensCampoBusca('descricao');
     setItensStatus('todos');
     setItensFornecedor('all');
     setItensDivisao('all');
@@ -1321,6 +1327,7 @@ export function TabelasPrecoTab() {
         permiteVendaB2b: itensB2bRef.current || undefined,
         permiteVendaB2c: itensB2cRef.current || undefined,
         escala: itensEscalaRef.current !== 'all' ? itensEscalaRef.current : undefined,
+        campoBusca: itensCampoBuscaRef.current,
       };
       const result = await tabelasPrecoService.getItens(
         itensTabela.tabela_preco_id,
@@ -1597,6 +1604,15 @@ export function TabelasPrecoTab() {
           {/* Row 1: busca + status + fornecedor + divisão + marca */}
           <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-dashed">
             <div className="flex items-center gap-1">
+              <Select value={itensCampoBusca} onValueChange={(v) => setItensCampoBusca(v as typeof itensCampoBusca)}>
+                <SelectTrigger className="h-7 text-xs w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="descricao">Descrição</SelectItem>
+                  <SelectItem value="codigo">Código</SelectItem>
+                  <SelectItem value="codigoFabrica">Cód. Fábrica</SelectItem>
+                  <SelectItem value="ean">EAN</SelectItem>
+                </SelectContent>
+              </Select>
               <Input
                 className="h-7 text-xs w-44"
                 placeholder="Buscar produto..."
@@ -2145,6 +2161,7 @@ export function TabelasPrecoTab() {
           onSelectProducts={handleImportProducts}
           selectedTabelaId={itensTabela?.tabela_preco_id ? String(itensTabela.tabela_preco_id) : undefined}
           showRecordCounter
+          onlyRevendaFornecedores
         />
 
         {/* Excel Import Preview Dialog */}

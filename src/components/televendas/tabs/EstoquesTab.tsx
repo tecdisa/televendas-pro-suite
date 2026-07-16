@@ -150,6 +150,7 @@ export function EstoquesTab() {
   const [filters, setFilters] = useState<{
     status: StatusType;
     search: string;
+    campoBusca: 'descricao' | 'codigo' | 'codigoFabrica' | 'ean';
     fornecedor: string;
     divisao: string;
     marca: string;
@@ -160,6 +161,7 @@ export function EstoquesTab() {
   }>({
     status: 'ativos',
     search: '',
+    campoBusca: 'descricao',
     fornecedor: 'all',
     divisao: 'all',
     marca: '',
@@ -192,6 +194,7 @@ export function EstoquesTab() {
       const params: StockListFilters = {
         status: has('status') ? overrideFilters!.status : filters.status,
         search: has('search') ? overrideFilters!.search : filters.search,
+        campoBusca: has('campoBusca') ? overrideFilters!.campoBusca : filters.campoBusca,
         fornecedorId: has('fornecedorId')
           ? overrideFilters!.fornecedorId
           : (filters.fornecedor !== 'all' ? Number(filters.fornecedor) : undefined),
@@ -253,8 +256,8 @@ export function EstoquesTab() {
   const handleSearch = async () => { await loadStocks(); };
 
   const handleClear = async () => {
-    setFilters({ status: 'ativos', search: '', fornecedor: 'all', divisao: 'all', marca: '', possuiFoto: undefined, permiteVendaB2b: undefined, permiteVendaB2c: undefined, lancamento: undefined });
-    await loadStocks({ status: 'ativos', search: '', fornecedorId: undefined, divisaoId: undefined, marca: '', possuiFoto: undefined, permiteVendaB2b: undefined, permiteVendaB2c: undefined, lancamento: undefined });
+    setFilters({ status: 'ativos', search: '', campoBusca: 'descricao', fornecedor: 'all', divisao: 'all', marca: '', possuiFoto: undefined, permiteVendaB2b: undefined, permiteVendaB2c: undefined, lancamento: undefined });
+    await loadStocks({ status: 'ativos', search: '', campoBusca: 'descricao', fornecedorId: undefined, divisaoId: undefined, marca: '', possuiFoto: undefined, permiteVendaB2b: undefined, permiteVendaB2c: undefined, lancamento: undefined });
   };
 
   const updateFilter = (key: string, value: any) =>
@@ -416,10 +419,22 @@ export function EstoquesTab() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="md:col-span-5">
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-1 block">Campo</label>
+                  <Select value={filters.campoBusca} onValueChange={(v) => updateFilter('campoBusca', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="descricao">Descrição</SelectItem>
+                      <SelectItem value="codigo">Código</SelectItem>
+                      <SelectItem value="codigoFabrica">Cód. Fábrica</SelectItem>
+                      <SelectItem value="ean">EAN</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-3">
                   <label className="text-sm font-medium mb-1 block">Pesquisa</label>
                   <Input
-                    placeholder="Descrição, código, EAN, fornecedor, divisão..."
+                    placeholder="Descrição, código, cód. fábrica ou EAN..."
                     value={filters.search}
                     onChange={(e) => updateFilter('search', e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}

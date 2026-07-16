@@ -51,6 +51,7 @@ interface StockResponse {
 export interface StockListFilters {
   status?: 'ativos' | 'inativos' | 'todos';
   search?: string;
+  campoBusca?: 'descricao' | 'codigo' | 'codigoFabrica' | 'ean';
   fornecedorId?: number;
   divisaoId?: number;
   marca?: string;
@@ -213,6 +214,7 @@ export const stocksService = {
     params.set('status', resolvedStatus);
     if (resolvedStatus === 'todos') params.set('incluirInativos', 'true');
     if (filters.search?.trim()) params.set('q', filters.search.trim());
+    if (filters.campoBusca) params.set('campoBusca', filters.campoBusca);
     if (filters.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
     if (filters.divisaoId) params.set('divisaoId', String(filters.divisaoId));
     if (filters.marca?.trim()) params.set('marca', filters.marca.trim());

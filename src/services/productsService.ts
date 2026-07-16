@@ -337,11 +337,13 @@ export interface ProductFiltersParams {
   estoqueZerado?: boolean;
   lancamentos?: boolean;
   ultimasComprasDesde?: string;
+  tipoBusca?: 'inicial' | 'contido' | 'exata';
 }
 
 export interface ProductCadastroFilters {
   status?: 'ativos' | 'inativos' | 'todos';
   search?: string;
+  campoBusca?: 'descricao' | 'codigo' | 'codigoFabrica' | 'ean';
   fornecedorId?: number;
   divisaoId?: number;
   marca?: string;
@@ -468,7 +470,23 @@ async function fetchCadastroProdutos({
   params.set('status', filters?.status ?? 'ativos');
 
   if (filters?.search?.trim()) {
-    params.set('q', filters.search.trim());
+    const termo = filters.search.trim();
+    switch (filters.campoBusca) {
+      case 'descricao':
+        params.set('descricao', termo);
+        break;
+      case 'codigo':
+        params.set('codigoProduto', termo);
+        break;
+      case 'codigoFabrica':
+        params.set('codigoFabrica', termo);
+        break;
+      case 'ean':
+        params.set('ean13', termo);
+        break;
+      default:
+        params.set('q', termo);
+    }
   }
   if (filters?.fornecedorId) params.set('fornecedorId', String(filters.fornecedorId));
   if (filters?.divisaoId) params.set('divisaoId', String(filters.divisaoId));
@@ -599,6 +617,7 @@ async function fetchFromApi({
     
     // Add individual filter parameters
     if (filters?.codigoProduto) params.set('codigoProduto', filters.codigoProduto);
+    if (filters?.tipoBusca) params.set('buscaTipo', filters.tipoBusca);
     if (filters?.descricao) params.set('descricao', filters.descricao);
     if (filters?.marca) params.set('marca', filters.marca);
     if (filters?.tabela) params.set('tabelaPrecoId', filters.tabela);

@@ -284,23 +284,55 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     }
   }, [draftKey]);
 
-  const handleDuplicateOrder = useCallback((purchaseOrder: PurchaseOrder) => {
-    // Map purchase order items to order items format
-    const mappedItems: OrderItem[] = (purchaseOrder.itens || []).map((item) => ({
-      produtoId: item.produtoId,
-      codigoProduto: item.codigoProduto || '',
-      descricao: item.descricao,
-      un: item.un || '',
-      quant: item.quant,
-      descontoPerc: item.descontoPerc || 0,
-      descontoMaximo: normalizeMaxDesconto((item as any)?.descontoMaximo ?? (item as any)?.desconto_maximo ?? (item as any)?.desconto_max),
-      preco: item.preco,
-      total: item.total,
+  const handleDuplicateOrder = useCallback(async (purchaseOrder: PurchaseOrder) => {
+    // A duplicação vira um pedido novo: usa data do dia (padrão do backend ao criar),
+    // busca o preço vigente na tabela atual e descarta produtos inativos/excluídos.
+    const tabelaId = getDefaultTabelaId();
+    const tabelaIdNum = tabelaId ? Number(tabelaId) : undefined;
+
+    const resolved = await Promise.all((purchaseOrder.itens || []).map(async (item): Promise<OrderItem | null> => {
+      if (!item.produtoId) return null;
+      let produto;
+      try {
+        produto = await productsService.getCadastroById(item.produtoId);
+      } catch {
+        return null;
+      }
+      if (!produto || produto.inativo) return null; // excluído ou inativo
+
+      let precoAtual = produto.preco ?? item.preco;
+      if (tabelaIdNum) {
+        try {
+          const precoTabela = await productsService.getPrecoByTabela(item.produtoId, tabelaIdNum);
+          if (precoTabela > 0) precoAtual = precoTabela;
+        } catch {
+          // mantém o fallback (preço de cadastro) se a consulta por tabela falhar
+        }
+      }
+
+      return {
+        produtoId: item.produtoId,
+        codigoProduto: item.codigoProduto || '',
+        descricao: item.descricao,
+        un: item.un || '',
+        quant: item.quant,
+        descontoPerc: item.descontoPerc || 0,
+        descontoMaximo: normalizeMaxDesconto((item as any)?.descontoMaximo ?? (item as any)?.desconto_maximo ?? (item as any)?.desconto_max),
+        preco: precoAtual,
+        total: precoAtual * (item.quant || 0),
+      };
     }));
-    
+
+    const mappedItems = resolved.filter((i): i is OrderItem => i !== null);
+    const totalOriginal = (purchaseOrder.itens || []).length;
+    const ignorados = totalOriginal - mappedItems.length;
+
     setItems(mappedItems);
+    if (ignorados > 0) {
+      toast.warning(`${ignorados} item(ns) do pedido original não foram incluídos (produto inativo ou excluído)`);
+    }
     toast.success(`${mappedItems.length} itens carregados do pedido ${purchaseOrder.pedido}`);
-  }, []);
+  }, [formData.tabela, tabelas]);
 
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [repSearchOpen, setRepSearchOpen] = useState(false);
@@ -1196,7 +1228,12 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       }
       setLoadingProductByCode(true);
       try {
-        const products = await productsService.search({ codigoProduto: productCodeInput.trim() }, 1, 1);
+        const codigoDigitado = productCodeInput.trim();
+        const products = await productsService.search(
+          { codigoProduto: codigoDigitado, tipoBusca: 'exata' },
+          1,
+          1,
+        );
         if (products.length === 0) {
           toast.error('Produto não encontrado com este código');
           setLoadingProductByCode(false);
@@ -1574,7 +1611,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       </span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="w-[95vw] max-w-2xl">
+                  <DialogContent className="w-[95vw] max-w-4xl">
                     <DialogHeader>
                       <DialogTitle>Buscar Cliente</DialogTitle>
                     </DialogHeader>
@@ -1620,24 +1657,35 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                               <TableRow>
                                 <TableHead>Código</TableHead>
                                 <TableHead>Nome</TableHead>
+                                <TableHead>Endereço</TableHead>
+                                <TableHead>Bairro</TableHead>
                                 <TableHead>Cidade</TableHead>
+                                <TableHead>Telefone</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {filteredClients.map((client) => (
-                                <TableRow
-                                  key={client.id}
-                                  className="cursor-pointer"
-                                  onClick={() => handleSelectClient(client)}
-                                >
-                                  <TableCell>{client.codigoCliente ?? ''}</TableCell>
-                                  <TableCell>{client.nome}</TableCell>
-                                  <TableCell>{client.cidade}</TableCell>
-                                </TableRow>
-                              ))}
+                              {filteredClients.map((client) => {
+                                const enderecoCompleto = [client.endereco, client.numero]
+                                  .filter(Boolean)
+                                  .join(', ');
+                                return (
+                                  <TableRow
+                                    key={client.id}
+                                    className="cursor-pointer"
+                                    onClick={() => handleSelectClient(client)}
+                                  >
+                                    <TableCell>{client.codigoCliente ?? ''}</TableCell>
+                                    <TableCell>{client.nome}</TableCell>
+                                    <TableCell>{enderecoCompleto || '-'}</TableCell>
+                                    <TableCell>{client.bairro || '-'}</TableCell>
+                                    <TableCell>{client.cidade}</TableCell>
+                                    <TableCell>{client.fone || '-'}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
                               {filteredClients.length === 0 && (
                                 <TableRow>
-                                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                                     Nenhum cliente encontrado
                                   </TableCell>
                                 </TableRow>
@@ -2097,9 +2145,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Observação Cliente</label>
-            <Textarea 
+            <Textarea
               value={observacoes.cliente}
-              onChange={(e) => setObservacoes({...observacoes, cliente: e.target.value})}
+              readOnly
+              disabled
               rows={1}
               className="min-h-[40px] resize-none"
             />

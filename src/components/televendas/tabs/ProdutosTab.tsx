@@ -511,6 +511,7 @@ export function ProdutosTab() {
   const [filters, setFilters] = useState<{
     status: StatusType;
     search: string;
+    campoBusca: 'descricao' | 'codigo' | 'codigoFabrica' | 'ean';
     fornecedor: string;
     divisao: string;
     marca: string;
@@ -523,6 +524,7 @@ export function ProdutosTab() {
   }>({
     status: 'ativos',
     search: '',
+    campoBusca: 'descricao',
     fornecedor: 'all',
     divisao: 'all',
     marca: '',
@@ -584,6 +586,7 @@ export function ProdutosTab() {
       const params: ProductCadastroFilters = {
         status: overrideFilters?.status ?? filters.status,
         search: overrideFilters?.search ?? filters.search,
+        campoBusca: overrideFilters?.campoBusca ?? filters.campoBusca,
         fornecedorId:
           overrideFilters?.fornecedorId ??
           (filters.fornecedor !== 'all' ? Number(filters.fornecedor) : undefined),
@@ -752,6 +755,7 @@ export function ProdutosTab() {
     const resetFilters = {
       status: 'ativos' as StatusType,
       search: '',
+      campoBusca: 'descricao' as const,
       fornecedor: 'all',
       divisao: 'all',
       marca: '',
@@ -1510,10 +1514,22 @@ export function ProdutosTab() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="md:col-span-6">
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium mb-1 block">Campo</label>
+                <Select value={filters.campoBusca} onValueChange={(v) => updateFilter('campoBusca', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="descricao">Descrição</SelectItem>
+                    <SelectItem value="codigo">Código</SelectItem>
+                    <SelectItem value="ean">EAN</SelectItem>
+                    <SelectItem value="codigoFabrica">Cód. Fábrica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-4">
                 <label className="text-sm font-medium mb-1 block">Pesquisa</label>
                 <Input
-                  placeholder="Descrição, código, EAN, fornecedor, divisão..."
+                  placeholder="Descrição, código, EAN ou cód. fábrica..."
                   value={filters.search}
                   onChange={(e) => updateFilter('search', e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}

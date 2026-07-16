@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Copy, FolderOpen } from 'lucide-react';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatDate } from '@/utils/format';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ordersService } from '@/services/ordersService';
@@ -53,7 +53,7 @@ export const DadosTab = () => {
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Data:</span>
-              <p className="text-sm">{new Date(selectedOrder.data).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm">{formatDate(selectedOrder.data)}</p>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Especial:</span>

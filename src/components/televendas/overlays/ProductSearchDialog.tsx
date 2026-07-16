@@ -62,6 +62,8 @@ interface ProductSearchDialogProps {
   availableTabelas?: Tabela[];
   showRecordCounter?: boolean;
   representanteId?: string;
+  /** Quando true, restringe o filtro de fornecedor apenas aos marcados como revenda (fluxo de importação em Tabelas de Preço). */
+  onlyRevendaFornecedores?: boolean;
 }
 
 export const ProductSearchDialog = ({
@@ -75,6 +77,7 @@ export const ProductSearchDialog = ({
   availableTabelas,
   showRecordCounter = false,
   representanteId,
+  onlyRevendaFornecedores = false,
 }: ProductSearchDialogProps) => {
   const [filters, setFilters] = useState<ProductFilters>(emptyFilters);
   const [products, setProducts] = useState<Product[]>([]);
@@ -167,16 +170,25 @@ export const ProductSearchDialog = ({
       try {
         if (representanteId) {
           const result = await representativesService.getFornecedores(representanteId, { limit: 200 });
-          const mapped = result.data.map((item) => ({
-            fornecedor_id: item.fornecedor.fornecedor_id,
-            nome_fornecedor: item.fornecedor.nome_fornecedor,
-            codigo_fornecedor: item.fornecedor.codigo_fornecedor,
-            inativo: item.fornecedor.inativo,
-          }));
+          const mapped = result.data
+            .filter((item) => !onlyRevendaFornecedores || item.fornecedor.revenda === true)
+            .map((item) => ({
+              fornecedor_id: item.fornecedor.fornecedor_id,
+              nome_fornecedor: item.fornecedor.nome_fornecedor,
+              codigo_fornecedor: item.fornecedor.codigo_fornecedor,
+              inativo: item.fornecedor.inativo,
+              revenda: item.fornecedor.revenda,
+            }));
           setFornecedores(mapped);
           setPastaFornecedorIds(new Set(mapped.map((f) => f.fornecedor_id)));
         } else {
-          const result = await suppliersService.getAll(undefined, 1, 200, 'ativos');
+          const result = await suppliersService.getAll(
+            undefined,
+            1,
+            200,
+            'ativos',
+            onlyRevendaFornecedores ? true : undefined,
+          );
           setFornecedores(result.data);
           setPastaFornecedorIds(null);
         }
@@ -199,7 +211,7 @@ export const ProductSearchDialog = ({
     };
 
     loadMetadata();
-  }, [availableTabelas, representanteId]);
+  }, [availableTabelas, representanteId, onlyRevendaFornecedores]);
 
   // Reset multi-selection and pre-fill tabela when dialog opens
   useEffect(() => {
