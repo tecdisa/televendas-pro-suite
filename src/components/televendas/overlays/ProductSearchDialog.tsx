@@ -385,16 +385,23 @@ export const ProductSearchDialog = ({
     setAllowedDivisoes(null);
   };
 
-  const handleSelectProduct = (product: Product) => {
-    if (multiSelect) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
-        return next;
-      });
-    } else {
-      onSelectProduct?.(product);
+  const handleToggleSelect = (product: Product) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+      return next;
+    });
+  };
+
+  // Clique na linha: carrega o produto na linha de edição (quando o chamador oferece
+  // esse fluxo via onSelectProduct); sem esse callback, um clique na linha em modo de
+  // seleção múltipla apenas alterna o checkbox (ex.: importação em massa de itens).
+  const handleRowClick = (product: Product) => {
+    if (onSelectProduct) {
+      onSelectProduct(product);
       onOpenChange(false);
+    } else if (multiSelect) {
+      handleToggleSelect(product);
     }
   };
 
@@ -656,13 +663,13 @@ export const ProductSearchDialog = ({
                     <TableRow
                       key={product.id}
                       className={`cursor-pointer hover:bg-primary/10 ${multiSelect && selectedIds.has(product.id) ? 'bg-primary/5' : ''}`}
-                      onClick={() => handleSelectProduct(product)}
+                      onClick={() => handleRowClick(product)}
                     >
                       {multiSelect && (
                         <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedIds.has(product.id)}
-                            onCheckedChange={() => handleSelectProduct(product)}
+                            onCheckedChange={() => handleToggleSelect(product)}
                           />
                         </TableCell>
                       )}

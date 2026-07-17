@@ -1840,7 +1840,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           <CardTitle>Itens do Pedido</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2 sm:gap-3 items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-10 gap-2 sm:gap-3 items-end">
             <div>
               <label className="text-sm font-medium mb-2 block">Cód. Produto</label>
               <Input
@@ -1958,6 +1958,15 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                 min={0}
                 max={100}
                 step="any"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Total</label>
+              <Input
+                type="text"
+                value={formatCurrency(calculateItemTotal({ ...newItem, preco: newItemPreco ?? newItem.preco }))}
+                readOnly
+                className="bg-muted/50 text-right font-semibold"
               />
             </div>
             <div>

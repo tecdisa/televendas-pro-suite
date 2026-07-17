@@ -249,7 +249,7 @@ export function TabelasPrecoTab() {
   const [itensHasMore, setItensHasMore] = useState(true);
 
   // Itens filters (server-side)
-  const [itensStatus, setItensStatus] = useState<'ativos' | 'inativos' | 'todos'>('todos');
+  const [itensStatus, setItensStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   const [itensFornecedor, setItensFornecedor] = useState('all');
   const [itensDivisao, setItensDivisao] = useState('all');
   const [itensMarca, setItensMarca] = useState('');
@@ -584,7 +584,7 @@ export function TabelasPrecoTab() {
   }, []);
 
   const resetItensFilters = () => {
-    itensStatusRef.current = 'todos';
+    itensStatusRef.current = 'ativos';
     itensFornecedorRef.current = 'all';
     itensDivisaoRef.current = 'all';
     itensMarcaRef.current = '';
@@ -596,7 +596,7 @@ export function TabelasPrecoTab() {
     itensCampoBuscaRef.current = 'descricao';
     itensSearchRef.current = '';
     setItensCampoBusca('descricao');
-    setItensStatus('todos');
+    setItensStatus('ativos');
     setItensFornecedor('all');
     setItensDivisao('all');
     setItensMarca('');
