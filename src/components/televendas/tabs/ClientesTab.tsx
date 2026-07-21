@@ -1105,7 +1105,7 @@ export const ClientesTab = () => {
     setClientsLoading(true);
     const requestId = ++clientsRequestId.current;
     try {
-      const data = await clientsService.search(
+      const data = await clientsService.searchCadastro(
         buildClientSearchFilters(active), undefined, nextPage, CLIENT_LIMIT,
       );
       if (requestId !== clientsRequestId.current) return;
@@ -1339,7 +1339,7 @@ export const ClientesTab = () => {
         const all: Client[] = [];
         let page = 1;
         while (true) {
-          const batch = await clientsService.search(searchFilters, undefined, page, CLIENT_LIMIT);
+          const batch = await clientsService.searchCadastro(searchFilters, undefined, page, CLIENT_LIMIT);
           all.push(...batch);
           if (batch.length < CLIENT_LIMIT) break;
           page++;

@@ -486,10 +486,12 @@ async function fetchFromApi({
   filters,
   page = 1,
   limit = 100,
+  endpoint = 'clientes',
 }: {
   filters?: ClientSearchFilters;
   page?: number;
   limit?: number;
+  endpoint?: 'clientes' | 'clientes/cadastro';
 }): Promise<Client[]> {
   const empresa = authService.getEmpresa();
   if (!empresa) return Promise.reject('Empresa não selecionada');
@@ -588,7 +590,7 @@ async function fetchFromApi({
 
     if (page) params.set('page', String(page));
     if (limit) params.set('limit', String(limit));
-    const url = `${API_BASE}/api/clientes?${params.toString()}`;
+    const url = `${API_BASE}/api/${endpoint}?${params.toString()}`;
     const headers: Record<string, string> = { accept: 'application/json' };
     const res = await apiClient.fetch(url, {
       method: 'GET',
@@ -678,6 +680,22 @@ export const clientsService = {
         ? { query: queryOrFilters }
         : queryOrFilters;
     return fetchFromApi({ filters, page, limit });
+  },
+
+  // Usado pela tela de Cadastro de Clientes: mostra todos os clientes da empresa,
+  // sem restringir pela carteira do representante logado (diferente de find/search,
+  // que alimentam fluxos de venda como o Digitar Pedido e por isso ficam restritos).
+  searchCadastro: async (
+    queryOrFilters?: string | ClientSearchFilters,
+    _filters?: any,
+    page = 1,
+    limit = 100,
+  ): Promise<Client[]> => {
+    const filters =
+      typeof queryOrFilters === 'string'
+        ? { query: queryOrFilters }
+        : queryOrFilters;
+    return fetchFromApi({ filters, page, limit, endpoint: 'clientes/cadastro' });
   },
 
   // Convenience to get a single client by id using a server search
