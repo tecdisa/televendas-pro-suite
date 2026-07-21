@@ -4,6 +4,12 @@ import { API_BASE } from '@/utils/env';
 import { apiClient } from '@/utils/apiClient';
 import { productsService } from '@/services/productsService';
 
+export interface OrderParcela {
+  parcela: number;
+  vencto: string; // ISO yyyy-mm-dd
+  valor: number;
+}
+
 export interface OrderItemUI {
   produtoId: number;
   codigoProduto?: string;
@@ -851,6 +857,51 @@ export const ordersService = {
       return Promise.resolve(true);
     }
     return Promise.reject('Pedido não encontrado');
+  },
+
+  // Prazo negociado: parcelas customizadas do pedido (vendas_parcelas)
+  getParcelas: async (id: number): Promise<OrderParcela[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+    const url = `${API_BASE}/api/pedidos/${encodeURIComponent(id)}/parcelas?empresaId=${encodeURIComponent(empresa.empresa_id)}`;
+    const res = await apiClient.fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
+    if (!res.ok) {
+      let message = 'Falha ao buscar parcelas do pedido';
+      try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
+      return Promise.reject(message);
+    }
+    const data = await res.json();
+    return Array.isArray(data)
+      ? data.map((p: any) => ({ parcela: Number(p.parcela), vencto: String(p.vencto), valor: Number(p.valor) }))
+      : [];
+  },
+
+  saveParcelas: async (id: number, parcelas: OrderParcela[]): Promise<OrderParcela[]> => {
+    const empresa = authService.getEmpresa();
+    if (!empresa) return Promise.reject('Empresa não selecionada');
+    const token = authService.getToken();
+    if (!token) return Promise.reject('Token ausente');
+    const url = `${API_BASE}/api/pedidos/${encodeURIComponent(id)}/parcelas`;
+    const headers: Record<string, string> = {
+      accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+    const res = await apiClient.fetch(url, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ empresaId: empresa.empresa_id, parcelas }),
+    });
+    if (!res.ok) {
+      let message = 'Falha ao salvar parcelas do pedido';
+      try { const err = await res.json(); message = err?.message || err?.error?.message || err?.error || message; } catch {}
+      return Promise.reject(message);
+    }
+    const data = await res.json();
+    const arr = Array.isArray(data?.parcelas) ? data.parcelas : [];
+    return arr.map((p: any) => ({ parcela: Number(p.parcela), vencto: String(p.vencto), valor: Number(p.valor) }));
   },
 
   duplicate: (id: number) => {

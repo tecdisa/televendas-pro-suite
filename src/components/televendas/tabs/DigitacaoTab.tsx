@@ -8,12 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Save, Undo, Search, Plus, Trash2, Info, DollarSign, History, Package } from 'lucide-react';
+import { Save, Undo, Search, Plus, Trash2, Info, DollarSign, History, Package, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import { metadataService, type Operacao, type Tabela, type FormaPagamento, type PrazoPagto } from '@/services/metadataService';
 import { authService } from '@/services/authService';
 import { clientsService, type Client } from '@/services/clientsService';
-import { productsService, type Product } from '@/services/productsService';
+import { productsService, type Product, type EscalaTier } from '@/services/productsService';
 import { representativesService, type Representative } from '@/services/representativesService';
 import { formatCurrency } from '@/utils/format';
 import { ordersService } from '@/services/ordersService';
@@ -23,7 +23,9 @@ import { ClientInfoModal } from '../overlays/ClientInfoModal';
 import { ClientReceivablesModal } from '../overlays/ClientReceivablesModal';
 import { ClientPurchasesModal } from '../overlays/ClientPurchasesModal';
 import { ProductBatchModal } from '../overlays/ProductBatchModal';
+import { PrazoNegociadoModal } from '../overlays/PrazoNegociadoModal';
 import type { PurchaseOrder } from '@/services/purchasesService';
+import type { OrderParcela } from '@/services/ordersService';
 
 type OrderItem = {
   produtoId: number;
@@ -35,6 +37,8 @@ type OrderItem = {
   quant: number;
   descontoPerc: number;
   descontoMaximo?: number;
+  hasEscala?: boolean;
+  escalaTiers?: EscalaTier[];
   preco: number;
   total: number;
   obs?: string;
@@ -150,6 +154,12 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   const [clientPurchasesOpen, setClientPurchasesOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [selectedBatchItem, setSelectedBatchItem] = useState<OrderItem | null>(null);
+  const [prazoNegociadoOpen, setPrazoNegociadoOpen] = useState(false);
+  const [parcelasNegociadas, setParcelasNegociadas] = useState<OrderParcela[]>([]);
+  // true quando a modal foi aberta automaticamente pelo botão Salvar (nesse
+  // caso, confirmar a negociação já dispara o salvamento do pedido); false
+  // quando o vendedor abriu a modal manualmente só para revisar/definir antes.
+  const [prazoNegociadoAutoSave, setPrazoNegociadoAutoSave] = useState(false);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [productCodeInput, setProductCodeInput] = useState('');
   const [loadingProductByCode, setLoadingProductByCode] = useState(false);
@@ -227,6 +237,48 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     [bloqueiaDescontoAcimaTabela, normalizeMaxDesconto],
   );
 
+  // Quando o produto tem desconto escalonado, a regra do escalonado prevalece
+  // sobre o desconto máximo da tabela: o desconto permitido é o da maior
+  // faixa de quantidade atingida pela quantidade do item.
+  const resolveEffectiveMaxDesconto = useCallback(
+    (
+      item: { descontoMaximo?: number; hasEscala?: boolean; escalaTiers?: EscalaTier[] },
+      quant: number,
+    ): number | undefined => {
+      if (item.hasEscala && item.escalaTiers && item.escalaTiers.length > 0) {
+        const atingidas = item.escalaTiers
+          .filter((t) => quant >= t.quantidade)
+          .sort((a, b) => b.quantidade - a.quantidade);
+        return atingidas.length > 0 ? atingidas[0].desconto : 0;
+      }
+      return normalizeMaxDesconto(item.descontoMaximo);
+    },
+    [normalizeMaxDesconto],
+  );
+
+  // Busca desconto máximo/escalonado vigentes na tabela para o item e
+  // mescla no item (usado ao carregar pedido existente e ao duplicar pedido).
+  const enrichItemWithTabelaInfo = useCallback(async (item: OrderItem): Promise<OrderItem> => {
+    const tabelaId = item.tabelaId != null ? Number(item.tabelaId) : undefined;
+    if (!item.produtoId || !tabelaId || Number.isNaN(tabelaId)) return item;
+    try {
+      const info = await productsService.getTabelaInfo(item.produtoId, tabelaId);
+      return {
+        ...item,
+        descontoMaximo: normalizeMaxDesconto(info.descontoMaximo ?? item.descontoMaximo),
+        hasEscala: info.hasEscala,
+        escalaTiers: info.escalaTiers,
+      };
+    } catch {
+      return item;
+    }
+  }, [normalizeMaxDesconto]);
+
+  const enrichItemsWithTabelaInfo = useCallback(
+    (list: OrderItem[]) => Promise.all(list.map((it) => enrichItemWithTabelaInfo(it))),
+    [enrichItemWithTabelaInfo],
+  );
+
   const draftKey = useMemo(() => {
     const session = authService.getSession();
     const userId = session?.usuario ?? 'unknown';
@@ -301,12 +353,18 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       if (!produto || produto.inativo) return null; // excluído ou inativo
 
       let precoAtual = produto.preco ?? item.preco;
+      let descontoMaximo = normalizeMaxDesconto((item as any)?.descontoMaximo ?? (item as any)?.desconto_maximo ?? (item as any)?.desconto_max);
+      let hasEscala = false;
+      let escalaTiers: EscalaTier[] = [];
       if (tabelaIdNum) {
         try {
-          const precoTabela = await productsService.getPrecoByTabela(item.produtoId, tabelaIdNum);
-          if (precoTabela > 0) precoAtual = precoTabela;
+          const info = await productsService.getTabelaInfo(item.produtoId, tabelaIdNum);
+          if (info.preco > 0) precoAtual = info.preco;
+          descontoMaximo = normalizeMaxDesconto(info.descontoMaximo ?? descontoMaximo);
+          hasEscala = info.hasEscala;
+          escalaTiers = info.escalaTiers;
         } catch {
-          // mantém o fallback (preço de cadastro) se a consulta por tabela falhar
+          // mantém o fallback (preço/desconto de cadastro) se a consulta por tabela falhar
         }
       }
 
@@ -317,7 +375,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         un: item.un || '',
         quant: item.quant,
         descontoPerc: item.descontoPerc || 0,
-        descontoMaximo: normalizeMaxDesconto((item as any)?.descontoMaximo ?? (item as any)?.desconto_maximo ?? (item as any)?.desconto_max),
+        descontoMaximo,
+        hasEscala,
+        escalaTiers,
+        tabelaId: tabelaIdNum,
         preco: precoAtual,
         total: precoAtual * (item.quant || 0),
       };
@@ -495,6 +556,9 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             it.tabela,
         })) as OrderItem[];
         setItems(mapped);
+        enrichItemsWithTabelaInfo(mapped).then((enriched) => {
+          if (active) setItems(enriched);
+        });
         setObservacoes({
           cliente: detail.observacaoCliente || '',
           pedido: detail.observacaoPedido || '',
@@ -551,6 +615,9 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             (it as any)?.tabela,
         })) as OrderItem[];
         setItems(mapped);
+        enrichItemsWithTabelaInfo(mapped).then((enriched) => {
+          if (active) setItems(enriched);
+        });
         setObservacoes({
           cliente: currentOrder.observacaoCliente || '',
           pedido: currentOrder.observacaoPedido || '',
@@ -942,7 +1009,12 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
 
   const handleSelectProduct = (product: Product) => {
     const maxDesconto = normalizeMaxDesconto(product.descontoMaximo);
-    const descontoPerc = clampDesconto(newItem.descontoPerc || 0, maxDesconto);
+    const hasEscala = Boolean(product.hasEscala);
+    const escalaTiers = product.escalaTiers ?? [];
+    const descontoPerc = clampDesconto(
+      newItem.descontoPerc || 0,
+      resolveEffectiveMaxDesconto({ descontoMaximo: maxDesconto, hasEscala, escalaTiers }, newItem.quant || 0),
+    );
     setNewItem({
       ...newItem,
       produtoId: product.id,
@@ -952,6 +1024,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       preco: product.preco,
       estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
       descontoMaximo: maxDesconto,
+      hasEscala,
+      escalaTiers,
       descontoPerc,
     });
     setNewItemPreco(product.preco);
@@ -963,7 +1037,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     setProductSearchOpen(false);
   };
 
-  // Fetch price when tabela changes for new item
+  // Fetch price/desconto máximo/escalonado when tabela changes for new item
   const handleNewItemTabelaChange = async (tabelaId: string) => {
     setNewItemTabelaId(tabelaId);
     if (!newItem.produtoId || !tabelaId) {
@@ -972,9 +1046,23 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     }
     setLoadingNewItemPreco(true);
     try {
-      const preco = await productsService.getPrecoByTabela(newItem.produtoId, Number(tabelaId));
-      setNewItemPreco(preco);
-      setNewItem(prev => ({ ...prev, preco, tabelaId }));
+      const info = await productsService.getTabelaInfo(newItem.produtoId, Number(tabelaId));
+      setNewItemPreco(info.preco);
+      setNewItem(prev => ({
+        ...prev,
+        preco: info.preco,
+        tabelaId,
+        descontoMaximo: normalizeMaxDesconto(info.descontoMaximo),
+        hasEscala: info.hasEscala,
+        escalaTiers: info.escalaTiers,
+        descontoPerc: clampDesconto(
+          prev.descontoPerc || 0,
+          resolveEffectiveMaxDesconto(
+            { descontoMaximo: info.descontoMaximo, hasEscala: info.hasEscala, escalaTiers: info.escalaTiers },
+            prev.quant || 0,
+          ),
+        ),
+      }));
     } catch (e) {
       console.error('Erro ao buscar preço:', e);
       setNewItemPreco(newItem.preco ?? null);
@@ -1072,8 +1160,9 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     const quant = Math.max(0, Number(itemToAdd.quant) || 0);
     const descricao = itemToAdd.descricao || '';
     const un = itemToAdd.un || '';
-    const maxDesconto = normalizeMaxDesconto(itemToAdd.descontoMaximo);
-    const descontoPerc = clampDesconto(itemToAdd.descontoPerc || 0, maxDesconto);
+    let maxDesconto = normalizeMaxDesconto(itemToAdd.descontoMaximo);
+    let hasEscala = Boolean(itemToAdd.hasEscala);
+    let escalaTiers: EscalaTier[] = itemToAdd.escalaTiers ?? [];
     const preco = itemToAdd.preco || 0;
     const obs = itemToAdd.obs;
     const tabelaSelecionada = getPreferredTabelaForItem(itemToAdd);
@@ -1124,10 +1213,14 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     let precoTabela = preco;
     if (resolvedTabelaId) {
       try {
-        precoTabela = await productsService.getPrecoByTabela(
+        const info = await productsService.getTabelaInfo(
           produtoId,
           Number(resolvedTabelaId),
         );
+        precoTabela = info.preco;
+        maxDesconto = normalizeMaxDesconto(info.descontoMaximo ?? maxDesconto);
+        hasEscala = info.hasEscala;
+        escalaTiers = info.escalaTiers;
       } catch (e: any) {
         toast.error(
           String(e) ||
@@ -1135,6 +1228,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         );
       }
     }
+    const descontoPerc = clampDesconto(
+      itemToAdd.descontoPerc || 0,
+      resolveEffectiveMaxDesconto({ descontoMaximo: maxDesconto, hasEscala, escalaTiers }, quant),
+    );
 
     const existingIndex = findSameProductIndex(items);
     if (existingIndex === -1) {
@@ -1151,6 +1248,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           descontoPerc,
           preco: precoTabela,
           descontoMaximo: maxDesconto,
+          hasEscala,
+          escalaTiers,
           total: 0,
           obs,
         };
@@ -1171,12 +1270,19 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       }
 
       let precoToApply = currentItem.preco;
+      let maxDescontoToApply = currentItem.descontoMaximo ?? maxDesconto;
+      let hasEscalaToApply = currentItem.hasEscala ?? hasEscala;
+      let escalaTiersToApply = currentItem.escalaTiers ?? escalaTiers;
       if (tabelaChanged && tabelaToApply) {
         try {
-          precoToApply = await productsService.getPrecoByTabela(
+          const info = await productsService.getTabelaInfo(
             produtoId,
             Number(tabelaToApply),
           );
+          precoToApply = info.preco;
+          maxDescontoToApply = normalizeMaxDesconto(info.descontoMaximo);
+          hasEscalaToApply = info.hasEscala;
+          escalaTiersToApply = info.escalaTiers;
         } catch (e: any) {
           toast.error(
             String(e) ||
@@ -1200,9 +1306,14 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           descricao: current.descricao || descricao,
           un: current.un || un,
           estoque: current.estoque ?? itemToAdd.estoque,
-          descontoMaximo: current.descontoMaximo ?? maxDesconto,
+          descontoMaximo: maxDescontoToApply,
+          hasEscala: hasEscalaToApply,
+          escalaTiers: escalaTiersToApply,
         };
-        merged.descontoPerc = clampDesconto(merged.descontoPerc, merged.descontoMaximo);
+        merged.descontoPerc = clampDesconto(
+          merged.descontoPerc,
+          resolveEffectiveMaxDesconto(merged, mergedQuant),
+        );
         const total = calculateItemTotal(merged);
         const next = [...prev];
         next[matchIndex] = { ...merged, total };
@@ -1240,20 +1351,31 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           return;
         }
         const product = products[0];
-        // Use the selected tabela if available, otherwise get the price for the default tabela
+        // Use a tabela selecionada, ou a padrão, para buscar preço + desconto
+        // máximo/escalonado vigentes (a busca por código não traz esses dados
+        // por si só, pois não é filtrada por tabela de preço).
         let precoFinal = product.preco;
+        let maxDesconto = normalizeMaxDesconto(product.descontoMaximo);
+        let hasEscala = Boolean(product.hasEscala);
+        let escalaTiers: EscalaTier[] = product.escalaTiers ?? [];
         const tabelaToUse = newItemTabelaId || getDefaultTabelaId();
         if (tabelaToUse) {
           try {
-            precoFinal = await productsService.getPrecoByTabela(product.id, Number(tabelaToUse));
+            const info = await productsService.getTabelaInfo(product.id, Number(tabelaToUse));
+            precoFinal = info.preco;
+            maxDesconto = normalizeMaxDesconto(info.descontoMaximo);
+            hasEscala = info.hasEscala;
+            escalaTiers = info.escalaTiers;
           } catch {
             precoFinal = product.preco;
           }
         }
         // Carrega na linha de edição para revisão (preço/quantidade/desconto) antes de
         // adicionar à lista — mesmo comportamento da seleção pela busca de produto.
-        const maxDesconto = normalizeMaxDesconto(product.descontoMaximo);
-        const descontoPerc = clampDesconto(newItem.descontoPerc || 0, maxDesconto);
+        const descontoPerc = clampDesconto(
+          newItem.descontoPerc || 0,
+          resolveEffectiveMaxDesconto({ descontoMaximo: maxDesconto, hasEscala, escalaTiers }, newItem.quant || 0),
+        );
         setNewItem({
           ...newItem,
           produtoId: product.id,
@@ -1263,6 +1385,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           preco: precoFinal,
           estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
           descontoMaximo: maxDesconto,
+          hasEscala,
+          escalaTiers,
           descontoPerc,
         });
         setNewItemPreco(precoFinal);
@@ -1287,16 +1411,23 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       const maxDesconto = normalizeMaxDesconto(
         patch.descontoMaximo ?? currentBase.descontoMaximo,
       );
-      const descontoPerc =
-        patch.descontoPerc != null
-          ? clampDesconto(patch.descontoPerc, maxDesconto)
-          : currentBase.descontoPerc;
-      const current = {
+      const merged = {
         ...currentBase,
         ...patch,
-        descontoPerc,
         descontoMaximo: maxDesconto ?? currentBase.descontoMaximo,
       } as OrderItem;
+      // Reclampa sempre que desconto, quantidade, desconto máximo ou
+      // escalonado mudam: no desconto escalonado, a faixa permitida depende
+      // da quantidade do item.
+      const descontoPerc =
+        patch.descontoPerc != null ||
+        patch.quant != null ||
+        patch.descontoMaximo != null ||
+        patch.hasEscala != null ||
+        patch.escalaTiers != null
+          ? clampDesconto(merged.descontoPerc, resolveEffectiveMaxDesconto(merged, merged.quant || 0))
+          : currentBase.descontoPerc;
+      const current = { ...merged, descontoPerc } as OrderItem;
       if (current.estoque != null && current.quant > current.estoque) {
         toast.warning('Quantidade solicitada excede o estoque disponível');
       }
@@ -1341,11 +1472,16 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     if (!tabelaNum) return;
 
     try {
-      const novoPreco = await productsService.getPrecoByTabela(
+      const info = await productsService.getTabelaInfo(
         current.produtoId,
         tabelaNum,
       );
-      handleUpdateItem(index, { preco: novoPreco });
+      handleUpdateItem(index, {
+        preco: info.preco,
+        descontoMaximo: normalizeMaxDesconto(info.descontoMaximo),
+        hasEscala: info.hasEscala,
+        escalaTiers: info.escalaTiers,
+      });
     } catch (e: any) {
       toast.error(
         String(e) ||
@@ -1374,6 +1510,14 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     };
   }, { bruto: 0, descontos: 0, liquido: 0 });
 
+  const selectedPrazoPagamento = prazos.find((p) => String(p.id) === String(formData.prazoPagtoId));
+
+  // Se o prazo de pagamento mudar, descarta a negociação anterior (ela pode
+  // não fazer mais sentido para o novo prazo/total).
+  useEffect(() => {
+    setParcelasNegociadas([]);
+  }, [formData.prazoPagtoId]);
+
   const handleSave = async () => {
     if (!formData.operacao || !formData.clienteId || !formData.representanteId || items.length === 0) {
       toast.error('Preencha operação, cliente, representante e adicione pelo menos um item');
@@ -1386,6 +1530,19 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       return;
     }
 
+    // Prazo negociado: o vendedor precisa informar as parcelas (data/valor)
+    // negociadas com o cliente antes de salvar o pedido.
+    if (selectedPrazoPagamento?.prazoNegociado && parcelasNegociadas.length === 0) {
+      setPrazoNegociadoAutoSave(true);
+      setPrazoNegociadoOpen(true);
+      return;
+    }
+
+    await proceedSave();
+  };
+
+  const proceedSave = async (parcelasOverride?: OrderParcela[]) => {
+    const parcelasToSave = parcelasOverride ?? parcelasNegociadas;
     const order = {
       data: new Date().toISOString().split('T')[0],
       operacao: formData.operacao,
@@ -1451,8 +1608,19 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           onSaveSuccess();
         }
       }
-      
+
+      if (parcelasToSave.length > 0 && saved?.id) {
+        try {
+          await ordersService.saveParcelas(saved.id, parcelasToSave);
+        } catch (e: any) {
+          toast.error(
+            `Pedido salvo, mas houve erro ao gravar o prazo negociado: ${String(e?.message || e)}`,
+          );
+        }
+      }
+
       // Reset form
+      setParcelasNegociadas([]);
       resetFormState();
       setCurrentOrder(null);
     } catch (error) {
@@ -1820,6 +1988,27 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
               {typeof prazoMax === 'number' && (
                 <p className="text-xs text-muted-foreground mt-1">Prazo máximo permitido pela tabela: {prazoMax} dias</p>
               )}
+              {selectedPrazoPagamento?.prazoNegociado && (
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                    {parcelasNegociadas.length > 0
+                      ? `Prazo negociado: ${parcelasNegociadas.length} parcela(s) definida(s)`
+                      : 'Prazo negociado: será solicitado ao salvar'}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => {
+                      setPrazoNegociadoAutoSave(false);
+                      setPrazoNegociadoOpen(true);
+                    }}
+                  >
+                    {parcelasNegociadas.length > 0 ? 'editar' : 'definir agora'}
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">
@@ -2123,6 +2312,14 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       >
                         <Package className="h-4 w-4" />
                       </Button>
+                      {item.hasEscala && (
+                        <span
+                          className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                          title="Produto com desconto escalonado nesta tabela"
+                        >
+                          <Percent className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => handleRemoveItem(idx)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -2224,6 +2421,23 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         produtoId={selectedBatchItem?.produtoId ?? 0}
         produtoDescricao={selectedBatchItem?.descricao ?? ''}
         estoqueAtual={selectedBatchItem?.estoque}
+      />
+
+      <PrazoNegociadoModal
+        open={prazoNegociadoOpen}
+        onOpenChange={setPrazoNegociadoOpen}
+        totalPedido={totals.liquido}
+        dataPedido={new Date().toISOString().split('T')[0]}
+        numeroParcelasSugerido={selectedPrazoPagamento?.numeroParcelas}
+        prazosEmDiasSugerido={selectedPrazoPagamento?.prazosEmDias}
+        parcelasIniciais={parcelasNegociadas}
+        onConfirm={(parcelas) => {
+          setParcelasNegociadas(parcelas);
+          if (prazoNegociadoAutoSave) {
+            proceedSave(parcelas);
+            setPrazoNegociadoAutoSave(false);
+          }
+        }}
       />
 
       <AlertDialog open={removeItemConfirm !== null} onOpenChange={(open) => !open && setRemoveItemConfirm(null)}>

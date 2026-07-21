@@ -2,6 +2,12 @@ import { authService } from '@/services/authService';
 import { API_BASE } from '@/utils/env';
 import { apiClient } from '@/utils/apiClient';
 
+export interface EscalaTier {
+  quantidade: number;
+  desconto: number;
+  comissao: number;
+}
+
 export interface Product {
   id: number;
   empresaId?: number;
@@ -21,6 +27,8 @@ export interface Product {
   tabelaPrecoId?: number;
   descricaoTabelaPreco?: string;
   descontoMaximo?: number;
+  hasEscala?: boolean;
+  escalaTiers?: EscalaTier[] | null;
   comissao?: number;
   fornecedorId?: number;
   fornecedor?: string;
@@ -97,6 +105,9 @@ interface ProductTabelaPrecoResponse {
   produtoId: number;
   tabelaPrecoId: number;
   preco: number;
+  descontoMaximo?: number;
+  hasEscala?: boolean;
+  escalaTiers?: EscalaTier[];
 }
 
 export interface ProductBatch {
@@ -198,6 +209,15 @@ function normalizeProduct(raw: any): Product {
     raw?.tabelaPreco;
   const tabelaPrecoId = numberOrUndefined(raw?.tabela_preco_id ?? raw?.tabelaPrecoId);
   const descontoMaximo = numberOrUndefined(raw?.desconto_maximo ?? raw?.descontoMaximo ?? raw?.desconto_max);
+  const hasEscala = boolOrUndefined(raw?.has_escala ?? raw?.hasEscala);
+  const escalaTiersRaw = raw?.escala_tiers ?? raw?.escalaTiers;
+  const escalaTiers: EscalaTier[] | null = Array.isArray(escalaTiersRaw)
+    ? escalaTiersRaw.map((t: any) => ({
+        quantidade: Number(t.quantidade),
+        desconto: Number(t.desconto),
+        comissao: Number(t.comissao),
+      }))
+    : null;
   const comissao = numberOrUndefined(raw?.comissao ?? raw?.percentual_comissao ?? raw?.percentualComissao);
   const fornecedor =
     fornecedorInfo?.nome_fornecedor ??
@@ -235,6 +255,8 @@ function normalizeProduct(raw: any): Product {
     tabelaPrecoId,
     descricaoTabelaPreco: trimOrUndefined(descricaoTabelaPreco),
     descontoMaximo,
+    hasEscala,
+    escalaTiers,
     comissao,
     fornecedorId: numberOrUndefined(
       fornecedorInfo?.fornecedor_id ?? fornecedorInfo?.fornecedorId ?? raw?.fornecedor_id ?? raw?.fornecedorId
@@ -703,11 +725,23 @@ async function fetchPrecoByTabela({
     const tabelaIdResp =
       Number(data?.tabelaPrecoId ?? tabelaPrecoId) || tabelaPrecoId;
     const precoResp = Number(data?.preco ?? 0) || 0;
+    const descontoMaximoResp =
+      data?.descontoMaximo !== undefined ? Number(data.descontoMaximo) : undefined;
+    const escalaTiersResp: EscalaTier[] = Array.isArray(data?.escalaTiers)
+      ? data.escalaTiers.map((t: any) => ({
+          quantidade: Number(t.quantidade),
+          desconto: Number(t.desconto),
+          comissao: Number(t.comissao),
+        }))
+      : [];
 
     return {
       produtoId: produtoIdResp,
       tabelaPrecoId: tabelaIdResp,
       preco: precoResp,
+      descontoMaximo: descontoMaximoResp,
+      hasEscala: Boolean(data?.hasEscala) || escalaTiersResp.length > 0,
+      escalaTiers: escalaTiersResp,
     };
   } catch {
     return Promise.reject('Erro de conexão ao buscar preço do produto');
@@ -796,6 +830,21 @@ export const productsService = {
   ): Promise<number> => {
     const data = await fetchPrecoByTabela({ produtoId, tabelaPrecoId });
     return data.preco;
+  },
+  // Igual a getPrecoByTabela, mas também traz o desconto máximo e o
+  // desconto escalonado da tabela para o produto (usado para validar/
+  // clampar desconto ao adicionar item ou trocar de tabela).
+  getTabelaInfo: async (
+    produtoId: number,
+    tabelaPrecoId: number,
+  ): Promise<{ preco: number; descontoMaximo?: number; hasEscala: boolean; escalaTiers: EscalaTier[] }> => {
+    const data = await fetchPrecoByTabela({ produtoId, tabelaPrecoId });
+    return {
+      preco: data.preco,
+      descontoMaximo: data.descontoMaximo,
+      hasEscala: Boolean(data.hasEscala),
+      escalaTiers: data.escalaTiers ?? [],
+    };
   },
   getLotes: async (produtoId: number): Promise<ProductBatch[]> => {
     return fetchLotes(produtoId);
