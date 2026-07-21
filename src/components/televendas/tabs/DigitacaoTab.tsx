@@ -1250,20 +1250,24 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             precoFinal = product.preco;
           }
         }
-        const itemToAdd: Partial<OrderItem> = {
+        // Carrega na linha de edição para revisão (preço/quantidade/desconto) antes de
+        // adicionar à lista — mesmo comportamento da seleção pela busca de produto.
+        const maxDesconto = normalizeMaxDesconto(product.descontoMaximo);
+        const descontoPerc = clampDesconto(newItem.descontoPerc || 0, maxDesconto);
+        setNewItem({
+          ...newItem,
           produtoId: product.id,
           codigoProduto: product.codigoProduto ?? '',
           descricao: product.descricao,
           un: product.un,
           preco: precoFinal,
-          tabelaId: tabelaToUse,
           estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
-          quant: newItem.quant || 1,
-          descontoPerc: newItem.descontoPerc || 0,
-          descontoMaximo: normalizeMaxDesconto(product.descontoMaximo),
-        };
+          descontoMaximo: maxDesconto,
+          descontoPerc,
+        });
+        setNewItemPreco(precoFinal);
+        if (tabelaToUse) setNewItemTabelaId(tabelaToUse);
         setLoadingProductByCode(false);
-        await handleAddItemWithProduct(itemToAdd);
         return;
       } catch (e: any) {
         toast.error(e?.message || 'Erro ao buscar produto');
