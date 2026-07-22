@@ -8,6 +8,7 @@ export interface OrderParcela {
   parcela: number;
   vencto: string; // ISO yyyy-mm-dd
   valor: number;
+  entrada?: boolean; // parcela de entrada (depósito/TED) - não gera boleto
 }
 
 export interface OrderItemUI {
@@ -874,7 +875,12 @@ export const ordersService = {
     }
     const data = await res.json();
     return Array.isArray(data)
-      ? data.map((p: any) => ({ parcela: Number(p.parcela), vencto: String(p.vencto), valor: Number(p.valor) }))
+      ? data.map((p: any) => ({
+          parcela: Number(p.parcela),
+          vencto: String(p.vencto),
+          valor: Number(p.valor),
+          entrada: Boolean(p.entrada),
+        }))
       : [];
   },
 

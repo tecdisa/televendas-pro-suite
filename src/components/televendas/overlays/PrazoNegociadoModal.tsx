@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, CalendarClock } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
 import type { OrderParcela } from '@/services/ordersService';
@@ -118,7 +119,8 @@ export const PrazoNegociadoModal = ({
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
             Informe as parcelas negociadas com o cliente (data e valor de cada uma). A soma precisa
-            fechar com o total do pedido.
+            fechar com o total do pedido. Marque "Entrada" quando a parcela for paga por
+            depósito/TED — ela não gera boleto.
           </p>
           <div className="border rounded-md overflow-hidden">
             <table className="w-full text-xs">
@@ -127,13 +129,14 @@ export const PrazoNegociadoModal = ({
                   <th className="px-3 py-2 text-left w-14">Parc.</th>
                   <th className="px-3 py-2 text-left">Vencimento</th>
                   <th className="px-3 py-2 text-right">Valor</th>
+                  <th className="px-2 py-2 text-center w-20">Entrada</th>
                   <th className="w-10 px-2 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {parcelas.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-6 text-muted-foreground">
+                    <td colSpan={5} className="text-center py-6 text-muted-foreground">
                       Nenhuma parcela definida
                     </td>
                   </tr>
@@ -157,6 +160,13 @@ export const PrazoNegociadoModal = ({
                           className="h-8 text-xs text-right"
                           value={p.valor}
                           onChange={(e) => updateParcela(idx, { valor: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        <Checkbox
+                          checked={!!p.entrada}
+                          onCheckedChange={(checked) => updateParcela(idx, { entrada: checked === true })}
+                          title="Esta parcela é uma entrada (depósito/TED) e não gera boleto"
                         />
                       </td>
                       <td className="px-2 py-1.5 text-right">

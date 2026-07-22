@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Save, Undo, Search, Plus, Trash2, Info, DollarSign, History, Package, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import { metadataService, type Operacao, type Tabela, type FormaPagamento, type PrazoPagto } from '@/services/metadataService';
@@ -74,6 +75,41 @@ const createEmptyNewItem = () =>
     descontoMaximo: undefined,
   }) as Partial<OrderItem>;
 
+const EscalaBadge = ({ tiers }: { tiers: EscalaTier[] }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button
+        type="button"
+        className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+        title="Produto com desconto escalonado nesta tabela — clique para ver as faixas"
+      >
+        <Percent className="h-3.5 w-3.5" />
+      </button>
+    </PopoverTrigger>
+    <PopoverContent className="w-56 p-2" align="start">
+      <p className="text-xs font-medium mb-1.5">Desconto escalonado</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground">
+            <th className="text-left font-normal pb-1">Qtd. mínima</th>
+            <th className="text-right font-normal pb-1">Desconto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...tiers]
+            .sort((a, b) => a.quantidade - b.quantidade)
+            .map((tier, i) => (
+              <tr key={i} className="border-t">
+                <td className="py-1">{tier.quantidade}</td>
+                <td className="py-1 text-right">{tier.desconto.toFixed(2)}%</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </PopoverContent>
+  </Popover>
+);
+
 const createEmptyObservacoes = () => ({
   cliente: '',
   pedido: '',
@@ -110,6 +146,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   const [newItem, setNewItem] = useState<Partial<OrderItem>>(createEmptyNewItem);
   const [observacoes, setObservacoes] = useState(createEmptyObservacoes);
   const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<number, string>>({});
+  const [descontoDrafts, setDescontoDrafts] = useState<Record<number, string>>({});
+  const [newItemDescontoDraft, setNewItemDescontoDraft] = useState<string | null>(null);
 
   // Operações (metadata)
   const [operacoes, setOperacoes] = useState<Operacao[]>([]);
@@ -179,8 +217,6 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   const [preferredPrazoId, setPreferredPrazoId] = useState<string | number | null>(null);
   const prevOrderIdRef = useRef<number | null>(null);
 
-  const parametrosAppMobile = useMemo(() => authService.getParametrosAppMobile(), []);
-
   const isAdmin = useMemo(() => authService.isAdmin(), []);
   const sessionRepresentante = useMemo(() => {
     const session = authService.getSession();
@@ -208,10 +244,6 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     return { id: String(id), nome: String(nome) };
   }, [isAdmin]);
 
-  const bloqueiaDescontoAcimaTabela = useMemo(
-    () => Boolean(parametrosAppMobile?.bloqueia_desconto_acima_tabela),
-    [parametrosAppMobile?.bloqueia_desconto_acima_tabela],
-  );
   const normalizeMaxDesconto = useCallback(
     (val?: number) => (typeof val === 'number' && !Number.isNaN(val) ? val : undefined),
     [],
@@ -223,7 +255,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         toast.error('Desconto não pode ser negativo.');
         return 0;
       }
-      if (!bloqueiaDescontoAcimaTabela) return valor;
+      // Validação do desconto máximo (tabela de preço/escalonado) roda sempre
+      // no formulário, além de ser reforçada pelo backend ao salvar — não
+      // depende do parâmetro `bloqueia_desconto_acima_tabela`, que hoje não
+      // controla mais nenhum outro comportamento.
       const maxValue = normalizeMaxDesconto(max);
       if (maxValue == null) return valor;
       if (valor > maxValue) {
@@ -234,7 +269,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       }
       return valor;
     },
-    [bloqueiaDescontoAcimaTabela, normalizeMaxDesconto],
+    [normalizeMaxDesconto],
   );
 
   // Quando o produto tem desconto escalonado, a regra do escalonado prevalece
@@ -312,6 +347,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     });
     setItems([]);
     setNewItem(createEmptyNewItem());
+    setNewItemDescontoDraft(null);
     setObservacoes(createEmptyObservacoes());
     setPreferredFormaId(null);
     setPreferredPrazoId(null);
@@ -623,6 +659,15 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           pedido: currentOrder.observacaoPedido || '',
           nf: currentOrder.observacaoNF || '',
         });
+      }
+      // Carrega as parcelas do prazo negociado já salvas para este pedido
+      // (senão, reabrir um pedido negociado para edição perde as parcelas
+      // gravadas e o próximo save pode sobrescrever com apenas 1 parcela).
+      try {
+        const parcelas = await ordersService.getParcelas(orderId);
+        if (active) setParcelasNegociadas(parcelas);
+      } catch {
+        if (active) setParcelasNegociadas([]);
       }
     };
     fill();
@@ -1116,12 +1161,6 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     return Number(normalized) || 0;
   };
 
-  const selectZeroValue = (input: HTMLInputElement) => {
-    if (Number(input.value) === 0) {
-      input.select();
-    }
-  };
-
   const handleAddItemWithProduct = async (productToAdd?: Partial<OrderItem>) => {
     const itemToAdd = productToAdd || newItem;
     
@@ -1325,6 +1364,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       ensureItemTabelas(itemToAdd.produtoId);
     }
     setNewItem({ produtoId: 0, quant: 1, descontoPerc: 0, descontoMaximo: undefined });
+    setNewItemDescontoDraft(null);
     setProductCodeInput('');
     setNewItemTabelaId('');
     setNewItemPreco(null);
@@ -1462,6 +1502,19 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
     });
   };
 
+  const updateDescontoDraft = (index: number, value: string) => {
+    setDescontoDrafts((prev) => ({ ...prev, [index]: value }));
+  };
+
+  const clearDescontoDraft = (index: number) => {
+    setDescontoDrafts((prev) => {
+      if (!(index in prev)) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
   const handleChangeItemTabela = async (index: number, tabelaId: string) => {
     const current = items[index];
     // Atualiza primeiro a tabela selecionada no item
@@ -1511,12 +1564,6 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
   }, { bruto: 0, descontos: 0, liquido: 0 });
 
   const selectedPrazoPagamento = prazos.find((p) => String(p.id) === String(formData.prazoPagtoId));
-
-  // Se o prazo de pagamento mudar, descarta a negociação anterior (ela pode
-  // não fazer mais sentido para o novo prazo/total).
-  useEffect(() => {
-    setParcelasNegociadas([]);
-  }, [formData.prazoPagtoId]);
 
   const handleSave = async () => {
     if (!formData.operacao || !formData.clienteId || !formData.representanteId || items.length === 0) {
@@ -1623,8 +1670,9 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       setParcelasNegociadas([]);
       resetFormState();
       setCurrentOrder(null);
-    } catch (error) {
-      toast.error('Erro ao criar pedido');
+    } catch (error: any) {
+      const message = typeof error === 'string' ? error : error?.message;
+      toast.error(message || 'Erro ao criar pedido');
     }
   };
 
@@ -1966,6 +2014,11 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       (p) =>
                         String(p.codigo || '').trim() === String(v).trim(),
                     );
+                  // Troca manual de prazo: descarta a negociação anterior (ela
+                  // pode não fazer mais sentido para o novo prazo/total). Não
+                  // reseta em cargas programáticas (ex.: abrir pedido para
+                  // edição), que carregam as parcelas já salvas à parte.
+                  setParcelasNegociadas([]);
                   setFormData({
                     ...formData,
                     prazo: v,
@@ -2137,20 +2190,43 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">%Desc</label>
-              <Input 
-                type="number"
+              <label className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                %Desc
+                {newItem.hasEscala && newItem.escalaTiers && newItem.escalaTiers.length > 0 && (
+                  <EscalaBadge tiers={newItem.escalaTiers} />
+                )}
+              </label>
+              <Input
+                type="text"
                 inputMode="decimal"
-                value={Number.isFinite(newItem.descontoPerc) ? newItem.descontoPerc : 0}
+                value={
+                  newItemDescontoDraft ??
+                  formatMoneyInput(Number.isFinite(newItem.descontoPerc) ? (newItem.descontoPerc as number) : 0)
+                }
                 onChange={(e) => {
-                  const parsed = parseFloat(e.target.value);
-                  const nextVal = Number.isFinite(parsed) ? parsed : 0;
-                  const limited = clampDesconto(nextVal, newItem.descontoMaximo);
-                  setNewItem({ ...newItem, descontoPerc: limited });
+                  const raw = e.target.value;
+                  setNewItemDescontoDraft(raw);
+                  if (raw.trim() !== '') {
+                    const parsed = parseMoneyInput(raw);
+                    const limited = clampDesconto(parsed, newItem.descontoMaximo);
+                    setNewItem({ ...newItem, descontoPerc: limited });
+                  }
                 }}
-                min={0}
-                max={100}
-                step="any"
+                onFocus={(e) => {
+                  if (newItemDescontoDraft == null) {
+                    setNewItemDescontoDraft(
+                      formatMoneyInput(Number.isFinite(newItem.descontoPerc) ? (newItem.descontoPerc as number) : 0),
+                    );
+                    requestAnimationFrame(() => e.currentTarget.select());
+                  }
+                }}
+                onBlur={() => {
+                  if (newItemDescontoDraft != null && newItemDescontoDraft.trim() !== '') {
+                    const limited = clampDesconto(parseMoneyInput(newItemDescontoDraft), newItem.descontoMaximo);
+                    setNewItem({ ...newItem, descontoPerc: limited });
+                  }
+                  setNewItemDescontoDraft(null);
+                }}
               />
             </div>
             <div>
@@ -2246,21 +2322,30 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                   <TableCell className="text-right">
                     <div className="flex items-center gap-1 justify-end">
                       <Input
-                        type="number"
+                        type="text"
                         inputMode="decimal"
                         className="h-8 w-20 text-right"
-                        value={item.descontoPerc}
-                        onChange={(e) => handleUpdateItem(idx, { descontoPerc: parseFloat(e.target.value) || 0 })}
-                        onFocus={(e) => selectZeroValue(e.currentTarget)}
-                        onMouseDown={(e) => {
-                          if (Number(e.currentTarget.value) === 0) {
-                            e.preventDefault();
-                            selectZeroValue(e.currentTarget);
+                        value={descontoDrafts[idx] ?? formatMoneyInput(item.descontoPerc)}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          updateDescontoDraft(idx, raw);
+                          if (raw.trim() !== '') {
+                            handleUpdateItem(idx, { descontoPerc: parseMoneyInput(raw) });
                           }
                         }}
-                        min={0}
-                        max={100}
-                        step="any"
+                        onFocus={(e) => {
+                          if (descontoDrafts[idx] == null) {
+                            updateDescontoDraft(idx, formatMoneyInput(item.descontoPerc));
+                            requestAnimationFrame(() => e.currentTarget.select());
+                          }
+                        }}
+                        onBlur={() => {
+                          const raw = descontoDrafts[idx];
+                          if (raw != null && raw.trim() !== '') {
+                            handleUpdateItem(idx, { descontoPerc: parseMoneyInput(raw) });
+                          }
+                          clearDescontoDraft(idx);
+                        }}
                       />
                       <span className="text-xs text-muted-foreground">%</span>
                     </div>
@@ -2312,13 +2397,8 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       >
                         <Package className="h-4 w-4" />
                       </Button>
-                      {item.hasEscala && (
-                        <span
-                          className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                          title="Produto com desconto escalonado nesta tabela"
-                        >
-                          <Percent className="h-3.5 w-3.5" />
-                        </span>
+                      {item.hasEscala && item.escalaTiers && item.escalaTiers.length > 0 && (
+                        <EscalaBadge tiers={item.escalaTiers} />
                       )}
                       <Button size="sm" variant="ghost" onClick={() => handleRemoveItem(idx)}>
                         <Trash2 className="h-4 w-4" />
