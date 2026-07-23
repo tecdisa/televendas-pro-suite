@@ -679,10 +679,13 @@ export const ordersService = {
         return Promise.reject(message);
       }
       const created = await res.json();
+      // A reserva de estoque é um efeito colateral best-effort (usado pelo
+      // fluxo de Televendas); uma falha aqui não pode fazer o pedido, que já
+      // foi criado com sucesso, aparecer como erro para o usuário.
       try {
         await reserveItens(payload.itens);
-      } catch (e: any) {
-        return Promise.reject(String(e) || 'Falha ao reservar estoque');
+      } catch (e) {
+        console.error('Falha ao reservar estoque para o pedido criado:', e);
       }
       return created;
     } catch (e) {

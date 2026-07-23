@@ -51,6 +51,11 @@ const buildSugestao = (
   return parcelas;
 };
 
+// Só a primeira parcela pode ser marcada como entrada (é o valor já
+// depositado/TED pelo cliente); demais parcelas nunca geram boleto de entrada.
+const clampEntradaToFirstRow = (list: OrderParcela[]): OrderParcela[] =>
+  list.map((p, i) => (i === 0 ? p : p.entrada ? { ...p, entrada: false } : p));
+
 export const PrazoNegociadoModal = ({
   open,
   onOpenChange,
@@ -66,7 +71,7 @@ export const PrazoNegociadoModal = ({
   useEffect(() => {
     if (!open) return;
     if (parcelasIniciais && parcelasIniciais.length > 0) {
-      setParcelas(parcelasIniciais.map((p) => ({ ...p })));
+      setParcelas(clampEntradaToFirstRow(parcelasIniciais.map((p) => ({ ...p }))));
     } else {
       setParcelas(buildSugestao(totalPedido, dataPedido, numeroParcelasSugerido, prazosEmDiasSugerido));
     }
@@ -97,7 +102,9 @@ export const PrazoNegociadoModal = ({
 
   const removeParcela = (idx: number) => {
     setParcelas((prev) =>
-      prev.filter((_, i) => i !== idx).map((p, i) => ({ ...p, parcela: i + 1 })),
+      clampEntradaToFirstRow(
+        prev.filter((_, i) => i !== idx).map((p, i) => ({ ...p, parcela: i + 1 })),
+      ),
     );
   };
 
@@ -163,11 +170,19 @@ export const PrazoNegociadoModal = ({
                         />
                       </td>
                       <td className="px-2 py-1.5 text-center">
-                        <Checkbox
-                          checked={!!p.entrada}
-                          onCheckedChange={(checked) => updateParcela(idx, { entrada: checked === true })}
-                          title="Esta parcela é uma entrada (depósito/TED) e não gera boleto"
-                        />
+                        {idx === 0 ? (
+                          <Checkbox
+                            checked={!!p.entrada}
+                            onCheckedChange={(checked) => updateParcela(idx, { entrada: checked === true })}
+                            title="Esta parcela é uma entrada (depósito/TED) e não gera boleto"
+                          />
+                        ) : (
+                          <Checkbox
+                            checked={false}
+                            disabled
+                            title="Apenas a primeira parcela pode ser marcada como entrada"
+                          />
+                        )}
                       </td>
                       <td className="px-2 py-1.5 text-right">
                         <Button

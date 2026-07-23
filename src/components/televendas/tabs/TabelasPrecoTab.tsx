@@ -47,7 +47,7 @@ const EXPORT_COLS: ExportColDef[] = [
   { header: 'Preço Venda',       field: 'preco',                  type: 'number',  editable: true,  digits: 2 },
   { header: '%DescMáx',          field: 'desconto_maximo',        type: 'number',  editable: true,  digits: 2 },
   { header: 'Prom.',             field: 'produto_em_promocao',    type: 'boolean', editable: true },
-  { header: 'Qtd.Mín.',          field: 'quantidade_minima',      type: 'number',  editable: true,  digits: 0 },
+  { header: 'Quantidade',        field: 'quantidade_minima',      type: 'number',  editable: true,  digits: 0 },
   { header: 'Bon.',              field: 'permite_bonificacao',    type: 'boolean', editable: true },
   { header: 'Déb/Cr.',           field: 'permite_debito_credito', type: 'boolean', editable: true },
   { header: 'Vd.Esp.',           field: 'permite_venda_especial', type: 'boolean', editable: true },
@@ -1231,7 +1231,7 @@ export function TabelasPrecoTab() {
           ['% Markup', 'markup'],
           ['% Despesa', 'despesa'], ['% Majoração', 'majoracao'],
           ['% Lucro', 'lucro'], ['% Frete', 'frete'],
-          ['Qtd. mínima', 'quantidade_minima'], ['PVS', 'pvs'],
+          ['Quantidade', 'quantidade_minima'], ['PVS', 'pvs'],
         ] as [string, keyof ItemFormData][]).map(([label, field]) => (
           <div key={field}>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
@@ -1416,7 +1416,7 @@ export function TabelasPrecoTab() {
             { header: 'Preço Venda', field: 'preco',           digits: 2 },
             { header: '%DescMáx',    field: 'desconto_maximo', digits: 2 },
             { header: 'Desc.Vl.',    field: 'desconto_valor',  digits: 2 },
-            { header: 'Qtd.Mín.',    field: 'quantidade_minima', digits: 0 },
+            { header: 'Quantidade',  field: 'quantidade_minima', digits: 0 },
           ];
           for (const { header, field, digits } of numericEditableFields) {
             const idx = headerMap[header];
@@ -1582,12 +1582,16 @@ export function TabelasPrecoTab() {
               className="hidden"
               onChange={handleImportFile}
             />
-            {selectedRows.size > 0 && (
-              <Button size="sm" variant="destructive" className="h-7 gap-1 text-xs" onClick={handleDeleteSelected}>
-                <Trash2 className="h-3.5 w-3.5" />
-                Excluir ({selectedRows.size})
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-7 gap-1 text-xs"
+              onClick={handleDeleteSelected}
+              disabled={selectedRows.size === 0}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Excluir{selectedRows.size > 0 ? ` (${selectedRows.size})` : ''}
+            </Button>
             <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleDesfazer} disabled={!hasPending}>
               <Undo2 className="h-3.5 w-3.5" />
               Desfazer
@@ -1729,7 +1733,7 @@ export function TabelasPrecoTab() {
                   <th className="px-1 py-1.5 text-right" style={{ minWidth: 176, width: 176 }}>Preço Venda</th>
                   <th className="w-14 px-1 py-1.5 text-right">%DescMáx</th>
                   <th className="w-14 px-1 py-1.5 text-right">%Comissão</th>
-                  <th className="w-14 px-1 py-1.5 text-right">Qtd.Mín.</th>
+                  <th className="w-14 px-1 py-1.5 text-right">Quantidade</th>
                   <th className="w-10 px-1 py-1.5 text-center">Prom.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Bonificação">Bon.</th>
                   <th className="w-10 px-1 py-1.5 text-center" title="Permite Débito/Crédito">Déb/Cr.</th>

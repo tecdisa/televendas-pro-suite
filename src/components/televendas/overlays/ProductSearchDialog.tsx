@@ -437,7 +437,7 @@ export const ProductSearchDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-6xl w-[95vw] h-[90vh] overflow-y-auto sm:overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Pesquisa Produtos</DialogTitle>
         </DialogHeader>
@@ -458,7 +458,7 @@ export const ProductSearchDialog = ({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="p-4 bg-muted/30 border-t rounded-b-lg">
-              <div className="grid grid-cols-[1fr_1fr_auto] gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-4 lg:gap-6">
                 {/* Column 1 - Text inputs */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -558,11 +558,11 @@ export const ProductSearchDialog = ({
                       </Select>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       onClick={handleSearch}
-                      className="h-9 w-48"
+                      className="h-9 flex-1 min-w-[140px] lg:flex-none lg:w-48"
                       disabled={loading}
                     >
                       <Search className="h-4 w-4 mr-2" />
@@ -572,7 +572,7 @@ export const ProductSearchDialog = ({
                       variant="outline"
                       size="sm"
                       onClick={handleClearFilters}
-                      className="h-9 w-48"
+                      className="h-9 flex-1 min-w-[140px] lg:flex-none lg:w-48"
                     >
                       <X className="h-4 w-4 mr-2" />
                       Limpar
@@ -581,7 +581,7 @@ export const ProductSearchDialog = ({
                 </div>
 
                 {/* Column 3 - Checkboxes */}
-                <div className="flex flex-col gap-2 pl-4 border-l">
+                <div className="flex flex-col gap-2 pt-2 border-t lg:pt-0 lg:pl-4 lg:border-t-0 lg:border-l">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="comEstoque"
@@ -619,7 +619,7 @@ export const ProductSearchDialog = ({
           </div>
         )}
 
-        <div className="flex-1 min-h-[250px] border rounded-lg overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-[150px] sm:min-h-[250px] border rounded-lg overflow-hidden flex flex-col">
           {loading && displayProducts.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">Carregando produtos...</div>
           ) : error ? (
@@ -643,8 +643,9 @@ export const ProductSearchDialog = ({
                     <TableHead className="text-xs min-w-[220px]">Descrição</TableHead>
                     <TableHead className="w-[110px] text-xs text-right">Preço</TableHead>
                     <TableHead className="w-[110px] text-xs text-right">Desc. Máx</TableHead>
-                    <TableHead className="w-[90px] text-xs text-right">Estoque</TableHead>
                     <TableHead className="w-[100px] text-xs text-right">Comissão</TableHead>
+                    <TableHead className="w-[100px] text-xs text-right">Quantidade</TableHead>
+                    <TableHead className="w-[90px] text-xs text-right">Estoque</TableHead>
                     <TableHead className="w-[180px] text-xs">Apresentação</TableHead>
                     <TableHead className="w-[120px] text-xs">Marca</TableHead>
                     <TableHead className="w-[80px] text-xs">UN</TableHead>
@@ -697,8 +698,11 @@ export const ProductSearchDialog = ({
                       <TableCell className="text-xs py-2">{product.descricao}</TableCell>
                       <TableCell className="text-xs text-right py-2">{formatCurrency(product.preco)}</TableCell>
                       <TableCell className="text-xs text-right py-2">{formatPercent(product.descontoMaximo)}</TableCell>
-                      <TableCell className="text-xs text-right py-2">{formatNumber(product.estoque, 3)}</TableCell>
                       <TableCell className="text-xs text-right py-2">{formatPercent(product.comissao)}</TableCell>
+                      <TableCell className="text-xs text-right py-2">
+                        {product.quantidadeMinima != null ? formatNumber(product.quantidadeMinima, 0) : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-right py-2">{formatNumber(product.estoque, 3)}</TableCell>
                       <TableCell className="text-xs py-2">{product.apresentacao ?? '-'}</TableCell>
                       <TableCell className="text-xs py-2">{product.marca ?? '-'}</TableCell>
                       <TableCell className="text-xs py-2">{product.un}</TableCell>
@@ -714,14 +718,14 @@ export const ProductSearchDialog = ({
                   ))}
                   {displayProducts.length === 0 && !loading && (
                     <TableRow>
-                      <TableCell colSpan={18} className="text-center text-sm text-muted-foreground py-8">
+                      <TableCell colSpan={19} className="text-center text-sm text-muted-foreground py-8">
                         Nenhum produto encontrado
                       </TableCell>
                     </TableRow>
                   )}
                   {loading && displayProducts.length > 0 && (
                     <TableRow>
-                      <TableCell colSpan={18} className="text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={19} className="text-center text-sm text-muted-foreground">
                         Carregando mais...
                       </TableCell>
                     </TableRow>
@@ -734,7 +738,7 @@ export const ProductSearchDialog = ({
 
         {/* Multi-select footer */}
         {multiSelect && (
-          <div className="flex items-center justify-between pt-2 border-t flex-shrink-0">
+          <div className="flex items-center justify-between pt-2 border-t flex-shrink-0 sticky bottom-0 bg-background pb-1">
             <span className="text-sm text-muted-foreground">
               {selectedIds.size > 0 ? `${selectedIds.size} produto(s) selecionado(s)` : 'Nenhum produto selecionado'}
             </span>

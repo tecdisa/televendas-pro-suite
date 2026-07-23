@@ -30,6 +30,7 @@ export interface Product {
   hasEscala?: boolean;
   escalaTiers?: EscalaTier[] | null;
   comissao?: number;
+  quantidadeMinima?: number;
   fornecedorId?: number;
   fornecedor?: string;
   divisaoId?: number;
@@ -106,6 +107,7 @@ interface ProductTabelaPrecoResponse {
   tabelaPrecoId: number;
   preco: number;
   descontoMaximo?: number;
+  quantidadeMinima?: number;
   hasEscala?: boolean;
   escalaTiers?: EscalaTier[];
 }
@@ -219,6 +221,7 @@ function normalizeProduct(raw: any): Product {
       }))
     : null;
   const comissao = numberOrUndefined(raw?.comissao ?? raw?.percentual_comissao ?? raw?.percentualComissao);
+  const quantidadeMinima = numberOrUndefined(raw?.quantidade_minima ?? raw?.quantidadeMinima);
   const fornecedor =
     fornecedorInfo?.nome_fornecedor ??
     fornecedorInfo?.fantasia ??
@@ -258,6 +261,7 @@ function normalizeProduct(raw: any): Product {
     hasEscala,
     escalaTiers,
     comissao,
+    quantidadeMinima,
     fornecedorId: numberOrUndefined(
       fornecedorInfo?.fornecedor_id ?? fornecedorInfo?.fornecedorId ?? raw?.fornecedor_id ?? raw?.fornecedorId
     ),
@@ -727,6 +731,10 @@ async function fetchPrecoByTabela({
     const precoResp = Number(data?.preco ?? 0) || 0;
     const descontoMaximoResp =
       data?.descontoMaximo !== undefined ? Number(data.descontoMaximo) : undefined;
+    const quantidadeMinimaResp =
+      data?.quantidadeMinima !== undefined && data?.quantidadeMinima !== null
+        ? Number(data.quantidadeMinima)
+        : undefined;
     const escalaTiersResp: EscalaTier[] = Array.isArray(data?.escalaTiers)
       ? data.escalaTiers.map((t: any) => ({
           quantidade: Number(t.quantidade),
@@ -740,6 +748,7 @@ async function fetchPrecoByTabela({
       tabelaPrecoId: tabelaIdResp,
       preco: precoResp,
       descontoMaximo: descontoMaximoResp,
+      quantidadeMinima: quantidadeMinimaResp,
       hasEscala: Boolean(data?.hasEscala) || escalaTiersResp.length > 0,
       escalaTiers: escalaTiersResp,
     };
@@ -837,11 +846,18 @@ export const productsService = {
   getTabelaInfo: async (
     produtoId: number,
     tabelaPrecoId: number,
-  ): Promise<{ preco: number; descontoMaximo?: number; hasEscala: boolean; escalaTiers: EscalaTier[] }> => {
+  ): Promise<{
+    preco: number;
+    descontoMaximo?: number;
+    quantidadeMinima?: number;
+    hasEscala: boolean;
+    escalaTiers: EscalaTier[];
+  }> => {
     const data = await fetchPrecoByTabela({ produtoId, tabelaPrecoId });
     return {
       preco: data.preco,
       descontoMaximo: data.descontoMaximo,
+      quantidadeMinima: data.quantidadeMinima,
       hasEscala: Boolean(data.hasEscala),
       escalaTiers: data.escalaTiers ?? [],
     };

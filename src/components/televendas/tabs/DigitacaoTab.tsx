@@ -38,6 +38,7 @@ type OrderItem = {
   quant: number;
   descontoPerc: number;
   descontoMaximo?: number;
+  quantidadeMinima?: number;
   hasEscala?: boolean;
   escalaTiers?: EscalaTier[];
   preco: number;
@@ -93,6 +94,7 @@ const EscalaBadge = ({ tiers }: { tiers: EscalaTier[] }) => (
           <tr className="text-muted-foreground">
             <th className="text-left font-normal pb-1">Qtd. mínima</th>
             <th className="text-right font-normal pb-1">Desconto</th>
+            <th className="text-right font-normal pb-1">Comissão</th>
           </tr>
         </thead>
         <tbody>
@@ -102,6 +104,7 @@ const EscalaBadge = ({ tiers }: { tiers: EscalaTier[] }) => (
               <tr key={i} className="border-t">
                 <td className="py-1">{tier.quantidade}</td>
                 <td className="py-1 text-right">{tier.desconto.toFixed(2)}%</td>
+                <td className="py-1 text-right">{tier.comissao.toFixed(2)}%</td>
               </tr>
             ))}
         </tbody>
@@ -301,6 +304,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       return {
         ...item,
         descontoMaximo: normalizeMaxDesconto(info.descontoMaximo ?? item.descontoMaximo),
+        quantidadeMinima: info.quantidadeMinima ?? item.quantidadeMinima,
         hasEscala: info.hasEscala,
         escalaTiers: info.escalaTiers,
       };
@@ -1069,6 +1073,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       preco: product.preco,
       estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
       descontoMaximo: maxDesconto,
+      quantidadeMinima: product.quantidadeMinima,
       hasEscala,
       escalaTiers,
       descontoPerc,
@@ -1098,6 +1103,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         preco: info.preco,
         tabelaId,
         descontoMaximo: normalizeMaxDesconto(info.descontoMaximo),
+        quantidadeMinima: info.quantidadeMinima,
         hasEscala: info.hasEscala,
         escalaTiers: info.escalaTiers,
         descontoPerc: clampDesconto(
@@ -1197,11 +1203,17 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
 
     const produtoId = typeof itemToAdd.produtoId === 'number' ? itemToAdd.produtoId : Number(itemToAdd.produtoId);
     const quant = Math.max(0, Number(itemToAdd.quant) || 0);
+    const quantidadeMinima = itemToAdd.quantidadeMinima;
+    if (quantidadeMinima != null && quantidadeMinima > 0 && quant < quantidadeMinima) {
+      toast.error(`Quantidade mínima para este produto é ${quantidadeMinima}.`);
+      return;
+    }
     const descricao = itemToAdd.descricao || '';
     const un = itemToAdd.un || '';
     let maxDesconto = normalizeMaxDesconto(itemToAdd.descontoMaximo);
     let hasEscala = Boolean(itemToAdd.hasEscala);
     let escalaTiers: EscalaTier[] = itemToAdd.escalaTiers ?? [];
+    let quantidadeMinimaResolvida = quantidadeMinima;
     const preco = itemToAdd.preco || 0;
     const obs = itemToAdd.obs;
     const tabelaSelecionada = getPreferredTabelaForItem(itemToAdd);
@@ -1226,13 +1238,6 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           normalizeCodigo(it.codigoProduto) === newCodigoNorm;
         return sameId || sameCodigo;
       });
-
-    const existingIndexForStock = findSameProductIndex(items);
-    const existingQtd = existingIndexForStock !== -1 ? items[existingIndexForStock].quant || 0 : 0;
-    const estoqueDisponivel = itemToAdd.estoque ?? (existingIndexForStock !== -1 ? items[existingIndexForStock].estoque : undefined);
-    if (estoqueDisponivel != null && quant + existingQtd > estoqueDisponivel) {
-      toast.warning('Quantidade solicitada excede o estoque disponível');
-    }
 
     const resolvedTabelaId = (() => {
       if (tabs && tabs.length > 0) {
@@ -1260,12 +1265,23 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         maxDesconto = normalizeMaxDesconto(info.descontoMaximo ?? maxDesconto);
         hasEscala = info.hasEscala;
         escalaTiers = info.escalaTiers;
+        if (info.quantidadeMinima != null) {
+          quantidadeMinimaResolvida = info.quantidadeMinima;
+        }
       } catch (e: any) {
         toast.error(
           String(e) ||
             'Não foi possível buscar o preço para a tabela selecionada',
         );
       }
+    }
+    if (
+      quantidadeMinimaResolvida != null &&
+      quantidadeMinimaResolvida > 0 &&
+      quant < quantidadeMinimaResolvida
+    ) {
+      toast.error(`Quantidade mínima para este produto é ${quantidadeMinimaResolvida}.`);
+      return;
     }
     const descontoPerc = clampDesconto(
       itemToAdd.descontoPerc || 0,
@@ -1287,6 +1303,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           descontoPerc,
           preco: precoTabela,
           descontoMaximo: maxDesconto,
+          quantidadeMinima: quantidadeMinimaResolvida,
           hasEscala,
           escalaTiers,
           total: 0,
@@ -1312,6 +1329,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       let maxDescontoToApply = currentItem.descontoMaximo ?? maxDesconto;
       let hasEscalaToApply = currentItem.hasEscala ?? hasEscala;
       let escalaTiersToApply = currentItem.escalaTiers ?? escalaTiers;
+      let quantidadeMinimaToApply = currentItem.quantidadeMinima ?? quantidadeMinimaResolvida;
       if (tabelaChanged && tabelaToApply) {
         try {
           const info = await productsService.getTabelaInfo(
@@ -1322,6 +1340,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           maxDescontoToApply = normalizeMaxDesconto(info.descontoMaximo);
           hasEscalaToApply = info.hasEscala;
           escalaTiersToApply = info.escalaTiers;
+          quantidadeMinimaToApply = info.quantidadeMinima;
         } catch (e: any) {
           toast.error(
             String(e) ||
@@ -1346,6 +1365,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           un: current.un || un,
           estoque: current.estoque ?? itemToAdd.estoque,
           descontoMaximo: maxDescontoToApply,
+          quantidadeMinima: quantidadeMinimaToApply,
           hasEscala: hasEscalaToApply,
           escalaTiers: escalaTiersToApply,
         };
@@ -1398,6 +1418,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
         let maxDesconto = normalizeMaxDesconto(product.descontoMaximo);
         let hasEscala = Boolean(product.hasEscala);
         let escalaTiers: EscalaTier[] = product.escalaTiers ?? [];
+        let quantidadeMinima = product.quantidadeMinima;
         const tabelaToUse = newItemTabelaId || getDefaultTabelaId();
         if (tabelaToUse) {
           try {
@@ -1406,6 +1427,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             maxDesconto = normalizeMaxDesconto(info.descontoMaximo);
             hasEscala = info.hasEscala;
             escalaTiers = info.escalaTiers;
+            quantidadeMinima = info.quantidadeMinima;
           } catch {
             precoFinal = product.preco;
           }
@@ -1425,6 +1447,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           preco: precoFinal,
           estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
           descontoMaximo: maxDesconto,
+          quantidadeMinima,
           hasEscala,
           escalaTiers,
           descontoPerc,
@@ -1468,8 +1491,13 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
           ? clampDesconto(merged.descontoPerc, resolveEffectiveMaxDesconto(merged, merged.quant || 0))
           : currentBase.descontoPerc;
       const current = { ...merged, descontoPerc } as OrderItem;
-      if (current.estoque != null && current.quant > current.estoque) {
-        toast.warning('Quantidade solicitada excede o estoque disponível');
+      if (
+        patch.quant != null &&
+        current.quantidadeMinima != null &&
+        current.quantidadeMinima > 0 &&
+        current.quant < current.quantidadeMinima
+      ) {
+        toast.warning(`Quantidade mínima para este produto é ${current.quantidadeMinima}.`);
       }
       const total = calculateItemTotal(current);
       updated[index] = { ...current, total };
@@ -1532,6 +1560,7 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
       handleUpdateItem(index, {
         preco: info.preco,
         descontoMaximo: normalizeMaxDesconto(info.descontoMaximo),
+        quantidadeMinima: info.quantidadeMinima,
         hasEscala: info.hasEscala,
         escalaTiers: info.escalaTiers,
       });
@@ -2121,9 +2150,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       un: product.un,
                       preco: product.preco,
                       estoque: typeof product.estoque === 'number' ? product.estoque : undefined,
-                      quant: 1,
+                      quant: product.quantidadeMinima && product.quantidadeMinima > 1 ? product.quantidadeMinima : 1,
                       descontoPerc: 0,
                       descontoMaximo: maxDesconto,
+                      quantidadeMinima: product.quantidadeMinima,
                     };
                     await handleAddItemWithProduct(item);
                   }
@@ -2183,10 +2213,17 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
             
             <div>
               <label className="text-sm font-medium mb-2 block">Quant.</label>
-              <Input 
+              <Input
                 type="number"
                 value={newItem.quant || ''}
-                onChange={(e) => setNewItem({...newItem, quant: parseFloat(e.target.value) || 0})}
+                onChange={(e) => {
+                  const quant = parseFloat(e.target.value) || 0;
+                  setNewItem((prev) => ({
+                    ...prev,
+                    quant,
+                    descontoPerc: clampDesconto(prev.descontoPerc || 0, resolveEffectiveMaxDesconto(prev, quant)),
+                  }));
+                }}
               />
             </div>
             <div>
@@ -2205,11 +2242,16 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                 }
                 onChange={(e) => {
                   const raw = e.target.value;
-                  setNewItemDescontoDraft(raw);
                   if (raw.trim() !== '') {
                     const parsed = parseMoneyInput(raw);
-                    const limited = clampDesconto(parsed, newItem.descontoMaximo);
+                    const limited = clampDesconto(parsed, resolveEffectiveMaxDesconto(newItem, newItem.quant || 0));
+                    // Se o valor foi limitado, o draft reflete o valor real
+                    // aplicado (não o que o usuário digitou) para que o campo
+                    // nunca mostre um número diferente do que será salvo.
+                    setNewItemDescontoDraft(limited !== parsed ? formatMoneyInput(limited) : raw);
                     setNewItem({ ...newItem, descontoPerc: limited });
+                  } else {
+                    setNewItemDescontoDraft(raw);
                   }
                 }}
                 onFocus={(e) => {
@@ -2222,7 +2264,10 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                 }}
                 onBlur={() => {
                   if (newItemDescontoDraft != null && newItemDescontoDraft.trim() !== '') {
-                    const limited = clampDesconto(parseMoneyInput(newItemDescontoDraft), newItem.descontoMaximo);
+                    const limited = clampDesconto(
+                      parseMoneyInput(newItemDescontoDraft),
+                      resolveEffectiveMaxDesconto(newItem, newItem.quant || 0),
+                    );
                     setNewItem({ ...newItem, descontoPerc: limited });
                   }
                   setNewItemDescontoDraft(null);
@@ -2328,9 +2373,16 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                         value={descontoDrafts[idx] ?? formatMoneyInput(item.descontoPerc)}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          updateDescontoDraft(idx, raw);
                           if (raw.trim() !== '') {
-                            handleUpdateItem(idx, { descontoPerc: parseMoneyInput(raw) });
+                            const parsed = parseMoneyInput(raw);
+                            const limited = clampDesconto(parsed, resolveEffectiveMaxDesconto(item, item.quant || 0));
+                            // Se o valor foi limitado, o draft reflete o valor real
+                            // aplicado (não o que o usuário digitou) para que o campo
+                            // nunca mostre um número diferente do que será salvo.
+                            updateDescontoDraft(idx, limited !== parsed ? formatMoneyInput(limited) : raw);
+                            handleUpdateItem(idx, { descontoPerc: limited });
+                          } else {
+                            updateDescontoDraft(idx, raw);
                           }
                         }}
                         onFocus={(e) => {
