@@ -384,7 +384,7 @@ const Televendas = () => {
             </Sheet>
 
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-primary">ADS Vendas</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-primary">ADS Vendas Beta Fernando Teste</h1>
               <p className="text-xs text-muted-foreground truncate max-w-[260px] sm:max-w-[360px] flex items-center gap-1.5">
                 <User className="h-3 w-3 shrink-0" />
                 <span className="truncate">
