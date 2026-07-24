@@ -2429,7 +2429,16 @@ export const DigitacaoTab = ({ onClose, onSaveSuccess }: DigitacaoTabProps) => {
                       onBlur={() => {
                         const raw = unitPriceDrafts[idx];
                         if (raw != null && raw.trim() !== '') {
-                          handleUpdateItemUnitPrice(idx, parseMoneyInput(raw));
+                          const parsed = parseMoneyInput(raw);
+                          // calculateUnitPrice arredonda para 2 casas; se o valor no
+                          // draft é o mesmo que já estava exibido (usuário só deu
+                          // foco/tab sem editar), recalcular o desconto a partir dele
+                          // gera um %Desc ligeiramente diferente do que foi digitado
+                          // (ex.: 5% vira 5,03%) só por causa do arredondamento — por
+                          // isso só recalcula quando o valor foi de fato alterado.
+                          if (parsed !== calculateUnitPrice(item)) {
+                            handleUpdateItemUnitPrice(idx, parsed);
+                          }
                         }
                         clearUnitPriceDraft(idx);
                       }}
