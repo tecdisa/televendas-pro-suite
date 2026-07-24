@@ -414,13 +414,44 @@ const FormField = ({ label, value, onChange, type = 'text', className = '', uppe
 export const ClientesTab = () => {
   const { canInsert } = useModuleCrudPermission('CLIENTES');
   const CLIENT_LIMIT = 100;
+  // Mesma regra de Digitar Pedido: representante (não-admin) só vê/edita os
+  // próprios clientes, com o filtro travado no próprio representante.
+  const isAdmin = useMemo(() => authService.isAdmin(), []);
+  const sessionRepresentante = useMemo(() => {
+    const session = authService.getSession();
+    const p = session?.payload;
+    const isForcaDeVendas =
+      p?.user?.forca_de_vendas === true ||
+      Boolean(p?.user?.usuario_empresa_id);
+    if (!isForcaDeVendas && isAdmin) return null;
+    const id =
+      p?.user?.usuario_empresa_id ??
+      p?.usuario_empresa_id ??
+      p?.representante_id ??
+      p?.user?.representante_id ??
+      p?.forcaDeVendasId ??
+      p?.user?.forcaDeVendasId ??
+      null;
+    if (!id) return null;
+    const nome =
+      p?.user?.nome_representante ??
+      p?.nome_representante ??
+      p?.user?.representanteNome ??
+      p?.representanteNome ??
+      session?.nome ??
+      '';
+    return { id: String(id), nome: String(nome) };
+  }, [isAdmin]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
   const [clientsPage, setClientsPage] = useState(1);
   const [clientsHasMore, setClientsHasMore] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
   const clientsRequestId = useRef(0);
-  const [filters, setFilters] = useState<ClientListFilters>(defaultClientFilters);
+  const [filters, setFilters] = useState<ClientListFilters>(() => ({
+    ...defaultClientFilters,
+    representanteId: sessionRepresentante?.id || defaultClientFilters.representanteId,
+  }));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(() => {
     try {
@@ -1082,7 +1113,13 @@ export const ClientesTab = () => {
       formaPagtoId: active.formaPagto !== 'all' ? Number(active.formaPagto) : undefined,
       prazoPagtoId: active.prazoPagto !== 'all' ? Number(active.prazoPagto) : undefined,
       tabelaPrecoId: active.tabelaPreco !== 'all' ? String(active.tabelaPreco) : undefined,
-      representanteId: active.representanteId !== 'all' ? active.representanteId : undefined,
+      // Representante (não-admin) sempre travado no próprio, mesmo que o
+      // filtro em memória tenha sido alterado por algum outro fluxo.
+      representanteId: sessionRepresentante
+        ? sessionRepresentante.id
+        : active.representanteId !== 'all'
+        ? active.representanteId
+        : undefined,
       rotaId: active.rota !== 'all' ? Number(active.rota) : undefined,
       redeId: active.rede !== 'all' ? Number(active.rede) : undefined,
       naoPositivadoDesde: active.naoPositivadoDesde || undefined,
@@ -1938,7 +1975,10 @@ const validateFormData = (data: ClientFormData): string[] => {
                 variant="outline"
                 className="w-full min-h-11 rounded-lg md:min-h-10 md:rounded-md"
                 onClick={() => {
-                  const next = { ...defaultClientFilters };
+                  const next = {
+                    ...defaultClientFilters,
+                    representanteId: sessionRepresentante?.id || defaultClientFilters.representanteId,
+                  };
                   setFilters(next);
                   setFilterCidades([]);
                   loadClients(next, true);
@@ -2155,7 +2195,11 @@ const validateFormData = (data: ClientFormData): string[] => {
             </div>
             <div className="md:col-span-4">
               <label className="text-sm font-medium mb-1 block">Representante</label>
-              <Select value={filters.representanteId} onValueChange={(v) => setFilters({ ...filters, representanteId: v })}>
+              <Select
+                value={filters.representanteId}
+                onValueChange={(v) => setFilters({ ...filters, representanteId: v })}
+                disabled={!!sessionRepresentante}
+              >
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
